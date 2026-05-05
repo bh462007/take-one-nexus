@@ -49,22 +49,34 @@ function normalizeRoleCounts(rows) {
   return base;
 }
 
+async function safeQuery(sql, params = []) {
+  try {
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (error) {
+    console.error(`Database query failed: ${sql}`);
+    console.error(`Error: ${error.message}`);
+    // If table doesn't exist or connection fails, return empty result instead of throwing
+    return [];
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
-    const [userCountRows] = await pool.query('SELECT COUNT(*) AS total FROM users');
-    const [scriptCountRows] = await pool.query('SELECT COUNT(*) AS total FROM scripts');
-    const [collegeCountRows] = await pool.query(`
+    const userCountRows = await safeQuery('SELECT COUNT(*) AS total FROM users');
+    const scriptCountRows = await safeQuery('SELECT COUNT(*) AS total FROM scripts');
+    const collegeCountRows = await safeQuery(`
       SELECT COUNT(DISTINCT college) AS total
       FROM users
       WHERE college IS NOT NULL AND TRIM(college) <> ''
     `);
-    const [roleRows] = await pool.query(`
+    const roleRows = await safeQuery(`
       SELECT role, COUNT(*) AS count
       FROM users
       WHERE role IS NOT NULL AND TRIM(role) <> ''
       GROUP BY role
     `);
-    const [scriptRows] = await pool.query(`
+    const scriptRows = await safeQuery(`
       SELECT
         scripts.id,
         scripts.user_id,
@@ -102,11 +114,11 @@ router.get('/', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error loading homepage data:', error.message);
+    console.error('Fatal error in homepage route:', error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Could not load homepage data yet. Check your database tables and connection.'
+      message: 'Could not load homepage data. Please try again later.'
     });
   }
 });

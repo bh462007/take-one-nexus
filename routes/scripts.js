@@ -15,6 +15,17 @@ function isCreatorRole(role) {
   );
 }
 
+async function safeQuery(sql, params = []) {
+  try {
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (error) {
+    console.error(`Database query failed: ${sql}`);
+    console.error(`Error: ${error.message}`);
+    return [];
+  }
+}
+
 router.get('/search', async (req, res) => {
   try {
     const query = String(req.query.q || '').trim();
@@ -49,7 +60,7 @@ router.get('/search', async (req, res) => {
 
     sql += ` ORDER BY scripts.created_at DESC, scripts.id DESC LIMIT 20`;
 
-    const [rows] = await pool.query(sql, params);
+    const rows = await safeQuery(sql, params);
 
     res.json({
       success: true,
