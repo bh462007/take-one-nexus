@@ -1,0 +1,71 @@
+CREATE DATABASE IF NOT EXISTS take_one;
+USE take_one;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(100) DEFAULT NULL,
+  college VARCHAR(150) DEFAULT NULL,
+  city VARCHAR(120) DEFAULT NULL,
+  bio TEXT DEFAULT NULL,
+  skills TEXT DEFAULT NULL,
+  portfolio VARCHAR(255) DEFAULT NULL,
+  avatar_url VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_users_email (email)
+);
+
+CREATE TABLE IF NOT EXISTS scripts (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED DEFAULT NULL,
+  title VARCHAR(180) NOT NULL,
+  genre VARCHAR(80) DEFAULT NULL,
+  synopsis TEXT DEFAULT NULL,
+  poster_url VARCHAR(255) DEFAULT NULL,
+  roles_needed VARCHAR(255) DEFAULT NULL,
+  status VARCHAR(80) NOT NULL DEFAULT 'Open for collaboration',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_scripts_user_id (user_id),
+  KEY idx_scripts_genre (genre),
+  CONSTRAINT fk_scripts_user
+    FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS collaboration_requests (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  script_id INT UNSIGNED NOT NULL,
+  requester_id INT UNSIGNED NOT NULL,
+  owner_id INT UNSIGNED NOT NULL,
+  message TEXT DEFAULT NULL,
+  status VARCHAR(40) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_script_requester (script_id, requester_id),
+  KEY idx_requests_owner_id (owner_id),
+  KEY idx_requests_requester_id (requester_id),
+  CONSTRAINT fk_requests_script
+    FOREIGN KEY (script_id)
+    REFERENCES scripts(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_requests_requester
+    FOREIGN KEY (requester_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_requests_owner
+    FOREIGN KEY (owner_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+);

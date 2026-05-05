@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crew Finder — TAKE ONE</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/crew.css">
+</head>
+
+<body>
+  <header>
+    <a href="/project" class="logo">TAKE <span>ONE</span></a>
+    <nav>
+      <a href="/project#explore">Scripts</a>
+      <a href="/crew.htm" class="active">Crew Finder</a>
+      <a href="/profile">Profile</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="finder-hero">
+      <div>
+        <div class="hero-kicker">Crew Marketplace</div>
+        <h1>Find film people without the chaos.</h1>
+        <p>
+          Browse directors, camera crew, actors, editors, sound, lights, and set support
+          in one clean workspace. Search by role, city, college, or skill.
+        </p>
+      </div>
+      <div class="hero-panel">
+        <div class="panel-row">
+          <span>Live Crew</span>
+          <strong id="totalCrew">0</strong>
+        </div>
+        <div class="panel-row">
+          <span>Selected Role</span>
+          <strong id="selectedRoleLabel">All</strong>
+        </div>
+        <div class="panel-row">
+          <span>Status</span>
+          <strong>Ready</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="finder-shell">
+      <aside class="filter-panel">
+        <div class="filter-title">Browse Roles</div>
+        <div class="role-filter-list" id="roleFilterList"></div>
+      </aside>
+
+      <section class="results-panel">
+        <div class="search-stack">
+          <div class="search-row">
+            <input type="text" id="crewSearchInput" placeholder="Search by name, skill, college..." autocomplete="off">
+            <input type="text" id="citySearchInput" placeholder="City" autocomplete="off">
+            <button type="button" id="clearCrewFilters">Clear</button>
+          </div>
+          <div class="result-status" id="crewResultStatus">Loading registered people...</div>
+        </div>
+
+        <div class="crew-grid" id="crewGrid">
+          <div class="crew-empty">Loading crew from MySQL...</div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/api.js"></script>
+  <script src="/crew.js"></script>
+</body>
+
+</html>

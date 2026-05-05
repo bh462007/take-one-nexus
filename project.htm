@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAKE ONE — Film Crew Connect</title>
+
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap"
+        rel="stylesheet">
+
+
+    <link rel="stylesheet" href="/project.css">
+</head>
+
+<body>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- ── CUSTOM CURSOR ── -->
+    <div class="cur-dot" id="dot"></div>
+    <div class="cur-cross" id="cross"></div>
+
+    <!-- ── TOAST NOTIFICATION ── -->
+    <div id="toast">Script submitted ✦</div>
+
+    <!-- ── LOADER ── -->
+    <div id="loader">
+        <div class="load-reels">
+            <div class="reel">
+                <div class="reel-spoke"></div>
+                <div class="reel-spoke"></div>
+                <div class="reel-spoke"></div>
+            </div>
+            <div class="reel">
+                <div class="reel-spoke"></div>
+                <div class="reel-spoke"></div>
+                <div class="reel-spoke"></div>
+            </div>
+        </div>
+        <div class="load-logo">TAKE <span>ONE</span></div>
+        <div class="load-tag">Film Crew Connect · Est. 2026</div>
+        <div class="load-bar">
+            <div class="load-fill"></div>
+        </div>
+    </div>
+
+    <!-- ── HEADER ── -->
+    <header>
+        <a href="#" class="logo">TAKE <span>ONE</span></a>
+        <nav>
+            <a href="#explore">Explore</a>
+            <a href="/crew.htm" id="navCrewLink">Crew</a>
+            <a href="#upload" id="navUploadLink">Upload</a>
+            <a href="/profile">Profile</a>
+            <button id="loginBtn" class="nav-cta" style="background: var(--neon); border: none; padding: 9px 20px; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;">
+  Join Now
+</button>
+        </nav>
+    </header>
+
+    <!-- ── HERO ── -->
+    <section class="hero">
+        <div class="filmstrip-v">
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+            <div class="film-hole"></div>
+
+        </div>
+    
+        <div class="hero-glow"></div>
+        <div class="hero-glow2"></div>
+        <div class="aperture-ring" aria-hidden="true">
+  <div class="ap-blade ap-b1"></div>
+  <div class="ap-blade ap-b2"></div>
+  <div class="ap-blade ap-b3"></div>
+  <div class="ap-blade ap-b4"></div>
+  <div class="ap-blade ap-b5"></div>
+  <div class="ap-blade ap-b6"></div>
+  <div class="ap-circle"></div>
+</div>
+ 
+
+        <!-- Cassette reel decoration -->
+        <div class="hero-reel">
+            <div class="reel-arm"></div>
+            <div class="reel-arm"></div>
+            <div class="reel-arm"></div>
+            <div class="reel-hole"></div>
+            <div class="reel-hole"></div>
+            <div class="reel-hole"></div>
+            <div class="reel-hub">
+                <div class="reel-hub-inner"><span>REEL</span></div>
+            </div>
+        </div>
+
+        <div class="hero-content">
+            <div class="hero-label">Film Crew Connect · College Edition</div>
+            <br><br>
+            <h1>
+                <span>LIGHTS.</span>
+                <span class="neon-line">CAMERA.</span>
+                <span class="outline-line">CONNECT.</span>
+            </h1>
+<br><br>
+
+<div class="clapper" aria-hidden="true">
+  <div class="clapper-top">
+    <div class="clapper-stripe"></div>
+    <div class="clapper-stripe"></div>
+    <div class="clapper-stripe"></div>
+    <div class="clapper-stripe"></div>
+    <div class="clapper-stripe"></div>
+  </div>
+  <div class="clapper-body">
+    <div class="clapper-row">
+      <span class="clapper-label">PRODUCTION</span>
+      <span class="clapper-val">TAKE ONE</span>
+    </div>
+    <div class="clapper-row">
+      <span class="clapper-label">SCENE</span>
+      <span class="clapper-val" id="clapScene">001</span>
+    </div>
+    <div class="clapper-row">
+      <span class="clapper-label">TAKE</span>
+      <span class="clapper-val" id="clapTake">01</span>
+    </div>
+    <div class="clapper-row">
+      <span class="clapper-label">ROLL</span>
+      <span class="clapper-val">A</span>
+    </div>
+  </div>
+</div>
+
+
+
+
+            <span class="hero-sub" id="heroSubText">
+                Where directors find their DPs, writers meet their directors,
+                and spot boys become legends. Build your film team — from first
+                script to final cut.
+            </span>
+            <div class="hero-actions">
+                <a href="#explore" class="btn-primary" id="heroPrimaryAction">Browse Scripts →</a>
+                <a href="#upload" class="btn-secondary" id="heroSecondaryAction">Upload Your Script</a>
+            </div>
+            <div class="hero-stats">
+                <div>
+                    <div class="hstat-num" id="statCreators">0</div>
+                    <div class="hstat-label">Creators</div>
+                </div>
+                <div>
+                    <div class="hstat-num" id="statScripts">0</div>
+                    <div class="hstat-label">Scripts</div>
+                </div>
+                <div>
+                    <div class="hstat-num" id="statColleges">0</div>
+                    <div class="hstat-label">Colleges</div>
+                </div>
+            </div>
+        </div>
+        <aside class="director-monitor reveal reveal-d2" aria-label="Live production monitor">
+            <div class="monitor-top">
+                <span class="monitor-dot"></span>
+                <span>Live Production Signal</span>
+                <strong id="monitorStatus">ONLINE</strong>
+            </div>
+            <div class="monitor-screen">
+                <div class="monitor-grid"></div>
+                <div class="monitor-frame">
+                    <div class="monitor-kicker">Now Rolling</div>
+                    <h2 id="monitorTitle">Loading script signal</h2>
+                    <p id="monitorMeta">Syncing live scripts from MySQL</p>
+                </div>
+                <div class="monitor-slate">
+                    <div>
+                        <span id="monitorScripts">0</span>
+                        <small>Scripts</small>
+                    </div>
+                    <div>
+                        <span id="monitorCrew">0</span>
+                        <small>Crew</small>
+                    </div>
+                    <div>
+                        <span id="monitorRoles">0</span>
+                        <small>Roles</small>
+                    </div>
+                </div>
+            </div>
+            <div class="monitor-actions">
+                <button type="button" data-monitor-action="scripts">View Scripts</button>
+                <button type="button" data-monitor-action="crew">Crew Finder</button>
+            </div>
+        </aside>
+    </section>
+    <!-- ── MARQUEE ── -->
+    <div class="marquee-wrap">
+        <div class="marquee-track">
+            <span>Director</span><span>Cinematographer</span><span>Spot Boy</span>
+            <span>Sound Designer</span><span>Script Writer</span><span>Editor</span>
+            <span>Producer</span><span>Art Director</span><span>VFX Artist</span>
+            <span>Costume Designer</span><span>Gaffer</span><span>Actor</span>
+            <!-- Duplicate for seamless loop -->
+            <span>Director</span><span>Cinematographer</span><span>Spot Boy</span>
+            <span>Sound Designer</span><span>Script Writer</span><span>Editor</span>
+            <span>Producer</span><span>Art Director</span><span>VFX Artist</span>
+            <span>Costume Designer</span><span>Gaffer</span><span>Actor</span>
+        </div>
+    </div>
+
+    <!-- ── FEATURES ── -->
+    <section>
+        <div class="sec-label reveal">Platform</div>
+        <div class="sec-title reveal reveal-d1">Built for<br>Film Crews</div>
+        <p class="sec-sub reveal reveal-d2">
+            Everything you need to find your team, share your vision, and make
+            your movie — designed for college filmmakers.
+        </p>
+        <div class="features-grid">
+            <div class="feat reveal" data-feature-card="scripts">
+                <div class="feat-num">01</div>
+                <div class="feat-icon">✍</div>
+                <div class="feat-title">Script Showcase</div>
+                <p class="feat-desc">
+                    Upload your screenplay with poster art, synopsis, and role
+                    requirements. Get discovered by directors and producers across campuses.
+                </p>
+                <div class="feat-live">
+                    <span id="featureScriptCount">0</span>
+                    <small>Live scripts on TAKE ONE</small>
+                </div>
+                <button class="feat-action" type="button" data-feature-action="scripts">Browse Scripts →</button>
+            </div>
+            <div class="feat reveal reveal-d1" data-feature-card="team">
+                <div class="feat-num">02</div>
+                <div class="feat-icon">🎬</div>
+                <div class="feat-title">Team Formation</div>
+                <p class="feat-desc">
+                    Find directors, DPs, spot boys, sound designers, editors — every
+                    role your production needs. Connect and create together.
+                </p>
+                <div class="feat-live">
+                    <span id="featureCreatorCount">0</span>
+                    <small>Registered crew members</small>
+                </div>
+                <button class="feat-action" type="button" data-feature-action="team">Find People →</button>
+            </div>
+            <div class="feat reveal reveal-d2" data-feature-card="spotlight">
+                <div class="feat-num">03</div>
+                <div class="feat-icon">🏆</div>
+                <div class="feat-title">Live Spotlight</div>
+                <p class="feat-desc">
+                    The newest uploaded script gets highlighted here so people can
+                    jump straight into productions that are moving right now.
+                </p>
+                <div class="feat-live">
+                    <span id="featureSpotlightTitle">No scripts yet</span>
+                    <small id="featureSpotlightMeta">Upload a script to activate this</small>
+                </div>
+                <button class="feat-action" type="button" data-feature-action="spotlight">View Spotlight →</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="production-deck reveal">
+        <div class="deck-copy">
+            <div class="sec-label">Production Flow</div>
+            <div class="sec-title">From Idea<br>To Set</div>
+            <p class="sec-sub">
+                A film platform should feel like production in motion. Move from script,
+                to crew, to collaboration without leaving the live dashboard.
+            </p>
+        </div>
+        <div class="deck-stages" id="productionStages">
+            <button class="stage-card active" type="button" data-stage="script">
+                <span>01</span>
+                <strong>Script Locked</strong>
+                <em>Live stories from MySQL</em>
+            </button>
+            <button class="stage-card" type="button" data-stage="crew">
+                <span>02</span>
+                <strong>Crew Call</strong>
+                <em>Available people by role</em>
+            </button>
+            <button class="stage-card" type="button" data-stage="request">
+                <span>03</span>
+                <strong>Request Sent</strong>
+                <em>Collaboration saved and mailed</em>
+            </button>
+        </div>
+        <div class="deck-preview" id="deckPreview">
+            <div class="deck-preview-label">Active Stage</div>
+            <h3 id="deckPreviewTitle">Script Showcase</h3>
+            <p id="deckPreviewText">Browse live scripts, search by genre, and open script previews before requesting to join.</p>
+        </div>
+    </section>
+
+    <!--crew roles-->
+    <section id="crew" style="padding-top: 0;" hidden>
+        <div class="sec-label reveal">Roles</div>
+        <div class="sec-title reveal reveal-d1">Find Your<br>People</div>
+        <p class="sec-sub reveal reveal-d2">Every great film is built by a team. What's your role?</p>
+        <div class="roles-grid reveal reveal-d3">
+            <div class="role-card" data-role-query="Director" data-role-label="Directors">
+                <div class="role-icon">🎬</div>
+                <div class="role-name">Director</div>
+                <div class="role-count"><strong id="countDirector">0</strong> Available</div>
+            </div>
+            <div class="role-card" data-role-query="Cinematographer" data-role-label="Camera Crew">
+                <div class="role-icon">📷</div>
+                <div class="role-name">DP / Camera</div>
+                <div class="role-count"><strong id="countCamera">0</strong> Available</div>
+            </div>
+            <div class="role-card" data-role-query="Writer" data-role-label="Writers">
+                <div class="role-icon">✍</div>
+                <div class="role-name">Writer</div>
+                <div class="role-count"><strong id="countWriter">0</strong> Available</div>
+            </div>
+            <div class="role-card" data-role-query="Sound" data-role-label="Sound Crew">
+                <div class="role-icon">🎙</div>
+                <div class="role-name">Sound</div>
+                <div class="role-count"><strong id="countSound">0</strong> Available</div>
+            </div>
+            <div class="role-card" data-role-query="Editor" data-role-label="Editors">
+                <div class="role-icon">✂</div>
+                <div class="role-name">Editor</div>
+                <div class="role-count"><strong id="countEditor">0</strong> Available</div>
+            </div>
+            <div class="role-card" data-role-query="Gaffer" data-role-label="Lighting Crew">
+                <div class="role-icon">💡</div>
+                <div class="role-name">Gaffer</div>
+                <div class="role-count"><strong id="countGaffer">0</strong> Available</div>
+            </div>
+            <div class="role-card" data-role-query="Actor" data-role-label="Actors">
+                <div class="role-icon">🎭</div>
+                <div class="role-name">Actor</div>
+                <div class="role-count"><strong id="countActor">0</strong> Available</div>
+            </div>
+            <div class="role-card" data-role-query="Spot" data-role-label="Spot Crew">
+                <div class="role-icon">⚙</div>
+                <div class="role-name">Spot Boy</div>
+                <div class="role-count"><strong id="countSpotBoy">0</strong> Available</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── EXPLORE ── -->
+    <section id="explore" style="padding-top: 0;">
+        <div class="sec-label reveal">Browse</div>
+        <div class="sec-title reveal reveal-d1">Trending Scripts</div>
+        <p class="sec-sub reveal reveal-d2">Discover stories waiting to be brought to life.</p>
+        <div class="search-bar-wrapper reveal reveal-d2">
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="liveSearchInput" placeholder="Search scripts by title or genre" autocomplete="off">
+            </div>
+            <div id="searchResults"></div>
+        </div>
+        <div class="live-script-status reveal reveal-d2" id="liveScriptStatus">Loading live scripts...</div>
+
+        <div class="tabs reveal reveal-d3">
+            <button class="tab-btn active" onclick="filterCards('all',      this)">All</button>
+            <button class="tab-btn" onclick="filterCards('horror',   this)">Horror</button>
+            <button class="tab-btn" onclick="filterCards('romance',  this)">Romance</button>
+            <button class="tab-btn" onclick="filterCards('action',   this)">Action</button>
+            <button class="tab-btn" onclick="filterCards('comedy',   this)">Comedy</button>
+            <button class="tab-btn" onclick="filterCards('thriller', this)">Thriller</button>
+        </div>
+
+        <div class="scroll-container reveal reveal-d3" id="cardRow">
+            <div class="live-empty-card">Loading live scripts from MySQL...</div>
+        </div>
+    </section>
+
+    <!-- ── UPLOAD ── -->
+    <section id="upload" style="padding-top: 0;">
+        <div class="sec-label reveal" id="uploadSectionLabel">Submit</div>
+        <div class="sec-title reveal reveal-d1" id="uploadSectionTitle">Share Your Vision</div>
+        <p class="sec-sub reveal reveal-d2" id="uploadSectionSubtitle">
+            Every great film starts with a single page. Let yours be discovered.
+        </p>
+
+        <div class="upload-zone reveal reveal-d3" id="creatorUploadZone">
+            <div class="upload-panel">
+                <div class="data-num">01</div>
+                <label for="scriptTitle">Script Title</label>
+                <input type="text" id="scriptTitle" placeholder="Enter your script's title…">
+            </div>
+
+            <div class="upload-panel">
+                <div class="data-num">02</div>
+                <label for="scriptTheme">Genre</label>
+                <select id="scriptTheme">
+                    <option value="horror">Horror</option>
+                    <option value="romance">Romance</option>
+                    <option value="action">Action</option>
+                    <option value="comedy">Comedy</option>
+                    <option value="drama">Drama</option>
+                    <option value="thriller">Thriller</option>
+                    <option value="sci-fi">Sci-Fi</option>
+                </select>
+            </div>
+
+            <div class="upload-panel upload-full">
+                <div class="data-num">03</div>
+                <label for="scriptDesc">Synopsis</label>
+                <textarea id="scriptDesc"
+                    placeholder="Describe your script — the story, tone, characters, roles you need…"></textarea>
+            </div>
+
+            <div class="upload-panel">
+                <div class="data-num">04</div>
+                <label for="posterInput">Poster / Cover Image</label>
+                <input type="file" id="posterInput" accept="image/*">
+            </div>
+
+            <div class="upload-panel">
+                <div class="data-num">05</div>
+                <label for="authorName">Your Name / Alias</label>
+                <input type="text" id="authorName" placeholder="Director · Writer · etc.">
+            </div>
+
+            <div class="upload-actions">
+                <p id="liveCommunityText">Reviewed within 24 hrs. Join 0 creators across 0 colleges.</p>
+                <button class="btn-upload" id="uploadActionButton" onclick="uploadScript()">Submit Script →</button>
+            </div>
+        </div>
+
+        <div class="crew-mode-panel reveal reveal-d3" id="crewModePanel" hidden>
+            <div class="crew-mode-card">
+                <div class="data-num">01</div>
+                <div class="crew-mode-kicker">Crew Mode</div>
+                <h3 id="crewModeHeading">Join The Right Set</h3>
+                <p id="crewModeDescription">
+                    Browse scripts that need camera, lights, sound, actors, and post crew. Your job here is to get discovered and join strong projects.
+                </p>
+            </div>
+            <div class="crew-mode-card">
+                <div class="data-num">02</div>
+                <div class="crew-mode-kicker">What You Can Do</div>
+                <ul class="crew-mode-list" id="crewModeList">
+                    <li>Browse open scripts and production needs</li>
+                    <li>Show your role, city, and skills on your profile</li>
+                    <li>Use your profile as your crew card</li>
+                </ul>
+            </div>
+            <div class="crew-mode-actions">
+                <a href="#explore" class="btn-primary" id="crewBrowseAction">Browse Open Scripts →</a>
+                <a href="/profile" class="btn-secondary" id="crewProfileAction">Build Your Crew Profile</a>
+            </div>
+        </div>
+
+        <div class="role-toolkit reveal reveal-d3" id="roleToolkit" hidden>
+            <div class="role-toolkit-head">
+                <div>
+                    <div class="role-tool-kicker" id="roleToolkitKicker">Role Interface</div>
+                    <h3 id="roleToolkitTitle">Your Film Desk</h3>
+                </div>
+                <span id="roleToolkitSignal">LIVE</span>
+            </div>
+            <div class="role-tool-grid" id="roleToolGrid"></div>
+            <div class="director-desk-panel" id="directorDeskPanel" hidden>
+                <div class="director-desk-head">
+                    <div>
+                        <div class="role-tool-kicker">Director Control Room</div>
+                        <h4>Build A Production Call</h4>
+                    </div>
+                    <div class="director-desk-state" id="directorDeskState">Draft</div>
+                </div>
+                <div class="director-desk-grid">
+                    <div class="director-control-card">
+                        <label for="directorSceneMood">Scene Mood</label>
+                        <select id="directorSceneMood">
+                            <option value="Gritty realistic">Gritty realistic</option>
+                            <option value="Dreamy romance">Dreamy romance</option>
+                            <option value="Fast action">Fast action</option>
+                            <option value="Quiet drama">Quiet drama</option>
+                            <option value="Dark thriller">Dark thriller</option>
+                        </select>
+                        <label for="directorLocation">Location Idea</label>
+                        <input type="text" id="directorLocation" placeholder="Rooftop, hostel corridor, cafe...">
+                        <label for="directorShootDate">Shoot Window</label>
+                        <input type="date" id="directorShootDate">
+                    </div>
+                    <div class="director-control-card">
+                        <div class="director-mini-title">Crew Checklist</div>
+                        <div class="director-chip-grid" id="directorCrewChips">
+                            <button type="button" class="director-chip active" data-director-role="DP">DP</button>
+                            <button type="button" class="director-chip active" data-director-role="Gaffer">Gaffer</button>
+                            <button type="button" class="director-chip" data-director-role="Sound">Sound</button>
+                            <button type="button" class="director-chip" data-director-role="Actors">Actors</button>
+                            <button type="button" class="director-chip" data-director-role="Editor">Editor</button>
+                            <button type="button" class="director-chip" data-director-role="Art">Art</button>
+                        </div>
+                        <div class="director-readiness">
+                            <div>
+                                <span>Call Readiness</span>
+                                <strong id="directorReadinessValue">40%</strong>
+                            </div>
+                            <div class="director-meter"><i id="directorReadinessBar"></i></div>
+                        </div>
+                    </div>
+                    <div class="director-output-card">
+                        <div class="director-mini-title">Live Pitch Preview</div>
+                        <p id="directorDeskPreview">Add a title, mood, location, and crew needs to generate a clean director call.</p>
+                        <div class="director-desk-actions">
+                            <button type="button" id="directorBuildCallBtn">Use In Upload Form</button>
+                            <button type="button" id="directorCrewFinderBtn">Find Crew</button>
+                            <button type="button" id="directorInboxBtn">Request Inbox</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── CTA STRIP ── -->
+    <div class="cta-strip">
+        <h2>Your story deserves to be <em>seen</em>. Start today.</h2>
+        <a href="/profile" class="btn-primary" style="white-space: nowrap;">Create Profile →</a>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <footer>
+        <div class="footer-top">
+            <div class="footer-brand">
+                <a href="#" class="logo">TAKE <span>ONE</span></a>
+                <p>
+                    Where scripts become films. The freelancing platform for college
+                    filmmakers — directors, camera crews, actors, and every role in between.
+                </p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-col">
+                    <h4>Navigate</h4>
+                    <a href="#explore">Explore</a>
+                    <a href="/crew.htm">Crew Roles</a>
+                    <a href="#upload">Upload</a>
+                    <a href="/profile">Profile</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <a href="/legal#privacy">Privacy</a>
+                    <a href="/legal#terms">Terms</a>
+                    <a href="/legal#community">Community Rules</a>
+                    <a href="/moderation">Moderation</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>2026 Take One — Create with Vision</p>
+            <p>Lights · Camera · Connect</p>
+        </div>
+    </footer>
+<div id="loginModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">LOGIN</h2>
+      <button class="modal-close" id="closeLoginBtn">&times;</button>
+    </div>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com" required>
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Your password" required>
+      </div>
+      <button type="submit" class="form-submit">Sign In →</button>
+    </form>
+    <div class="form-footer">
+      Don't have an account? <a id="registerLink">Create one</a>
+    </div>
+  </div>
+</div>
+    <!-- ── STATUS BAR ── -->
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-dot"></div>System Online
+        </div>
+        <div class="status-item">
+            <div class="status-dot cyan"></div><span id="statusCreators">0 Creators Active</span>
+        </div>
+        <div class="status-item">TAKE ONE v2.0</div>
+        <div class="status-item" id="statusTime"></div>
+    </div>
+
+
+    <div id="registerModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">CREATE ACCOUNT</h2>
+      <button class="modal-close" id="closeRegisterBtn">&times;</button>
+    </div>
+    <form id="registerForm">
+      <div class="form-group">
+        <label for="registerName">Full Name</label>
+        <input type="text" id="registerName" placeholder="Arjun Mehta" required>
+      </div>
+      <div class="form-group">
+        <label for="registerEmail">Email Address</label>
+        <input type="email" id="registerEmail" placeholder="your@email.com" required>
+      </div>
+      <div class="form-group">
+        <label for="registerPassword">Password</label>
+        <input type="password" id="registerPassword" placeholder="At least 6 characters" required>
+      </div>
+      <div class="form-group">
+        <label for="registerConfirmPassword">Confirm Password</label>
+        <input type="password" id="registerConfirmPassword" placeholder="Re-enter password" required>
+      </div>
+      <div class="form-group">
+        <label for="registerRole">Your Role</label>
+        <select id="registerRole">
+          <option value="Director">Director</option>
+          <option value="Cinematographer">Cinematographer / DP</option>
+          <option value="Writer">Writer</option>
+          <option value="Editor">Editor</option>
+          <option value="Sound Designer">Sound Designer</option>
+          <option value="Actor">Actor</option>
+          <option value="Producer">Producer</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="registerCollege">College / University</label>
+        <input type="text" id="registerCollege" placeholder="e.g., FTII Pune">
+      </div>
+      <div class="form-group">
+        <label for="registerCity">City</label>
+        <input type="text" id="registerCity" placeholder="e.g., Mumbai">
+      </div>
+      <button type="submit" class="form-submit">Create Account →</button>
+    </form>
+    <div class="form-footer">
+      Already have an account? <a id="backToLoginLink">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<div id="peopleModal" class="modal">
+  <div class="modal-content people-modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title" id="peopleModalTitle">Registered Crew</h2>
+      <button class="modal-close" id="closePeopleModalBtn">&times;</button>
+    </div>
+    <div class="people-modal-subtitle" id="peopleModalSubtitle">Browse and contact available crew.</div>
+    <div id="crewRoleBrowser" class="crew-role-browser"></div>
+    <div id="peopleResults" class="people-results"></div>
+  </div>
+</div>
+
+<div id="scriptModal" class="modal">
+  <div class="modal-content script-modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title" id="scriptModalTitle">Script Preview</h2>
+      <button class="modal-close" id="closeScriptModalBtn">&times;</button>
+    </div>
+    <div class="script-modal-body">
+      <div class="script-poster-preview" id="scriptModalPoster">
+        <span id="scriptModalGenre">General</span>
+      </div>
+      <div class="script-modal-info">
+        <div class="script-modal-kicker" id="scriptModalAuthor">TAKE ONE creator</div>
+        <p id="scriptModalSynopsis">Open a live script to see the story, crew needs, and project signal.</p>
+        <div class="script-modal-tags">
+          <span id="scriptModalRoles">Open for collaboration</span>
+          <span id="scriptModalStatus">Live</span>
+        </div>
+        <button class="btn-upload" id="scriptModalRequestBtn" type="button">Request To Join →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <script src="/api.js"></script>
+    <script src="/project.js"></script>
+   
+</body>
+
+</html>

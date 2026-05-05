@@ -1,0 +1,143 @@
+:root {
+  --void: #06080A;
+  --machine: #0E1218;
+  --panel: #141A22;
+  --neon: #FF4D1A;
+  --cyan: #00D4FF;
+  --cream: #E8DFC8;
+  --silver: #6B7A8D;
+  --border: rgba(255, 77, 26, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--void);
+  color: var(--cream);
+  font-family: 'Space Mono', monospace;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 6vw;
+  border-bottom: 1px solid var(--border);
+  background: rgba(6, 8, 10, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.logo {
+  color: var(--cream);
+  text-decoration: none;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.18em;
+}
+
+.logo span,
+nav a:hover,
+.legal-kicker {
+  color: var(--neon);
+}
+
+nav {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+nav a {
+  color: var(--silver);
+  text-decoration: none;
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+.legal-shell {
+  width: min(1120px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: clamp(44px, 8vw, 90px) 0;
+}
+
+.legal-hero {
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 77, 26, 0.14), transparent 28%),
+    var(--machine);
+  padding: clamp(30px, 6vw, 62px);
+  margin-bottom: 28px;
+}
+
+.legal-kicker {
+  font-size: 9px;
+  letter-spacing: 0.48em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+
+h1,
+h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.05em;
+  line-height: 0.95;
+}
+
+h1 {
+  font-size: clamp(54px, 10vw, 110px);
+  margin-bottom: 20px;
+}
+
+h2 {
+  color: var(--cream);
+  font-size: 34px;
+  margin-bottom: 14px;
+}
+
+p,
+li {
+  color: var(--silver);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.legal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+
+.legal-card {
+  border: 1px solid var(--border);
+  background: rgba(14, 18, 24, 0.94);
+  padding: 28px;
+}
+
+.legal-card ul {
+  display: grid;
+  gap: 10px;
+  padding-left: 18px;
+}
+
+.legal-note {
+  margin-top: 28px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(0, 212, 255, 0.05);
+  padding: 24px;
+}
+
+@media (max-width: 900px) {
+  .legal-grid {
+    grid-template-columns: 1fr;
+  }
+}
