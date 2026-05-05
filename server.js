@@ -100,10 +100,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-const server = app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, () => {
   console.log('');
   console.log('TAKE ONE API running');
-  console.log(`http://${HOST}:${PORT}`);
+  console.log(`Port: ${PORT}`);
   console.log('');
   console.log('Available now:');
   console.log('GET /');

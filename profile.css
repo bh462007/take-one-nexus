@@ -75,10 +75,11 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 0 5%;
-    height: 60px;
-    background: rgba(6, 8, 10, 0.95);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(12px);
+    height: 70px;
+    background: rgba(6, 8, 10, 0.75);
+    border-bottom: 1px solid rgba(255, 77, 26, 0.15);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     position: sticky;
     top: 0;
     z-index: 100;

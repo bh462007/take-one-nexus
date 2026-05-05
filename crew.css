@@ -48,15 +48,16 @@ header {
   position: sticky;
   top: 0;
   z-index: 10;
-  min-height: 64px;
+  min-height: 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   padding: 0 5%;
-  background: rgba(6, 8, 10, 0.92);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(14px);
+  background: rgba(6, 8, 10, 0.75);
+  border-bottom: 1px solid rgba(255, 77, 26, 0.15);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .logo {
