@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --void:    #06080A;
+  --machine: #0E1218;
+  --panel:   #13181F;
+  --rail:    #1C2330;
+  --neon:    #FF4D1A;
+  --neon2:   #FF7A1A;
+  --amber:   #FFA620;
+  --cyan:    #00D4FF;
+  --cream:   #E8DFC8;
+  --silver:  #6B7A8D;
+  --dim:     #3A4556;
+  --border:  rgba(255, 77, 26, 0.18);
+  --border2: rgba(0, 212, 255, 0.12);
+  --glow:    rgba(255, 77, 26, 0.25);
+}
+
+/* Base styles to match the original cinematic UI defaults */
+body {
+  @apply bg-void text-cream;
+  font-family: 'Space Mono', monospace;
+  overflow-x: hidden;
+}

@@ -50,8 +50,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'assets', 'uploads')));
-app.use(express.static(__dirname));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'uploads')));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/home', homeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/scripts', scriptRoutes);
@@ -111,27 +111,27 @@ app.get('/api/health', async (req, res) => {
 
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'project.htm'));
+  res.sendFile(path.join(__dirname, 'public', 'project.htm'));
 });
 
 app.get('/profile', (req, res) => {
-  res.sendFile(path.join(__dirname, 'profile.htm'));
+  res.sendFile(path.join(__dirname, 'public', 'profile.htm'));
 });
 
 app.get('/project', (req, res) => {
-  res.sendFile(path.join(__dirname, 'project.htm'));
+  res.sendFile(path.join(__dirname, 'public', 'project.htm'));
 });
 
 app.get('/crew', (req, res) => {
-  res.sendFile(path.join(__dirname, 'crew.htm'));
+  res.sendFile(path.join(__dirname, 'public', 'crew.htm'));
 });
 
 app.get('/legal', (req, res) => {
-  res.sendFile(path.join(__dirname, 'legal.htm'));
+  res.sendFile(path.join(__dirname, 'public', 'legal.htm'));
 });
 
 app.get('/moderation', (req, res) => {
-  res.sendFile(path.join(__dirname, 'moderation.htm'));
+  res.sendFile(path.join(__dirname, 'public', 'moderation.htm'));
 });
 
 
