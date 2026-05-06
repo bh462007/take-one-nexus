@@ -14,7 +14,6 @@ const moderationRoutes = require('./routes/moderation');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '127.0.0.1';
 
 const allowedOrigins = [
   'http://localhost:3000',
@@ -51,7 +50,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use(express.static(__dirname));
 app.use('/api/home', homeRoutes);
 app.use('/api/users', userRoutes);
@@ -90,7 +89,6 @@ app.get('/api/health', async (req, res) => {
     console.error('Health check DB error:', err.message);
   }
 
-  const isProd = process.env.NODE_ENV === 'production';
 
   res.json({
     success: true,
@@ -136,7 +134,6 @@ app.get('/moderation', (req, res) => {
   res.sendFile(path.join(__dirname, 'moderation.htm'));
 });
 
-// Route files will keep growing as backend features are added.
 
 app.use((req, res) => {
   res.status(404).json({
