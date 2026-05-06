@@ -39,8 +39,10 @@ Experience the cinematic interface live:
 - 🎭 **Role-Based Workspaces**: Tailored interfaces for Directors, Writers, Actors, and Technical Crew.
 - 📜 **Script Showcase**: Live script cards with genre filtering and "Director's Vision" previews.
 - 🤝 **Collaboration Engine**: Seamless request-to-join flow with real-time status tracking.
-- **Admin Control Room**: Secure dashboard for user management, real-time stats, and manual creator onboarding.
-- **Role Skins**: The entire UI transforms based on your film role (Director, Writer, Camera, Sound, etc.).ant Time-to-Interactive (TTI).
+- 🛠️ **Admin Control Room**: Secure dashboard for user management, real-time stats, and manual creator onboarding.
+- 🌑 **Cinematic UI**: A premium dark-mode aesthetic designed for visual storytellers.
+- ⚡ **Lightweight Performance**: Hybrid Express/Next.js architecture for instant interactions.
+- 🔒 **Secure Auth**: JWT-based session sharing between legacy and modern app layers.
 - 📱 **Fully Responsive**: Optimized for scouting and networking on any device.
 - 🔒 **Secure Auth**: JWT-based authentication with robust password hashing.
 - 🔔 **Notification System**: Built-in email and platform notifications for collaboration requests.
