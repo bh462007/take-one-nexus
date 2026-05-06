@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int                    @id @default(autoincrement()) @db.UnsignedInt
+  name                  String                 @db.VarChar(120)
+  email                 String                 @unique(map: "uq_users_email") @db.VarChar(150)
+  password              String                 @db.VarChar(255)
+  role                  String?                @db.VarChar(100)
+  college               String?                @db.VarChar(150)
+  city                  String?                @db.VarChar(120)
+  bio                   String?                @db.Text
+  skills                String?                @db.Text
+  portfolio             String?                @db.VarChar(255)
+  avatar_url            String?                @db.VarChar(255)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime               @default(now()) @updatedAt @db.Timestamp(0)
+  scripts               Script[]
+  collaboration_owned   CollaborationRequest[] @relation("OwnedRequests")
+  collaboration_reqs    CollaborationRequest[] @relation("RequesterRequests")
+
+  @@map("users")
+}
+
+model Script {
+  id                    Int                    @id @default(autoincrement()) @db.UnsignedInt
+  user_id               Int?                   @db.UnsignedInt
+  title                 String                 @db.VarChar(180)
+  genre                 String?                @db.VarChar(80)
+  synopsis              String?                @db.Text
+  poster_url            String?                @db.VarChar(255)
+  roles_needed          String?                @db.VarChar(255)
+  status                String                 @default("Open for collaboration") @db.VarChar(80)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime               @default(now()) @updatedAt @db.Timestamp(0)
+  user                  User?                  @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  collaboration_reqs    CollaborationRequest[]
+
+  @@index([user_id], map: "idx_scripts_user_id")
+  @@index([genre], map: "idx_scripts_genre")
+  @@map("scripts")
+}
+
+model CollaborationRequest {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  script_id    Int      @db.UnsignedInt
+  requester_id Int      @db.UnsignedInt
+  owner_id     Int      @db.UnsignedInt
+  message      String?  @db.Text
+  status       String   @default("pending") @db.VarChar(40)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(0)
+  script       Script   @relation(fields: [script_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  requester    User     @relation("RequesterRequests", fields: [requester_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  owner        User     @relation("OwnedRequests", fields: [owner_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([script_id, requester_id], map: "uq_script_requester")
+  @@index([owner_id], map: "idx_requests_owner_id")
+  @@index([requester_id], map: "idx_requests_requester_id")
+  @@map("collaboration_requests")
+}

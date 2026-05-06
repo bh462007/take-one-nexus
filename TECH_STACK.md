@@ -10,11 +10,12 @@ TAKE ONE is a professional collaboration platform for film crews and scriptwrite
 ## Tech Stack
 
 ### Core Technologies
-- **Frontend**: Vanilla HTML5, CSS3, JavaScript (ES6+).
-- **Backend**: [Node.js](https://nodejs.org/) with [Express.js](https://expressjs.com/).
-- **Database**: [MySQL](https://www.mysql.com/) (using `mysql2/promise` for async pooling).
-- **Authentication**: JWT (JSON Web Tokens) with `bcryptjs` for secure password hashing.
-- **Deployment**: [Vercel](https://vercel.com/) (configured via `vercel.json` with `@vercel/node`).
+- **Frontend**: Vanilla HTML5, CSS3, JavaScript (ES6+) & **Next.js (App Router)** for Admin.
+- **Backend**: [Node.js](https://nodejs.org/) with [Express.js](https://expressjs.com/) & **Next.js Server Actions**.
+- **ORM**: [Prisma](https://www.prisma.io/) (for new Admin features).
+- **Database**: [MySQL / TiDB](https://www.mysql.com/) (using `mysql2` and `@prisma/client`).
+- **Authentication**: JWT (JSON Web Tokens) shared between Express and Next.js.
+- **Deployment**: [Vercel](https://vercel.com/) (Hybrid Node/Next.js).
 
 ### Key Third-Party Packages
 - `jsonwebtoken`: Secure user sessions.
@@ -40,15 +41,17 @@ graph TD
     
     subgraph Backend
         Express -->|Routes| Controllers[Route Handlers]
+        NextJS[Next.js Server Actions] -->|ORM| Prisma[Prisma Client]
         Controllers -->|Auth| JWT[JWT Middleware]
-        Controllers -->|Queries| MySQL[(MySQL DB)]
+        Prisma -->|Queries| MySQL[(MySQL DB)]
+        Controllers -->|Queries| MySQL
         Controllers -->|Email| Nodemailer[SMTP]
-        Controllers -->|Files| Multer[Uploads]
     end
     
     subgraph Frontend Logic
         Static -->|Calls| ClientAPI[api.js wrapper]
         ClientAPI -->|Fetch| Express
+        AdminUI[Next.js Admin UI] -->|Actions| NextJS
     end
 ```
 

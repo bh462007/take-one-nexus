@@ -4,8 +4,11 @@
   "description": "Backend API for TAKE ONE, a film crew and script collaboration platform.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon -L --watch server.js --watch routes --watch config --ext js,json server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "legacy:dev": "nodemon -L --watch server.js --watch routes --watch config --ext js,json server.js",
+    "legacy:start": "node server.js"
   },
   "keywords": [
     "take-one",
@@ -17,15 +20,30 @@
   "author": "TAKE ONE",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^1.14.0",
     "mysql2": "^3.11.5",
-    "nodemailer": "^6.10.1"
+    "next": "^16.2.4",
+    "nodemailer": "^6.10.1",
+    "prisma": "^5.22.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "nodemon": "^3.1.9",
+    "typescript": "^6.0.3"
   }
 }

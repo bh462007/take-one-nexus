@@ -39,8 +39,8 @@ Experience the cinematic interface live:
 - 🎭 **Role-Based Workspaces**: Tailored interfaces for Directors, Writers, Actors, and Technical Crew.
 - 📜 **Script Showcase**: Live script cards with genre filtering and "Director's Vision" previews.
 - 🤝 **Collaboration Engine**: Seamless request-to-join flow with real-time status tracking.
-- 🌑 **Cinematic UI**: A premium dark-mode aesthetic designed for visual storytellers.
-- ⚡ **Lightweight Performance**: Zero-framework frontend for instant Time-to-Interactive (TTI).
+- **Admin Control Room**: Secure dashboard for user management, real-time stats, and manual creator onboarding.
+- **Role Skins**: The entire UI transforms based on your film role (Director, Writer, Camera, Sound, etc.).ant Time-to-Interactive (TTI).
 - 📱 **Fully Responsive**: Optimized for scouting and networking on any device.
 - 🔒 **Secure Auth**: JWT-based authentication with robust password hashing.
 - 🔔 **Notification System**: Built-in email and platform notifications for collaboration requests.
@@ -106,16 +106,27 @@ Follow these steps to set up the Nexus locally:
    cp .env.example .env
    ```
 
-4. **Initialize Database**
-   Ensure your MySQL server is running, then execute the schema:
-   ```bash
-   node database/init.js
-   ```
-
-5. **Start Development Server**
+46. **Set up the Database**: 
+   - Initialize your MySQL/TiDB database.
+   - Set up the environment variables:
+     ```env
+     PORT=3000
+     DB_HOST=your_host
+     DB_USER=your_user
+     DB_PASSWORD=your_password
+     DB_NAME=take_one
+     JWT_SECRET=your_secret
+     DATABASE_URL="mysql://USER:PASS@HOST:PORT/DB" # For Prisma Admin Panel
+     ```
+7. **Run the Application**:
    ```bash
    npm run dev
    ```
+   *This starts both the Express backend and the Next.js Admin interface.*
+
+## Admin Access
+Access the control room at `/admin`. Authorization is restricted to specific emails (defined in `src/middleware.ts`) and users with the `admin` role.
+
 
 ---
 

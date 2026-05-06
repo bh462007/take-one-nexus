@@ -1098,6 +1098,9 @@ function applyRoleBasedUI(user) {
   if (!creatorUploadZone || !crewModePanel) return;
 
   if (!user) {
+    const adminLink = document.getElementById('adminPanelLink');
+    if (adminLink) adminLink.remove();
+
     applyRoleSkin('');
     renderRoleToolkit(null, workspace);
     creatorUploadZone.hidden = true;
@@ -1124,6 +1127,25 @@ function applyRoleBasedUI(user) {
   const creatorMode = isCreatorRole(user.role);
   applyRoleSkin(user.role);
   renderRoleToolkit(user, workspace);
+
+  // Admin Panel Link logic
+  const nav = document.querySelector('header nav');
+  let adminLink = document.getElementById('adminPanelLink');
+
+  if (isAdmin(user)) {
+    if (!adminLink && nav) {
+      adminLink = document.createElement('a');
+      adminLink.id = 'adminPanelLink';
+      adminLink.href = '/admin';
+      adminLink.textContent = 'Admin Panel';
+      adminLink.style.color = 'var(--neon)';
+      adminLink.style.fontWeight = 'bold';
+      // Insert before the logout/login button
+      nav.insertBefore(adminLink, document.getElementById('loginBtn') || nav.lastElementChild);
+    }
+  } else if (adminLink) {
+    adminLink.remove();
+  }
 
   if (creatorMode) {
     creatorUploadZone.hidden = false;

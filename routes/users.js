@@ -13,7 +13,7 @@ function createToken(user) {
   }
 
   return jwt.sign(
-    { id: user.id, email: user.email },
+    { id: user.id, email: user.email, role: user.role || '' },
     process.env.JWT_SECRET,
     { expiresIn: '10d' }
   );
@@ -117,6 +117,13 @@ router.post('/register', async (req, res) => {
       city: city || ''
     };
 
+    const token = createToken(user);
+    res.cookie('token', token, { 
+      httpOnly: false, // Set to false so client can read if needed, or true for better security
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
+    });
+
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
@@ -129,7 +136,7 @@ router.post('/register', async (req, res) => {
         college: user.college,
         city: user.city
       },
-      token: createToken(user)
+      token: token
     });
   } catch (error) {
     console.error('--- Registration Failed ---');
@@ -214,6 +221,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    const token = createToken(user);
+    res.cookie('token', token, { 
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 10 * 24 * 60 * 60 * 1000
+    });
+
     res.json({
       success: true,
       user: {
@@ -224,7 +238,7 @@ router.post('/login', async (req, res) => {
         college: user.college || '',
         city: user.city || ''
       },
-      token: createToken(user)
+      token: token
     });
   } catch (error) {
     console.error('--- Login Failed ---');
