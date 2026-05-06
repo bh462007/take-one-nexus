@@ -2209,15 +2209,17 @@ footer {
 .modal {
   display: none;
   position: fixed;
-  z-index: 900;
+  z-index: 1000; /* Higher z-index to ensure it's on top */
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+  overflow-y: auto; /* Enable scrolling if content is too tall */
 }
 
 .modal.show {
@@ -2229,15 +2231,18 @@ footer {
   border: 1px solid var(--border);
   padding: 40px;
   width: 100%;
-  max-width: 400px;
+  max-width: 480px; /* Slightly wider for registration */
   position: relative;
-  animation: modalSlideIn 0.4s ease;
+  animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: translateY(-40px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -2249,25 +2254,28 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
 }
 
 .modal-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 28px;
-  letter-spacing: 0.1em;
+  font-size: 32px;
+  letter-spacing: 0.15em;
   color: var(--cream);
+  line-height: 1;
 }
 
 .modal-close {
   background: none;
   border: none;
   color: var(--silver);
-  font-size: 24px;
+  font-size: 28px;
   cursor: pointer;
-  transition: color 0.3s;
-  width: 30px;
-  height: 30px;
+  transition: all 0.3s;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2275,52 +2283,58 @@ footer {
 
 .modal-close:hover {
   color: var(--neon);
+  transform: rotate(90deg);
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .form-group label {
   display: block;
-  font-size: 9px;
-  letter-spacing: 0.3em;
+  font-size: 8px;
+  letter-spacing: 0.35em;
   text-transform: uppercase;
   color: var(--neon);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
   color: var(--cream);
   font-family: 'Space Mono', monospace;
   font-size: 13px;
-  padding: 10px 0;
-  transition: border-color 0.3s;
+  padding: 12px 14px;
+  transition: all 0.3s;
   outline: none;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-  border-bottom-color: var(--neon);
-  box-shadow: 0 1px 0 0 var(--neon);
+  border-color: var(--neon);
+  background: rgba(255, 77, 26, 0.05);
+  box-shadow: 0 0 15px rgba(255, 77, 26, 0.1);
 }
 
 .form-group input::placeholder {
   color: var(--silver);
-  opacity: 0.5;
+  opacity: 0.3;
 }
 
 .form-group select {
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FF4D1A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
 }
 
 .form-group select option {
-  background: var(--machine);
+  background: var(--void);
   color: var(--cream);
 }
 
@@ -2329,14 +2343,14 @@ footer {
   background: var(--neon);
   color: var(--void);
   border: none;
-  padding: 14px;
-  font-size: 11px;
+  padding: 16px;
+  font-size: 10px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
   box-shadow: 0 0 25px var(--glow);
   margin-top: 10px;
 }
@@ -2344,6 +2358,7 @@ footer {
 .form-submit:hover {
   background: var(--amber);
   box-shadow: 0 0 40px rgba(255, 166, 32, 0.4);
+  transform: translateY(-2px);
 }
 
 .form-submit:active {
@@ -2351,21 +2366,24 @@ footer {
 }
 
 .form-footer {
-  margin-top: 20px;
-  font-size: 12px;
+  margin-top: 28px;
+  font-size: 11px;
   color: var(--silver);
   text-align: center;
+  letter-spacing: 0.05em;
 }
 
 .form-footer a {
   color: var(--neon);
   text-decoration: none;
   cursor: pointer;
-  transition: color 0.3s;
+  transition: all 0.3s;
+  font-weight: bold;
+  margin-left: 5px;
 }
 
 .form-footer a:hover {
-  color: var(--amber);
+  color: var(--cyan);
   text-decoration: underline;
 }
 
@@ -2375,7 +2393,7 @@ footer {
 }
 
 #loginBtn:hover {
-  opacity: 0.8 !important;
+  filter: brightness(1.2);
 }
 
 @media (max-width: 600px) {
@@ -2397,9 +2415,18 @@ footer {
     text-align: left;
   }
 
+  .modal {
+    padding: 10px;
+  }
+
   .modal-content {
-    margin: 20px;
+    padding: 30px 20px;
+    margin: 10px;
     max-width: none;
+  }
+
+  .modal-title {
+    font-size: 26px;
   }
 }
 

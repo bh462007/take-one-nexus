@@ -37,10 +37,12 @@ if (process.env.ALLOWED_ORIGINS) {
 
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow same-origin requests (origin will be undefined) or allowed origins
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
 
+    console.warn(`CORS blocked origin: ${origin}`);
     return callback(new Error(`CORS blocked this origin: ${origin}`));
   },
   credentials: true
@@ -63,23 +65,29 @@ app.get('/api/health', async (req, res) => {
   let dbStatus = 'disconnected';
   try {
     const { pool } = require('./config/db');
-    await pool.query('SELECT 1');
-    dbStatus = 'connected';
+    // Using a fast query to check connection
+    const [rows] = await pool.query('SELECT 1 as health_check');
+    if (rows && rows[0].health_check === 1) {
+      dbStatus = 'connected';
+    }
   } catch (err) {
     dbStatus = `error: ${err.message}`;
+    console.error('Health check DB error:', err.message);
   }
 
   res.json({
     success: true,
     status: 'ok',
     message: 'TAKE ONE API is running',
+    version: '2.1.0',
     timestamp: new Date().toISOString(),
     env: {
+      node_env: process.env.NODE_ENV || 'development',
       jwt_secret_set: Boolean(process.env.JWT_SECRET),
       db_host_set: Boolean(process.env.DB_HOST),
       db_user_set: Boolean(process.env.DB_USER),
       db_name: process.env.DB_NAME || 'take_one (default)',
-      node_env: process.env.NODE_ENV || 'development'
+      origin: req.headers.origin || 'same-origin'
     },
     database: dbStatus
   });

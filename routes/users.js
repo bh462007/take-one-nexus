@@ -116,21 +116,36 @@ router.post('/register', async (req, res) => {
       token: createToken(user)
     });
   } catch (error) {
-    console.error('--- Register Error ---');
-    console.error('Message:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('--- Registration Failed ---');
+    console.error(`Error: ${error.message}`);
     
-    // Check for specific database errors if needed
-    if (error.code === 'ER_DUP_ENTRY') {
+    // JWT configuration error
+    if (error.message.includes('JWT_SECRET')) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: Authentication system is not ready.'
+      });
+    }
+
+    // Database duplicate entry
+    if (error.code === 'ER_DUP_ENTRY' || error.message.includes('Duplicate entry')) {
       return res.status(409).json({
         success: false,
-        message: 'Email already registered'
+        message: 'This email is already registered. Please try logging in.'
+      });
+    }
+
+    // Database connection issues
+    if (error.code === 'ECONNREFUSED' || error.message.includes('connect')) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is currently unavailable. Please try again later.'
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Could not create account'
+      message: 'An unexpected error occurred during registration. Please try again.'
     });
   }
 });
@@ -184,13 +199,26 @@ router.post('/login', async (req, res) => {
       token: createToken(user)
     });
   } catch (error) {
-    console.error('--- Login Error ---');
-    console.error('Message:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('--- Login Failed ---');
+    console.error(`Error: ${error.message}`);
     
+    if (error.message.includes('JWT_SECRET')) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: Authentication system is not ready.'
+      });
+    }
+
+    if (error.code === 'ECONNREFUSED' || error.message.includes('connect')) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is currently unavailable.'
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Could not log in'
+      message: 'An unexpected error occurred during login.'
     });
   }
 });

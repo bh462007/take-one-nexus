@@ -51,10 +51,15 @@ To ensure the production system works, you **MUST** add these variables in your 
 | `SMTP_USER` | Required | SMTP username. |
 | `SMTP_PASS` | Required | SMTP app password. |
 
-> [!CAUTION]
-> If `DB_HOST` is missing, the app will attempt to connect to `127.0.0.1`, which will fail in the Vercel serverless environment with an `ECONNREFUSED` error.
-
----
+### Troubleshooting Production Auth
+If you see "Could not create account" or "Database unavailable" in production:
+1. Check **Vercel Deployment Logs**: Look for `[DB] CRITICAL` or `JWT_SECRET is missing` errors.
+2. Check **Health Endpoint**: Visit `https://your-app.vercel.app/api/health`.
+   - Ensure `jwt_secret_set: true`.
+   - Ensure `db_host_set: true`.
+   - Ensure `database: connected`.
+3. Check **CORS**: The app automatically allows `.vercel.app` subdomains. If using a custom domain, add it to `ALLOWED_ORIGINS`.
 
 ### 3. Safe Mode
-The API routes are designed with "Safe Empty States". If the database is not yet initialized or becomes unreachable, read-only routes (like the homepage and search) will return empty data (200 OK) instead of crashing with 500 errors. This allows the frontend to load gracefully while you troubleshoot connection issues.
+The API routes are designed with "Safe Empty States". If the database is not yet initialized or becomes unreachable, read-only routes will return empty data (200 OK) instead of crashing. However, **Registration and Login will fail (503/500)** until the database and JWT_SECRET are correctly configured.
+

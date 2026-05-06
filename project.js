@@ -1015,55 +1015,59 @@ const scriptModal = document.getElementById('scriptModal');
 const closeScriptModalBtn = document.getElementById('closeScriptModalBtn');
 const scriptModalRequestBtn = document.getElementById('scriptModalRequestBtn');
 
+/* Centralized Modal Management */
+function openModal(modal) {
+  if (!modal) return;
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.remove('show');
+  
+  // Only re-enable scrolling if no other modals are open
+  const openModals = document.querySelectorAll('.modal.show');
+  if (openModals.length === 0) {
+    document.body.style.overflow = '';
+  }
+}
+
 loginBtn?.addEventListener('click', () => {
-  loginModal.style.display = 'flex';
+  if (API.auth.isLoggedIn()) {
+    API.auth.logout();
+  } else {
+    openModal(loginModal);
+  }
 });
 
 registerLink?.addEventListener('click', (e) => {
   e.preventDefault();
-  loginModal.style.display = 'none';
-  registerModal.style.display = 'flex';
+  closeModal(loginModal);
+  openModal(registerModal);
 });
 
 backToLoginLink?.addEventListener('click', (e) => {
   e.preventDefault();
-  registerModal.style.display = 'none';
-  loginModal.style.display = 'flex';
+  closeModal(registerModal);
+  openModal(loginModal);
 });
 
-closeLoginBtn?.addEventListener('click', () => {
-  loginModal.style.display = 'none';
-});
-
-closeRegisterBtn?.addEventListener('click', () => {
-  registerModal.style.display = 'none';
-});
-
-closePeopleModalBtn?.addEventListener('click', () => {
-  peopleModal.style.display = 'none';
-});
-
-closeScriptModalBtn?.addEventListener('click', () => {
-  scriptModal.style.display = 'none';
-});
+closeLoginBtn?.addEventListener('click', () => closeModal(loginModal));
+closeRegisterBtn?.addEventListener('click', () => closeModal(registerModal));
+closePeopleModalBtn?.addEventListener('click', () => closeModal(peopleModal));
+closeScriptModalBtn?.addEventListener('click', () => closeModal(scriptModal));
 
 function openAuthFromUrl() {
   const authMode = new URLSearchParams(window.location.search).get('auth');
-
-  if (authMode === 'login' && loginModal) {
-    loginModal.style.display = 'flex';
-  }
-
-  if (authMode === 'register' && registerModal) {
-    registerModal.style.display = 'flex';
-  }
+  if (authMode === 'login') openModal(loginModal);
+  if (authMode === 'register') openModal(registerModal);
 }
 
 window.addEventListener('click', (e) => {
-  if (e.target === loginModal) loginModal.style.display = 'none';
-  if (e.target === registerModal) registerModal.style.display = 'none';
-  if (e.target === peopleModal) peopleModal.style.display = 'none';
-  if (e.target === scriptModal) scriptModal.style.display = 'none';
+  if (e.target.classList.contains('modal')) {
+    closeModal(e.target);
+  }
 });
 
 const loginForm = document.getElementById('loginForm');
@@ -1079,7 +1083,7 @@ loginForm?.addEventListener('submit', async (e) => {
     if (response.success) {
       API.auth.saveToken(response.token, response.user);
       showToast(`Welcome back, ${response.user.name}! ✦`);
-      loginModal.style.display = 'none';
+      closeModal(loginModal);
       loginForm.reset();
       updateUIAfterLogin(response.user);
     }
@@ -1118,7 +1122,7 @@ registerForm?.addEventListener('submit', async (e) => {
     if (response.success) {
       API.auth.saveToken(response.token, { id: response.user_id, name, role });
       showToast(`Welcome to TAKE ONE, ${name}! ✦`);
-      registerModal.style.display = 'none';
+      closeModal(registerModal);
       registerForm.reset();
       updateUIAfterLogin({ id: response.user_id, name, role });
     }
@@ -1175,7 +1179,7 @@ function applyRoleBasedUI(user) {
       heroSecondaryAction.setAttribute('href', '#');
       heroSecondaryAction.onclick = (event) => {
         event.preventDefault();
-        registerModal.style.display = 'flex';
+        openModal(registerModal);
       };
     }
     if (navUploadLink) {
@@ -1303,7 +1307,7 @@ function openCrewFinderModal() {
   renderCrewRoleBrowser(latestHomeStats.roleCounts || {});
   showPeopleIntro();
 
-  if (peopleModal) peopleModal.style.display = 'flex';
+  openModal(peopleModal);
 }
 
 function renderPeopleResults(people) {
@@ -1362,7 +1366,7 @@ function openScriptModal(scriptId) {
     scriptModalRequestBtn.textContent = 'Request To Join →';
   }
 
-  scriptModal.style.display = 'flex';
+  openModal(scriptModal);
 }
 
 async function openPeopleModal(roleQuery, roleLabel) {
@@ -1381,12 +1385,12 @@ async function openPeopleModal(roleQuery, roleLabel) {
     if (results) {
       results.innerHTML = `<div class="people-empty">${roleLabel || 'This role'} is not available yet. When someone registers for this role, they will appear here.</div>`;
     }
-    if (peopleModal) peopleModal.style.display = 'flex';
+    openModal(peopleModal);
     return;
   }
 
   if (results) results.innerHTML = '<div class="people-empty">Loading people...</div>';
-  if (peopleModal) peopleModal.style.display = 'flex';
+  openModal(peopleModal);
 
   try {
     const response = await API.users.search({ role: roleQuery });
@@ -1492,7 +1496,7 @@ scriptModalRequestBtn?.addEventListener('click', async () => {
 
   if (sent && scriptModal) {
     setTimeout(() => {
-      scriptModal.style.display = 'none';
+      closeModal(scriptModal);
     }, 600);
   }
 });
