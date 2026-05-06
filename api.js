@@ -2,6 +2,11 @@ const API = (() => {
   const BASE_URL = window.location.origin;
   const TOKEN_KEY = 'take_one_token';
   const USER_KEY = 'take_one_user';
+  let activeRequests = 0;
+
+  function getActiveRequests() {
+    return activeRequests;
+  }
 
   async function request(path, options = {}) {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -21,6 +26,7 @@ const API = (() => {
     const timeout = options.timeout || 15000; // Default 15s
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    activeRequests++;
 
     try {
       const response = await fetch(`${BASE_URL}${path}`, {
@@ -57,11 +63,14 @@ const API = (() => {
         throw new Error('The request timed out. Please check your internet connection or try again later.');
       }
       throw err;
+    } finally {
+      activeRequests--;
     }
   }
 
 
   return {
+    getActiveRequests,
     home: {
       get() {
         return request('/api/home');
@@ -177,6 +186,7 @@ const API = (() => {
       saveToken(token, user) {
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(USER_KEY, JSON.stringify(user));
+        localStorage.setItem('take_one_session_start', Date.now());
       },
       getToken() {
         return localStorage.getItem(TOKEN_KEY);
@@ -191,8 +201,96 @@ const API = (() => {
       logout() {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+        localStorage.removeItem('take_one_session_start');
         window.location.reload();
       }
     }
   };
+})();
+
+/**
+ * SESSION & RELOAD MANAGEMENT
+ * Implements: 
+ * 1. 30-minute auto-reload (Safe, Visibility-aware)
+ * 2. 10-day auto sign-out
+ */
+(() => {
+  const RELOAD_INTERVAL = 30 * 60 * 1000; // 30 minutes
+  const SESSION_MAX_AGE = 10 * 24 * 60 * 60 * 1000; // 10 days
+  let reloadTimer = null;
+
+  function checkSessionExpiry() {
+    const sessionStart = localStorage.getItem('take_one_session_start');
+    if (sessionStart) {
+      if (Date.now() - parseInt(sessionStart, 10) > SESSION_MAX_AGE) {
+        console.log('Session expired (10 days). Logging out...');
+        if (typeof API !== 'undefined' && API.auth) {
+          API.auth.logout();
+        } else {
+          localStorage.clear();
+          window.location.reload();
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function setupAutoReload() {
+    if (reloadTimer) clearTimeout(reloadTimer);
+
+    reloadTimer = setTimeout(() => {
+      // 1. Check session expiry first
+      if (checkSessionExpiry()) return;
+
+      // 2. Safe reload logic
+      if (document.visibilityState === 'visible') {
+        const activeElement = document.activeElement;
+        const isTyping = activeElement && (
+          activeElement.tagName === 'INPUT' || 
+          activeElement.tagName === 'TEXTAREA' || 
+          activeElement.contentEditable === 'true'
+        );
+        
+        // Check for active uploads or forms (heuristics)
+        const isUploading = !!document.querySelector('.is-uploading, [data-uploading="true"]');
+        const isSubmitting = !!document.querySelector('.is-submitting, [data-submitting="true"]');
+        
+        if (!isTyping && !isUploading && !isSubmitting && API.getActiveRequests() === 0) {
+          console.log('Performing scheduled 30-minute reload...');
+          window.location.reload();
+        } else {
+          // Retry in 5 minutes if user is busy
+          console.log('User busy, delaying reload by 5 minutes...');
+          reloadTimer = setTimeout(setupAutoReload, 5 * 60 * 1000);
+        }
+      } else {
+        // Tab hidden, wait for it to become visible
+        console.log('Tab hidden, waiting for visibility to reload...');
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'visible') {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            setupAutoReload();
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+      }
+    }, RELOAD_INTERVAL);
+  }
+
+  // Initialize
+  if (typeof window !== 'undefined') {
+    // Check expiry immediately on load
+    checkSessionExpiry();
+    
+    // Set up the periodic reload
+    setupAutoReload();
+    
+    // Also check expiry when tab becomes visible after being away
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkSessionExpiry();
+      }
+    });
+  }
 })();
