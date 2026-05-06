@@ -187,10 +187,13 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
-## 👤 Author
+## 👤 Authors
 
-**Alokr**
+**Alok Rawat**
 - GitHub: [@alokr25012-lab](https://github.com/alokr25012-lab)
+
+**Aarush Gupta**
+- GitHub: [@Aarush2112](https://github.com/Aarush2112)
 
 ---
 <p align="center">Built for creators, by creators. 🎬</p>
