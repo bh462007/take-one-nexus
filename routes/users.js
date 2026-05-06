@@ -7,6 +7,11 @@ const { authenticateUser, requireSameUser } = require('../middleware/auth');
 const router = express.Router();
 
 function createToken(user) {
+  if (!process.env.JWT_SECRET) {
+    console.error('CRITICAL ERROR: JWT_SECRET environment variable is not set!');
+    throw new Error('Server configuration error: JWT_SECRET is missing');
+  }
+
   return jwt.sign(
     { id: user.id, email: user.email },
     process.env.JWT_SECRET,
@@ -99,18 +104,30 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
-      token: createToken(user),
       user_id: user.id,
       user: {
         id: user.id,
         name: user.name,
+        email: user.email,
         role: user.role,
         college: user.college,
         city: user.city
-      }
+      },
+      token: createToken(user)
     });
   } catch (error) {
-    console.error('Register error:', error.message);
+    console.error('--- Register Error ---');
+    console.error('Message:', error.message);
+    console.error('Stack:', error.stack);
+    
+    // Check for specific database errors if needed
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Could not create account'
@@ -156,17 +173,21 @@ router.post('/login', async (req, res) => {
 
     res.json({
       success: true,
-      token: createToken(user),
       user: {
         id: user.id,
         name: user.name,
+        email: user.email,
         role: user.role || '',
         college: user.college || '',
         city: user.city || ''
-      }
+      },
+      token: createToken(user)
     });
   } catch (error) {
-    console.error('Login error:', error.message);
+    console.error('--- Login Error ---');
+    console.error('Message:', error.message);
+    console.error('Stack:', error.stack);
+    
     res.status(500).json({
       success: false,
       message: 'Could not log in'

@@ -21,17 +21,25 @@ Add the following environment variables in your Vercel Project Settings:
 | `SMTP_PORT` | SMTP server port |
 | `SMTP_USER` | SMTP username |
 | `SMTP_PASS` | SMTP password |
-| `MAIL_FROM` | Sender email address |
+## Getting Started
 
-### 2. Database Initialization
-Once your environment variables are set, you need to create the required tables. You can do this by running the initialization script:
+1. **Install Dependencies**: `npm install`
+2. **Setup Environment**: Copy `.env.example` to `.env` and fill in your details.
+   - **IMPORTANT**: Ensure `JWT_SECRET` is set to a secure random string.
+   - **IMPORTANT**: Ensure all `DB_` variables point to a valid MySQL instance.
+3. **Initialize Database**: Run `node database/init.js` to create the schema.
+4. **Start Server**: `npm run dev`
 
-```bash
-# Run this locally with production env vars or via a Vercel one-off command
-node database/init.js
-```
+## Deployment
 
-Alternatively, you can manually execute the SQL found in `database/schema.sql` using your database client.
+This app is designed to be deployed on Vercel. Ensure all environment variables from `.env.example` are added to your Vercel project settings.
+
+### Required Environment Variables
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: Your MySQL database credentials.
+- `JWT_SECRET`: A secure string for session management.
+- `SMTP_*`: Credentials for sending system notifications.
+
+---
 
 ### 3. Safe Mode
 The API routes are designed with "Safe Empty States". If the database is not yet initialized or becomes unreachable, read-only routes (like the homepage and search) will return empty data (200 OK) instead of crashing with 500 errors. This allows the frontend to load gracefully while you troubleshoot connection issues.

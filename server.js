@@ -49,12 +49,26 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/moderation', moderationRoutes);
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'disconnected';
+  try {
+    const { pool } = require('./config/db');
+    await pool.query('SELECT 1');
+    dbStatus = 'connected';
+  } catch (err) {
+    dbStatus = `error: ${err.message}`;
+  }
+
   res.json({
     success: true,
     status: 'ok',
     message: 'TAKE ONE API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    env: {
+      jwt_secret_set: Boolean(process.env.JWT_SECRET),
+      db_name: process.env.DB_NAME || 'take_one (default)'
+    },
+    database: dbStatus
   });
 });
 
