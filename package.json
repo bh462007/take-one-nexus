@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "legacy:dev": "nodemon -L --watch server.js --watch routes --watch config --ext js,json server.js",
     "legacy:start": "node server.js"
