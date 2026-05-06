@@ -859,6 +859,17 @@ document.getElementById('productionStages')?.addEventListener('click', (event) =
 async function loadHomepageData() {
   if (typeof API === 'undefined' || !API.home) return;
 
+  const hideLoader = () => {
+    const loader = document.getElementById('loader');
+    if (loader) {
+      loader.style.animation = 'loaderOut 0.5s ease forwards';
+      setTimeout(() => { loader.style.display = 'none'; }, 500);
+    }
+  };
+
+  // Safety timeout: hide loader after 5 seconds no matter what
+  const safetyTimeout = setTimeout(hideLoader, 5000);
+
   try {
     const response = await API.home.get();
     const stats = response.stats || {};
@@ -886,11 +897,17 @@ async function loadHomepageData() {
     allLiveScripts = response.scripts || [];
     renderHomepageScripts(allLiveScripts);
     updateFeatureDashboard(stats, response.scripts || []);
+    
+    clearTimeout(safetyTimeout);
+    hideLoader();
   } catch (err) {
     console.error('Homepage data load failed:', err);
     updateText('liveScriptStatus', 'Could not load live scripts. Check server and MySQL connection.');
+    clearTimeout(safetyTimeout);
+    hideLoader();
   }
 }
+
 
 activateFeatureSection();
 
@@ -1077,7 +1094,13 @@ loginForm?.addEventListener('submit', async (e) => {
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
   
+  const submitBtn = loginForm.querySelector('.form-submit');
+  const originalText = submitBtn.textContent;
+  
   try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in...';
+    
     const response = await API.users.login(email, password);
     
     if (response.success) {
@@ -1089,6 +1112,9 @@ loginForm?.addEventListener('submit', async (e) => {
     }
   } catch (err) {
     showToast(`❌ ${err.message || 'Login failed. Check your email and password.'}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 });
 
@@ -1114,7 +1140,13 @@ registerForm?.addEventListener('submit', async (e) => {
     return;
   }
   
+  const submitBtn = registerForm.querySelector('.form-submit');
+  const originalText = submitBtn.textContent;
+  
   try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating account...';
+    
     const response = await API.users.register({
       name, email, password, role, college, city
     });
@@ -1128,6 +1160,9 @@ registerForm?.addEventListener('submit', async (e) => {
     }
   } catch (err) {
     showToast(`❌ ${err.message || 'Registration failed.'}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 });
 
@@ -1536,6 +1571,12 @@ function uploadScript() {
     return;
   }
 
+  const uploadBtn = document.getElementById('uploadActionButton');
+  const originalText = uploadBtn.textContent;
+
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = 'Submitting...';
+
   API.scripts.create({
     title,
     genre,
@@ -1552,5 +1593,8 @@ function uploadScript() {
     if (authorEl) authorEl.value = '';
   }).catch((err) => {
     showToast(`❌ ${err.message || 'Could not upload script'}`);
+  }).finally(() => {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = originalText;
   });
 }

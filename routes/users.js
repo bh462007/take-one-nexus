@@ -49,12 +49,21 @@ async function getProfileData(userId) {
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role, college, city } = req.body;
-    const normalizedEmail = email ? email.trim().toLowerCase() : '';
-
-    if (!name || !normalizedEmail || !password) {
+    
+    // Basic validation
+    if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Name, email, and password are required'
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
       });
     }
 
@@ -65,15 +74,22 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const [existingUsers] = await pool.query(
-      'SELECT id FROM users WHERE email = ? LIMIT 1',
-      [normalizedEmail]
-    );
+    // Check for existing user
+    let existingUsers;
+    try {
+      [existingUsers] = await pool.query(
+        'SELECT id FROM users WHERE email = ? LIMIT 1',
+        [normalizedEmail]
+      );
+    } catch (dbError) {
+      console.error('[DB] Register check failed:', dbError.message);
+      throw dbError; // Caught by outer try-catch
+    }
 
-    if (existingUsers.length > 0) {
+    if (existingUsers && existingUsers.length > 0) {
       return res.status(409).json({
         success: false,
-        message: 'Email already registered'
+        message: 'This email is already registered. Please try logging in.'
       });
     }
 
@@ -117,13 +133,15 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('--- Registration Failed ---');
-    console.error(`Error: ${error.message}`);
+    console.error(`Error Type: ${error.constructor.name}`);
+    console.error(`Error Code: ${error.code}`);
+    console.error(`Error Message: ${error.message}`);
     
     // JWT configuration error
     if (error.message.includes('JWT_SECRET')) {
       return res.status(500).json({
         success: false,
-        message: 'Server configuration error: Authentication system is not ready.'
+        message: 'Authentication system is not configured. Please contact the administrator.'
       });
     }
 
@@ -136,19 +154,21 @@ router.post('/register', async (req, res) => {
     }
 
     // Database connection issues
-    if (error.code === 'ECONNREFUSED' || error.message.includes('connect')) {
+    const connErrors = ['ECONNREFUSED', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST', 'ER_ACCESS_DENIED_ERROR'];
+    if (connErrors.includes(error.code) || error.message.includes('connect')) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently unavailable. Please try again later.'
+        message: 'The database is currently unavailable. We are working to restore the connection. Please try again in a few minutes.'
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'An unexpected error occurred during registration. Please try again.'
+      message: 'An unexpected error occurred during registration. Please try again later.'
     });
   }
 });
+
 
 router.post('/login', async (req, res) => {
   try {
@@ -161,15 +181,23 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const [rows] = await pool.query(
-      `SELECT id, name, email, password, role, college, city
-       FROM users
-       WHERE email = ?
-       LIMIT 1`,
-      [email.trim().toLowerCase()]
-    );
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (rows.length === 0) {
+    let rows;
+    try {
+      [rows] = await pool.query(
+        `SELECT id, name, email, password, role, college, city
+         FROM users
+         WHERE email = ?
+         LIMIT 1`,
+        [normalizedEmail]
+      );
+    } catch (dbError) {
+      console.error('[DB] Login query failed:', dbError.message);
+      throw dbError;
+    }
+
+    if (!rows || rows.length === 0) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -200,28 +228,31 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('--- Login Failed ---');
-    console.error(`Error: ${error.message}`);
+    console.error(`Error Code: ${error.code}`);
+    console.error(`Error Message: ${error.message}`);
     
     if (error.message.includes('JWT_SECRET')) {
       return res.status(500).json({
         success: false,
-        message: 'Server configuration error: Authentication system is not ready.'
+        message: 'Authentication system is not configured. Please contact the administrator.'
       });
     }
 
-    if (error.code === 'ECONNREFUSED' || error.message.includes('connect')) {
+    const connErrors = ['ECONNREFUSED', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST', 'ER_ACCESS_DENIED_ERROR'];
+    if (connErrors.includes(error.code) || error.message.includes('connect')) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently unavailable.'
+        message: 'The database is currently unavailable. Please try again later.'
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'An unexpected error occurred during login.'
+      message: 'An unexpected error occurred during login. Please try again later.'
     });
   }
 });
+
 
 async function safeQuery(sql, params = []) {
   try {

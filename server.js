@@ -63,35 +63,54 @@ app.use('/api/moderation', moderationRoutes);
 
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'disconnected';
+  let dbDetails = {};
+  
   try {
-    const { pool } = require('./config/db');
-    // Using a fast query to check connection
+    const { pool, dbConfig } = require('./config/db');
+    const start = Date.now();
     const [rows] = await pool.query('SELECT 1 as health_check');
+    const latency = Date.now() - start;
+    
     if (rows && rows[0].health_check === 1) {
       dbStatus = 'connected';
+      dbDetails = {
+        status: 'online',
+        latency: `${latency}ms`,
+        host: dbConfig.host,
+        database: dbConfig.database
+      };
     }
   } catch (err) {
-    dbStatus = `error: ${err.message}`;
+    dbStatus = 'error';
+    dbDetails = {
+      status: 'offline',
+      error: err.code || err.message,
+      message: err.message
+    };
     console.error('Health check DB error:', err.message);
   }
 
+  const isProd = process.env.NODE_ENV === 'production';
+
   res.json({
     success: true,
-    status: 'ok',
+    status: dbStatus === 'connected' ? 'ok' : 'degraded',
     message: 'TAKE ONE API is running',
-    version: '2.1.0',
+    version: '2.2.0',
     timestamp: new Date().toISOString(),
     env: {
       node_env: process.env.NODE_ENV || 'development',
       jwt_secret_set: Boolean(process.env.JWT_SECRET),
-      db_host_set: Boolean(process.env.DB_HOST),
-      db_user_set: Boolean(process.env.DB_USER),
-      db_name: process.env.DB_NAME || 'take_one (default)',
-      origin: req.headers.origin || 'same-origin'
+      db_configured: Boolean(process.env.DB_HOST || process.env.DATABASE_URL)
     },
-    database: dbStatus
+    database: dbDetails,
+    system: {
+      memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+      uptime: Math.round(process.uptime()) + 's'
+    }
   });
 });
+
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'project.htm'));
@@ -127,13 +146,25 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
+  const status = err.status || 500;
+  const isProd = process.env.NODE_ENV === 'production';
+  
+  console.error(`[Server Error] ${req.method} ${req.url}`);
+  console.error(err);
 
-  res.status(err.status || 500).json({
+  // Hide detailed error messages in production unless they are intentionally thrown
+  const message = (isProd && status === 500) 
+    ? 'An internal server error occurred. Our team has been notified.' 
+    : err.message || 'Something went wrong on the server';
+
+  res.status(status).json({
     success: false,
-    message: err.message || 'Something went wrong on the server'
+    status,
+    message,
+    ...(isProd ? {} : { stack: err.stack })
   });
 });
+
 
 const server = app.listen(PORT, () => {
   console.log('');

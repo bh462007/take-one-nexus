@@ -17,19 +17,49 @@ const API = (() => {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${BASE_URL}${path}`, {
-      ...options,
-      headers
-    });
+    // Timeout mechanism
+    const timeout = options.timeout || 15000; // Default 15s
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    const data = await response.json().catch(() => ({}));
+    try {
+      const response = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers,
+        signal: controller.signal
+      });
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Request failed');
+      clearTimeout(timeoutId);
+
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json().catch(() => ({}));
+      } else {
+        data = { message: await response.text().catch(() => 'Request failed') };
+      }
+
+      if (!response.ok) {
+        // Handle unauthorized
+        if (response.status === 401 && token) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          window.location.reload();
+        }
+        
+        throw new Error(data.message || `Request failed with status ${response.status}`);
+      }
+
+      return data;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('The request timed out. Please check your internet connection or try again later.');
+      }
+      throw err;
     }
-
-    return data;
   }
+
 
   return {
     home: {
