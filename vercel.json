@@ -1,17 +1,47 @@
 {
   "version": 2,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/server.js"
+      "src": "server.js",
+      "use": "@vercel/node"
     },
     {
-      "source": "/uploads/(.*)",
-      "destination": "/server.js"
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/_next/(.*)",
+      "dest": "/_next/$1"
     },
     {
-      "source": "/((?!admin|api|_next|static|favicon.ico).*\\.htm)",
-      "destination": "/server.js"
+      "src": "/admin(/(.*)|$)",
+      "dest": "/admin$1"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/uploads/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/styles/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/scripts/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/((?!admin|api|_next).*)",
+      "dest": "server.js"
     }
   ]
 }
