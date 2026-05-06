@@ -50,7 +50,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'assets', 'uploads')));
 app.use(express.static(__dirname));
 app.use('/api/home', homeRoutes);
 app.use('/api/users', userRoutes);

@@ -1,31 +1,4 @@
-/* ── CUSTOM CURSOR ── */
-const dot = document.getElementById('dot');
-let mx = 0, my = 0;
-
-document.addEventListener('mousemove', e => {
-    mx = e.clientX;
-    my = e.clientY;
-});
-
-(function animateCursor() {
-    dot.style.left = mx + 'px';
-    dot.style.top = my + 'px';
-    requestAnimationFrame(animateCursor);
-})();
-
-/* ── LIVE CLOCK (STATUS BAR) ── */
-function updateTime() {
-    const el = document.getElementById('statusTime');
-    if (!el) return;
-    const t = new Date();
-    el.textContent = t.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-}
-setInterval(updateTime, 1000);
-updateTime();
+/* Logic moved to common.js and ui.js */
 
 /* ── TAB SWITCHING ── */
 function switchTab(name, btn) {
@@ -74,35 +47,9 @@ function liveUpdateName(val) {
     if (val.trim()) el.textContent = val;
 }
 
-function splitSkills(skills) {
-    return String(skills || '')
-        .split(',')
-        .map(item => item.trim())
-        .filter(Boolean);
-}
+/* Utils moved to helpers.js */
 
-function escapeHTML(value) {
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-function cardTone(genre) {
-    const tones = {
-        horror: '#2a0808',
-        romance: '#080e20',
-        action: '#0a1808',
-        comedy: '#181408',
-        thriller: '#10080a',
-        drama: '#08101a',
-        'sci-fi': '#08121c'
-    };
-
-    return tones[String(genre || '').toLowerCase()] || '#141018';
-}
+/* Moved to helpers.js as getCardTone */
 
 function renderSkillBadges(skills) {
     const wrap = document.getElementById('skillBadges');
@@ -136,7 +83,7 @@ function renderProjects(scripts) {
     const items = Array.isArray(scripts) ? scripts : [];
     const cards = items.map((script, index) => `
         <div class="project-card"
-             style="background: linear-gradient(160deg, ${cardTone(script.genre)} 0%, #06080A 100%)">
+             style="background: linear-gradient(160deg, ${getCardTone(script.genre)} 0%, #06080A 100%)">
           <div class="pc-num">${String(index + 1).padStart(3, '0')}</div>
           <div class="pc-genre">${script.genre || 'General'}</div>
           <div class="pc-title">${script.title || 'Untitled Script'}</div>
@@ -165,10 +112,7 @@ function renderProjects(scripts) {
     updateStat('projCount', items.length);
 }
 
-function updateStat(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-}
+/* Moved to ui.js */
 
 function populateProfile(profile) {
     document.getElementById('profileName').textContent = profile.name || 'Creator Name';
@@ -431,21 +375,7 @@ async function markAllNotificationsRead() {
     }
 }
 
-function splitCollegeCity(value) {
-    const cleaned = String(value || '').trim();
-    if (!cleaned) return { college: '', city: '' };
-
-    const separator = cleaned.includes('·') ? '·' : ',';
-    const parts = cleaned
-        .split(separator)
-        .map(part => part.trim())
-        .filter(Boolean);
-
-    return {
-        college: parts[0] || '',
-        city: parts.slice(1).join(` ${separator} `) || ''
-    };
-}
+/* Moved to helpers.js */
 
 /* ── SAVE PROFILE ── */
 async function saveProfile() {
@@ -506,12 +436,7 @@ async function saveProfile() {
 }
 
 /* ── TOAST NOTIFICATION ── */
-function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
-}
+/* Moved to ui.js */
 
 loadProfile().then(activateHashTab);
 window.addEventListener('hashchange', activateHashTab);

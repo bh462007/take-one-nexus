@@ -1,56 +1,4 @@
-
-/* ── CUSTOM CURSOR ── */
-const dot   = document.getElementById('dot');
-const cross = document.getElementById('cross');
-let mx = 0, my = 0, cx = 0, cy = 0;
-
-document.addEventListener('mousemove', e => {
-  mx = e.clientX;
-  my = e.clientY;
-});
-
-(function animateCursor() {
-  dot.style.left = mx + 'px';
-  dot.style.top  = my + 'px';
-  cx += (mx - cx) * 0.1;
-  cy += (my - cy) * 0.1;
-  cross.style.left = cx + 'px';
-  cross.style.top  = cy + 'px';
-  requestAnimationFrame(animateCursor);
-})();
-
-/* Scale crosshair on hover over interactive elements */
-document.querySelectorAll('a, button, .role-card, .movie-card').forEach(el => {
-  el.addEventListener('mouseenter', () => {
-    cross.style.transform = 'translate(-50%, -50%) scale(1.6)';
-  });
-  el.addEventListener('mouseleave', () => {
-    cross.style.transform = 'translate(-50%, -50%) scale(1)';
-  });
-});
-
-/* ── SCROLL REVEAL ── */
-const revealObserver = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) e.target.classList.add('visible');
-  });
-}, { threshold: 0.1 });
-
-document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-/* ── LIVE CLOCK (STATUS BAR) ── */
-function updateTime() {
-  const el = document.getElementById('statusTime');
-  if (!el) return;
-  const t = new Date();
-  el.textContent = t.toLocaleTimeString('en-IN', {
-    hour:   '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-}
-setInterval(updateTime, 1000);
-updateTime();
+/* Logic moved to /scripts/animations/common.js and /scripts/components/ui.js */
 
 /* ── GENRE FILTER (Live Script Cards) ── */
 function filterCards(genre, btn) {
@@ -112,37 +60,9 @@ function uploadScript() {
   posterEl.value = '';
 }
 
-/* ── TOAST NOTIFICATION ── */
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
+/* Utility functions moved to /scripts/utils/helpers.js and /scripts/components/ui.js */
 
-function formatCompactNumber(value) {
-  return new Intl.NumberFormat('en-IN', {
-    notation: 'compact',
-    maximumFractionDigits: 1
-  }).format(Number(value) || 0);
-}
-
-function updateText(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value;
-}
-
-function updateScrollProgress() {
-  const progress = document.getElementById('scrollProgress');
-  if (!progress) return;
-
-  const max = document.documentElement.scrollHeight - window.innerHeight;
-  const percent = max > 0 ? (window.scrollY / max) * 100 : 0;
-  progress.style.width = `${percent}%`;
-}
-
-window.addEventListener('scroll', updateScrollProgress, { passive: true });
-updateScrollProgress();
+/* Scroll progress moved to /scripts/animations/common.js */
 
 function scrollToSection(selector) {
   const target = document.querySelector(selector);
@@ -155,19 +75,7 @@ function openCrewFinderPage(role = '') {
   window.location.href = `/crew.htm${query}`;
 }
 
-function normalizeRole(role) {
-  return String(role || '').trim().toLowerCase();
-}
-
-function isCreatorRole(role) {
-  const normalized = normalizeRole(role);
-  return (
-    normalized.includes('director') ||
-    normalized.includes('writer') ||
-    normalized.includes('producer') ||
-    normalized.includes('screenwriter')
-  );
-}
+/* Role helpers moved to /scripts/utils/helpers.js */
 
 const CREW_ROLE_OPTIONS = [
   { key: 'director', query: 'Director', label: 'Directors', icon: '🎬' },
@@ -615,19 +523,7 @@ let allLiveScripts = [];
 let activeSearchQuery = '';
 let activeGenreFilter = 'all';
 
-function getCardTone(genre) {
-  const tones = {
-    horror: '#2a0808',
-    romance: '#081020',
-    action: '#0a1808',
-    comedy: '#181408',
-    thriller: '#10080a',
-    drama: '#08101a',
-    'sci-fi': '#08121c'
-  };
-
-  return tones[String(genre || '').toLowerCase()] || '#141018';
-}
+/* Moved to helpers.js */
 
 function normalizeScriptCard(script, index) {
   return {
