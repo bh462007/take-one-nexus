@@ -1,12 +1,20 @@
 import React from 'react';
 import './globals.css';
-import { Inter } from 'next/font/google';
+import { Metadata } from 'next';
 
-const inter = Inter({ subsets: ['latin'] });
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'TAKE ONE — Film Crew Connect',
   description: 'Where scripts become films. Connect with student filmmakers across campuses.',
+  viewport: 'width=device-width, initial-scale=1',
+  keywords: 'film, crew, college, filmmaking, scripts, collaboration, director, cinematographer',
+  authors: [{ name: 'TAKE ONE' }],
+  openGraph: {
+    type: 'website',
+    url: 'https://take-one-nexus.vercel.app/',
+    title: 'TAKE ONE — Film Crew Connect',
+    description: 'Where scripts become films. Connect with student filmmakers across campuses.',
+    siteName: 'TAKE ONE',
+  }
 };
 
 export default function RootLayout({
@@ -16,7 +24,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
+        <div className="scroll-progress" id="scrollProgress"></div>
         {children}
       </body>
     </html>

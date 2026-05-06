@@ -3,7 +3,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const { authenticateUser, requireSameUser } = require('../middleware/auth');
+const { PrismaClient } = require('@prisma/client');
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 function createToken(user) {
@@ -328,15 +330,6 @@ router.get('/search', async (req, res) => {
 router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
   try {
     const userId = Number(req.params.id);
-    const existingProfile = await getProfileData(userId);
-
-    if (!existingProfile) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
     const {
       name,
       role,
@@ -348,48 +341,36 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
       avatar_url
     } = req.body;
 
-    const nextName = typeof name === 'string' && name.trim()
-      ? name.trim()
-      : existingProfile.name;
-
-    if (!nextName) {
+    if (name && typeof name === 'string' && !name.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Display name is required'
+        message: 'Display name cannot be empty'
       });
     }
 
-    await pool.query(
-      `UPDATE users
-       SET name = ?,
-           role = ?,
-           college = ?,
-           city = ?,
-           bio = ?,
-           skills = ?,
-           portfolio = ?,
-           avatar_url = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [
-        nextName,
-        typeof role === 'string' ? role.trim() || null : existingProfile.role,
-        typeof college === 'string' ? college.trim() || null : existingProfile.college,
-        typeof city === 'string' ? city.trim() || null : existingProfile.city,
-        typeof bio === 'string' ? bio.trim() || null : existingProfile.bio,
-        typeof skills === 'string' ? skills.trim() || null : existingProfile.skills,
-        typeof portfolio === 'string' ? portfolio.trim() || null : existingProfile.portfolio,
-        typeof avatar_url === 'string' ? avatar_url.trim() || null : existingProfile.avatar_url,
-        userId
-      ]
-    );
-
-    const updatedProfile = await getProfileData(userId);
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(name && { name: name.trim() }),
+        role: typeof role === 'string' ? role.trim() : undefined,
+        college: typeof college === 'string' ? college.trim() : undefined,
+        city: typeof city === 'string' ? city.trim() : undefined,
+        bio: typeof bio === 'string' ? bio.trim() : undefined,
+        skills: typeof skills === 'string' ? skills.trim() : undefined,
+        portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
+        avatar_url: typeof avatar_url === 'string' ? avatar_url.trim() : undefined,
+      },
+      include: {
+        scripts: {
+          orderBy: { created_at: 'desc' }
+        }
+      }
+    });
 
     res.json({
       success: true,
-      message: 'Profile updated successfully',
-      data: updatedProfile
+      message: 'Profile updated successfully via Prisma',
+      data: updatedUser
     });
   } catch (error) {
     console.error('Profile update error:', error.message);

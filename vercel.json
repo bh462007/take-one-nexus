@@ -20,6 +20,22 @@
       "dest": "/admin$1"
     },
     {
+      "src": "/profile",
+      "dest": "/profile"
+    },
+    {
+      "src": "/crew",
+      "dest": "/crew"
+    },
+    {
+      "src": "/legal",
+      "dest": "/legal"
+    },
+    {
+      "src": "/moderation",
+      "dest": "/moderation"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "server.js"
     },
@@ -40,7 +56,7 @@
       "dest": "server.js"
     },
     {
-      "src": "/((?!admin|api|_next).*)",
+      "src": "/((?!admin|api|_next|profile|crew|legal|moderation).*)",
       "dest": "server.js"
     }
   ]

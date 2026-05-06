@@ -65,6 +65,27 @@ export async function addUser(formData: any) {
   }
 }
 
+export async function updateUser(id: number, formData: any) {
+  try {
+    const validated = userSchema.partial().parse(formData);
+    
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: validated
+    });
+
+    revalidatePath('/admin/users');
+    revalidatePath('/admin');
+    
+    return { success: true, user: updatedUser };
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
+    return { success: false, error: error.message || 'Failed to update user' };
+  }
+}
+
 export async function deleteUser(id: number) {
   try {
     // Prevent self-deletion would be good, but we don't have current user ID here easily 

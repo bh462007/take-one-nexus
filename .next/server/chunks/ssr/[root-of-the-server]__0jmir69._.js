@@ -1,3 +1,0 @@
-module.exports=[63021,(a,b,c)=>{b.exports=a.x("@prisma/client-2c3a283f134fdcb6",()=>require("@prisma/client-2c3a283f134fdcb6"))},66518,a=>{"use strict";var b=a.i(63021);let c=globalThis.prisma??new b.PrismaClient;a.s(["default",0,c])},55122,a=>{"use strict";var b=a.i(66830);a.s([],65622),a.i(65622),a.s(["407117990f71f3b3cc98b6585d0a0909f0cd256572",()=>b.deleteUser],55122)}];
-
-//# sourceMappingURL=%5Broot-of-the-server%5D__0jmir69._.js.map

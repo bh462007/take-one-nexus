@@ -133,12 +133,24 @@ function populateProfile(profile) {
     }
 
     document.getElementById('editName').value = profile.name || '';
-    document.getElementById('editRole').value = profile.role || '';
-    document.getElementById('editCollegeCity').value =
-        [profile.college, profile.city].filter(Boolean).join(' · ');
-    document.getElementById('editPortfolio').value = profile.portfolio || '';
-    document.getElementById('editBio').value = profile.bio || '';
-    document.getElementById('editSkills').value = profile.skills || '';
+    if (document.getElementById('editRole')) {
+        document.getElementById('editRole').value = profile.role || '';
+    }
+    if (document.getElementById('editCollege')) {
+        document.getElementById('editCollege').value = profile.college || '';
+    }
+    if (document.getElementById('editCity')) {
+        document.getElementById('editCity').value = profile.city || '';
+    }
+    if (document.getElementById('editPortfolio')) {
+        document.getElementById('editPortfolio').value = profile.portfolio || '';
+    }
+    if (document.getElementById('editBio')) {
+        document.getElementById('editBio').value = profile.bio || '';
+    }
+    if (document.getElementById('editSkills')) {
+        document.getElementById('editSkills').value = profile.skills || '';
+    }
 
     renderSkillBadges(profile.skills);
     renderProjects(profile.scripts || []);
@@ -387,9 +399,20 @@ async function saveProfile() {
         return;
     }
 
-    const saveButton = document.querySelector('.save-btn');
+    const saveButton = document.querySelector('.save-btn') || document.getElementById('saveProfileBtn');
     const originalText = saveButton ? saveButton.textContent : '';
-    const { college, city } = splitCollegeCity(document.getElementById('editCollegeCity')?.value);
+    
+    let college = '';
+    let city = '';
+    
+    if (document.getElementById('editCollege')) {
+        college = document.getElementById('editCollege').value.trim();
+        city = document.getElementById('editCity')?.value.trim() || '';
+    } else {
+        const split = splitCollegeCity(document.getElementById('editCollegeCity')?.value);
+        college = split.college;
+        city = split.city;
+    }
 
     const payload = {
         name: document.getElementById('editName')?.value.trim() || '',
