@@ -27,13 +27,25 @@ export async function getCurrentUser() {
 
     return user;
   } catch (error: any) {
-    console.error('Auth verification failed:', error);
+    // 1. Log the full error in development for debugging
+    console.error('[AUTH_LAYER_FAILURE]:', {
+      message: error?.message,
+      code: error?.code,
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    });
     
-    // If it's a Prisma connection error, throw it so the Error Boundary can catch it
-    if (error?.code?.startsWith('P') || error?.message?.includes('connection') || error?.message?.includes('Database')) {
-      throw new Error('DATABASE_CONNECTION_FAILURE');
+    // 2. Identify critical Database connection failures
+    const isPrismaError = error?.code?.startsWith('P');
+    const isConnError = error?.message?.toLowerCase().includes('connection') || 
+                        error?.message?.toLowerCase().includes('reach') ||
+                        error?.message?.toLowerCase().includes('network');
+
+    if (isPrismaError || isConnError) {
+      // Re-throw as a standardized DB failure for the Error Boundary
+      throw new Error(`DATABASE_CONNECTION_FAILURE: ${error?.code || 'CONN_LOST'}`);
     }
     
+    // 3. For generic Auth errors (expired token, etc.), return null to force login
     return null;
   }
 }

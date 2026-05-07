@@ -129,10 +129,12 @@ export default async function ProfilePage() {
 
             <div id="profileName">{user?.name || 'Creator'}</div>
             <div className="profile-role" id="profileRole">{user?.role || 'Independent Filmmaker'}</div>
-            <div className="profile-meta" id="profileMeta">{user?.college || 'College'} · {user?.city || 'City'}</div>
+            <div className="profile-meta" id="profileMeta">
+              {[user?.college, user?.city].filter(Boolean).join(' · ') || 'Location Pending'}
+            </div>
 
             <p className="profile-bio" id="profileBio">
-              {user?.bio || 'No bio provided yet.'}
+              {user?.bio || 'The reel is still being edited. No bio added yet.'}
             </p>
 
             <div className="profile-stats">
@@ -155,9 +157,10 @@ export default async function ProfilePage() {
             </button>
 
             <div className="skill-badges" id="skillBadges">
-              {user.skills && String(user.skills).split(',').map((skill, i) => (
+              {user?.skills && String(user.skills).split(',').filter(s => s.trim()).map((skill, i) => (
                 <span key={i} className="badge">{skill.trim()}</span>
               ))}
+              {!user?.skills && <span className="badge">New Creator</span>}
             </div>
           </div>
 
@@ -179,9 +182,9 @@ export default async function ProfilePage() {
                 <a href="/#upload" className="btn-sm">+ Add Script</a>
               </div>
               <div className="project-grid" id="projectGrid">
-                {(user.scripts || []).map((script, i) => (
+                {(user?.scripts || []).map((script: any, i: number) => (
                   <div key={script.id} className="project-card"
-                       style={{ background: `linear-gradient(160deg, #1a1108 0%, #06080A 100%)` }}>
+                       style={{ background: `linear-gradient(160deg, #1C2330 0%, #06080A 100%)` }}>
                     <div className="pc-num">{String(i + 1).padStart(3, '0')}</div>
                     <div className="pc-genre">{script.genre || 'General'}</div>
                     <div className="pc-title">{script.title || 'Untitled Script'}</div>
@@ -229,7 +232,7 @@ export default async function ProfilePage() {
                 </div>
                 <div className="about-item">
                   <label htmlFor="editGender">Gender</label>
-                  <select id="editGender" defaultValue={user?.gender || 'Prefer not to say'}>
+                  <select id="editGender" className="profile-role-dropdown" defaultValue={user?.gender || 'Prefer not to say'}>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>

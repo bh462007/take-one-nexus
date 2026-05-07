@@ -16,7 +16,10 @@ export default function Error({
     }
   }, [error]);
 
-  const isDbError = error.message.includes('DATABASE') || error.message.includes('PRODUCTION_DATABASE');
+  const isDbError = error.message.includes('DATABASE') || 
+                    error.message.includes('PRODUCTION_DATABASE') ||
+                    error.message.includes('CONN_LOST') ||
+                    error.message.includes('P200');
 
   return (
     <div className="error-container">

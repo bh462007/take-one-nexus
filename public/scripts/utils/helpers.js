@@ -79,26 +79,35 @@ function isAdmin(user) {
 }
 
 function getAvatarUrl(name, gender, customAvatar) {
+    // 1. Priority: Custom uploaded avatar
     if (customAvatar && customAvatar.trim() !== '') {
         return customAvatar;
     }
 
+    const safeName = (name || 'User').trim();
     const normalizedGender = (gender || 'Other').toLowerCase();
-    const seed = encodeURIComponent(name || 'User');
+    const seed = encodeURIComponent(safeName);
 
-    let options = '';
+    // 2. DiceBear Avataaars options based on gender selection
+    let genderOptions = '';
+    
     if (normalizedGender === 'male') {
-        options = '&top[]=shortHair&top[]=shaggy&top[]=shortWaved&facialHairProbability=10';
+        genderOptions = '&top[]=shortHair&top[]=shaggy&top[]=shortWaved&top[]=sides&facialHairProbability=15&facialHair[]=beardLight';
     } else if (normalizedGender === 'female') {
-        options = '&top[]=longHair&top[]=bob&top[]=curly&facialHairProbability=0';
+        genderOptions = '&top[]=longHair&top[]=bob&top[]=curly&top[]=bun&facialHairProbability=0';
     } else {
-        options = '&top[]=shortHair&top[]=hat&top[]=curly&facialHairProbability=0';
+        genderOptions = '&top[]=shortHair&top[]=hat&top[]=curly&top[]=eyepatch&facialHairProbability=5';
     }
 
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}${options}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood[]=happy`;
+    const colors = '0E1218,1C2330,FF4D1A,FFA620,00D4FF';
+
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}${genderOptions}&backgroundColor=${colors}&mood[]=happy&backgroundType=gradientLinear`;
 }
 
 function handleImageError(img, name, gender) {
-    img.onerror = null;
-    img.src = getAvatarUrl(name, gender);
+    if (img.dataset.triedFallback === 'true') return;
+    img.dataset.triedFallback = 'true';
+    
+    const safeName = encodeURIComponent(name || 'User');
+    img.src = `https://ui-avatars.com/api/?name=${safeName}&background=random&color=fff&size=128&bold=true`;
 }
