@@ -59,7 +59,7 @@ export default function UserManagement({ initialUsers }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <button className="btn-add" onClick={() => router.push('/admin/users/add')}>
+        <button className="btn-add" onClick={() => router.push('/admin/users/add')} aria-label="Add new crew member">
           <span>+ NEW CREW SIGNAL</span>
         </button>
       </div>

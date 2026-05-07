@@ -4,12 +4,7 @@
   --panel: rgba(19, 24, 31, 0.8);
   --text: var(--cream);
   --text-dim: var(--silver);
-  --neon: var(--neon);
-  --cyan: var(--cyan);
-  --amber: var(--amber);
   --border: rgba(255, 77, 26, 0.2);
-  --font-main: var(--font-main);
-  --font-title: var(--font-title);
 }
 
 body {
@@ -360,7 +355,7 @@ tr:hover td {
 }
 
 .search-input::placeholder {
-  color: rgba(234, 230, 222, 0.3);
+  color: rgba(232, 223, 200, 0.25);
 }
 
 /* ── BUTTONS ── */
@@ -391,27 +386,55 @@ tr:hover td {
 }
 
 .btn-add {
-  background: var(--neon);
-  color: var(--void);
-  border: none;
-  padding: 18px 35px;
+  background: rgba(255, 77, 26, 0.05);
+  color: var(--cream);
+  border: 1px solid var(--neon);
+  padding: 16px 32px;
   font-family: var(--font-title);
-  font-size: 18px;
-  letter-spacing: 0.1em;
+  font-size: 14px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  transition: all 0.3s;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   cursor: pointer;
   clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-  box-shadow: 0 0 25px var(--glow);
+  box-shadow: 0 0 15px rgba(255, 77, 26, 0.1), inset 0 0 10px rgba(255, 77, 26, 0.05);
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.btn-add span {
+  position: relative;
+  z-index: 2;
+}
+
+.btn-add::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: 0.5s;
+}
+
+.btn-add:hover::before {
+  left: 100%;
 }
 
 .btn-add:hover {
-  background: var(--amber);
-  box-shadow: 0 0 35px rgba(255, 166, 32, 0.5);
+  background: var(--neon);
+  color: var(--void);
+  box-shadow: 0 0 30px var(--neon);
   transform: translateY(-2px);
+  border-color: var(--neon);
+}
+
+.btn-add:active {
+  transform: translateY(0);
 }
 
 /* ── FOOTER / STATUS BAR ── */
