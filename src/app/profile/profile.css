@@ -871,14 +871,34 @@ nav a:hover::after {
 }
 
 .request-card {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
     gap: 16px;
     border: 1px solid rgba(255, 77, 26, 0.16);
     background:
         linear-gradient(135deg, rgba(255, 77, 26, 0.06), transparent 48%),
         rgba(14, 18, 24, 0.96);
     padding: 18px;
+    align-items: flex-start;
+}
+
+.request-avatar-wrap {
+    width: 50px;
+    height: 50px;
+    flex-shrink: 0;
+    border: 1px solid var(--neon);
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 0 10px var(--glow);
+}
+
+.request-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.request-main {
+    flex: 1;
 }
 
 .request-script {
@@ -909,15 +929,34 @@ nav a:hover::after {
     line-height: 1.7;
 }
 
-.request-contact {
-    align-self: start;
-    background: var(--neon);
-    color: var(--void);
-    text-decoration: none;
-    padding: 10px 14px;
+.request-actions-row {
+    display: flex;
+    gap: 8px;
+    align-self: flex-start;
+}
+
+.request-contact, .request-chat-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
     font-size: 8px;
     letter-spacing: 0.26em;
     text-transform: uppercase;
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.request-contact {
+    border: 1px solid var(--border);
+    color: var(--neon);
+    background: rgba(255, 77, 26, 0.05);
+}
+
+.request-chat-btn {
+    background: var(--neon);
+    color: var(--void);
 }
 
 .request-side {

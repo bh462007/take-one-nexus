@@ -23,7 +23,7 @@ function createToken(user) {
 
 async function getProfileData(userId) {
   const [userRows] = await pool.query(
-    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, created_at
+    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, created_at
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -50,7 +50,7 @@ async function getProfileData(userId) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role, college, city } = req.body;
+    const { name, email, password, role, college, city, gender } = req.body;
     
     // Basic validation
     if (!name || !email || !password) {
@@ -98,15 +98,16 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await pool.query(
-      `INSERT INTO users (name, email, password, role, college, city)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (name, email, password, role, college, city, gender)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         normalizedEmail,
         hashedPassword,
         role || null,
         college || null,
-        city || null
+        city || null,
+        gender || 'Prefer not to say'
       ]
     );
 
@@ -116,7 +117,8 @@ router.post('/register', async (req, res) => {
       email: normalizedEmail,
       role: role || '',
       college: college || '',
-      city: city || ''
+      city: city || '',
+      gender: gender || 'Prefer not to say'
     };
 
     const token = createToken(user);
@@ -136,7 +138,8 @@ router.post('/register', async (req, res) => {
         email: user.email,
         role: user.role,
         college: user.college,
-        city: user.city
+        city: user.city,
+        gender: user.gender
       },
       token: token
     });
@@ -238,7 +241,8 @@ router.post('/login', async (req, res) => {
         email: user.email,
         role: user.role || '',
         college: user.college || '',
-        city: user.city || ''
+        city: user.city || '',
+        gender: user.gender || 'Prefer not to say'
       },
       token: token
     });
@@ -288,7 +292,7 @@ router.get('/search', async (req, res) => {
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, email, role, college, city, bio, skills
+      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender
       FROM users
       WHERE 1 = 1
     `;
@@ -338,7 +342,8 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
       bio,
       skills,
       portfolio,
-      avatar_url
+      avatar_url,
+      gender
     } = req.body;
 
     if (name && typeof name === 'string' && !name.trim()) {
@@ -359,6 +364,7 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
         skills: typeof skills === 'string' ? skills.trim() : undefined,
         portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
         avatar_url: typeof avatar_url === 'string' ? avatar_url.trim() : undefined,
+        gender: typeof gender === 'string' ? gender.trim() : undefined,
       },
       include: {
         scripts: {

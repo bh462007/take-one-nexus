@@ -185,6 +185,12 @@ function requestCard(request, mode) {
     const otherName = mode === 'incoming'
         ? request.requester_name
         : request.owner_name;
+    const otherGender = mode === 'incoming'
+        ? request.requester_gender
+        : request.owner_gender;
+    const otherAvatar = mode === 'incoming'
+        ? request.requester_avatar_url
+        : request.owner_avatar_url;
     const contactEmail = mode === 'incoming'
         ? request.requester_email
         : request.owner_email;
@@ -208,12 +214,21 @@ function requestCard(request, mode) {
         `
         : '';
     const contactLink = contactEmail
-        ? `<a class="request-contact" href="mailto:${esc(contactEmail)}?subject=TAKE%20ONE%20Collaboration">Contact</a>`
+        ? `<div class="request-actions-row">
+            <a class="request-contact" href="mailto:${esc(contactEmail)}?subject=TAKE%20ONE%20Collaboration">Email</a>
+            <a class="request-chat-btn" href="/chat?user=${request.requester_id || request.owner_id}">Chat</a>
+           </div>`
         : '';
 
     return `
         <div class="request-card">
-            <div>
+            <div class="request-avatar-wrap">
+                <img src="${getAvatarUrl(otherName, otherGender || 'Other', otherAvatar)}" 
+                     class="request-avatar" 
+                     alt="${esc(otherName)}"
+                     onerror="handleImageError(this, '${esc(otherName)}', '${otherGender || 'Other'}')">
+            </div>
+            <div class="request-main">
                 <div class="request-script">${esc(request.script_title || 'Untitled Script')}</div>
                 <div class="request-meta">${esc(request.script_genre || 'General')}</div>
                 <div class="request-person">${esc(otherName || 'Creator')} · ${esc(roleLine)}</div>
@@ -398,6 +413,7 @@ async function saveProfile() {
         role: document.getElementById('editRole')?.value.trim() || '',
         college: document.getElementById('editCollege')?.value.trim() || '',
         city: document.getElementById('editCity')?.value.trim() || '',
+        gender: document.getElementById('editGender')?.value || 'Prefer not to say',
         portfolio: document.getElementById('editPortfolio')?.value.trim() || '',
         bio: document.getElementById('editBio')?.value.trim() || '',
         skills: document.getElementById('editSkills')?.value.trim() || ''
@@ -422,7 +438,8 @@ async function saveProfile() {
                 name: response.data.name,
                 role: response.data.role || '',
                 college: response.data.college || '',
-                city: response.data.city || ''
+                city: response.data.city || '',
+                gender: response.data.gender || 'Prefer not to say'
             });
             if (typeof showToast === 'function') showToast('Profile saved permanently ✦');
         }

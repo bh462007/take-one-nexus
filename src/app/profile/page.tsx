@@ -3,6 +3,7 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
 import { USER_ROLES } from '@/lib/constants';
 import Script from 'next/script';
+import { getAvatarUrl } from '@/lib/avatars';
 import './profile.css';
 
 export const dynamic = 'force-dynamic';
@@ -66,6 +67,8 @@ export default async function ProfilePage() {
     );
   }
 
+  const avatarUrl = getAvatarUrl(user.name, user.gender, user.avatar_url);
+
   return (
     <>
       {/* ── CUSTOM CURSOR ── */}
@@ -81,6 +84,7 @@ export default async function ProfilePage() {
           <a href="/">Home</a>
           <a href="/#explore">Explore</a>
           <a href="/#upload">Upload</a>
+          <a href="/chat" className="nav-chat-link">Messages</a>
           <button className="profile-logout" id="profileLogoutBtn" type="button">Logout</button>
         </nav>
       </header>
@@ -101,8 +105,9 @@ export default async function ProfilePage() {
           <div className="profile-sidebar">
             <div className="avatar-wrap">
               <div className="avatar-ring">
-                <img src={user.avatar_url || "https://via.placeholder.com/150/0E1218/FF4D1A?text=C"}
-                     id="profilePic" alt="Profile Photo" />
+                <img src={avatarUrl}
+                     id="profilePic" alt="Profile Photo" 
+                     onError="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent('User') + '&background=random';" />
               </div>
               <button className="avatar-edit" id="avatarEditBtn" type="button">✎</button>
               <input type="file" id="avatarInput" accept="image/*" style={{ display: 'none' }} />
@@ -207,6 +212,15 @@ export default async function ProfilePage() {
                 <div className="about-item">
                   <label htmlFor="editCity">City</label>
                   <input type="text" id="editCity" defaultValue={user.city || ''} placeholder="Mumbai…" />
+                </div>
+                <div className="about-item">
+                  <label htmlFor="editGender">Gender</label>
+                  <select id="editGender" defaultValue={user.gender || 'Prefer not to say'}>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                  </select>
                 </div>
                 <div className="about-item full">
                   <label htmlFor="editPortfolio">Portfolio / Reel</label>

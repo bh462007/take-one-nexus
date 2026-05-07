@@ -1025,6 +1025,7 @@ registerForm?.addEventListener('submit', async (e) => {
   const role = document.getElementById('registerRole').value;
   const college = document.getElementById('registerCollege').value;
   const city = document.getElementById('registerCity').value;
+  const gender = document.getElementById('registerGender').value;
   
   if (password !== confirmPassword) {
     showToast('❌ Passwords do not match');
@@ -1044,7 +1045,7 @@ registerForm?.addEventListener('submit', async (e) => {
     submitBtn.textContent = 'Creating account...';
     
     const response = await API.users.register({
-      name, email, password, role, college, city
+      name, email, password, role, college, city, gender
     });
     
     if (response.success) {
@@ -1274,7 +1275,13 @@ function renderPeopleResults(people) {
 
   results.innerHTML = people.map((person) => `
     <div class="person-card">
-      <div>
+      <div class="person-avatar-wrap">
+        <img src="${getAvatarUrl(person.name, person.gender, person.avatar_url)}" 
+             class="person-avatar" 
+             alt="${person.name}"
+             onerror="handleImageError(this, '${person.name}', '${person.gender}')">
+      </div>
+      <div class="person-content">
         <div class="person-name">${person.name || 'Unnamed Creator'}</div>
         <div class="person-role">${person.role || 'Crew Member'}</div>
         <div class="person-meta">
@@ -1283,7 +1290,8 @@ function renderPeopleResults(people) {
         <div class="person-bio">${person.bio || 'Profile is live. Reach out and start a conversation about the project.'}</div>
       </div>
       <div class="person-actions">
-        <a class="person-contact" href="mailto:${person.email}?subject=TAKE%20ONE%20Collaboration">Contact</a>
+        <a class="person-contact" href="mailto:${person.email}?subject=TAKE%20ONE%20Collaboration">Email</a>
+        <a class="person-chat-btn" href="/chat?user=${person.id}">Chat</a>
         <div class="person-email">${person.email || ''}</div>
       </div>
     </div>

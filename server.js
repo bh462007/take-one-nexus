@@ -11,6 +11,7 @@ const requestRoutes = require('./routes/requests');
 const notificationRoutes = require('./routes/notifications');
 const systemRoutes = require('./routes/system');
 const moderationRoutes = require('./routes/moderation');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,6 +60,7 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/moderation', moderationRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'disconnected';

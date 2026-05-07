@@ -78,3 +78,27 @@ function isAdmin(user) {
     return ADMIN_EMAILS.includes(user.email) || normalizeRole(user.role) === 'admin';
 }
 
+function getAvatarUrl(name, gender, customAvatar) {
+    if (customAvatar && customAvatar.trim() !== '') {
+        return customAvatar;
+    }
+
+    const normalizedGender = (gender || 'Other').toLowerCase();
+    const seed = encodeURIComponent(name || 'User');
+
+    let options = '';
+    if (normalizedGender === 'male') {
+        options = '&top[]=shortHair&top[]=shaggy&top[]=shortWaved&facialHairProbability=10';
+    } else if (normalizedGender === 'female') {
+        options = '&top[]=longHair&top[]=bob&top[]=curly&facialHairProbability=0';
+    } else {
+        options = '&top[]=shortHair&top[]=hat&top[]=curly&facialHairProbability=0';
+    }
+
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}${options}&backgroundColor=b6e3f4,c0aede,d1d4f9&mood[]=happy`;
+}
+
+function handleImageError(img, name, gender) {
+    img.onerror = null;
+    img.src = getAvatarUrl(name, gender);
+}
