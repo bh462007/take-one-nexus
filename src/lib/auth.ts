@@ -41,8 +41,8 @@ export async function getCurrentUser() {
                         error?.message?.toLowerCase().includes('network');
 
     if (isPrismaError || isConnError) {
-      // Re-throw as a standardized DB failure for the Error Boundary
-      throw new Error(`DATABASE_CONNECTION_FAILURE: ${error?.code || 'CONN_LOST'}`);
+      console.error('[CRITICAL_DB_FAILURE]: Returning null to prevent SSR crash.');
+      return null;
     }
     
     // 3. For generic Auth errors (expired token, etc.), return null to force login

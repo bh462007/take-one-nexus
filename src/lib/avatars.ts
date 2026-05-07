@@ -1,52 +1,26 @@
 /**
- * Utility to generate avatar URLs based on gender and name.
- * Uses DiceBear API (avataaars style) with robust fallbacks.
+ * EMERGENCY FALLBACK AVATAR SYSTEM
+ * Disables external API dependencies (DiceBear, UI-Avatars) for maximum stability.
  */
 
 export type Gender = 'Male' | 'Female' | 'Other' | 'Prefer not to say';
 
 export function getAvatarUrl(name: string, gender?: string | null, customAvatar?: string | null): string {
-  // 1. Priority: Custom uploaded avatar
+  // Use custom avatar if provided, otherwise a local placeholder
   if (customAvatar && customAvatar.trim() !== '') {
     return customAvatar;
   }
 
-  const safeName = (name || 'User').trim();
-  const normalizedGender = (gender || 'Other').toLowerCase();
-  const seed = encodeURIComponent(safeName);
-
-  // 2. DiceBear Avataaars options based on gender selection
-  let genderOptions = '';
-  
-  if (normalizedGender === 'male') {
-    // Masculine traits
-    genderOptions = '&top[]=shortHair&top[]=shaggy&top[]=shortWaved&top[]=sides&facialHairProbability=15&facialHair[]=beardLight';
-  } else if (normalizedGender === 'female') {
-    // Feminine traits
-    genderOptions = '&top[]=longHair&top[]=bob&top[]=curly&top[]=bun&facialHairProbability=0';
-  } else {
-    // Neutral/Eclectic traits
-    genderOptions = '&top[]=shortHair&top[]=hat&top[]=curly&top[]=eyepatch&facialHairProbability=5';
-  }
-
-  // Cinematic color palette for backgrounds
-  const colors = '0E1218,1C2330,FF4D1A,FFA620,00D4FF';
-
-  // Return high-quality SVG from DiceBear
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}${genderOptions}&backgroundColor=${colors}&mood[]=happy&backgroundType=gradientLinear`;
+  // RETURN STATIC LOCAL PLACEHOLDER TO AVOID EXTERNAL NETWORK CALLS DURING SSR
+  // This is a base64 encoded simple profile SVG
+  return `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkY0RDFBIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTRhIDQgMCAwIDAtNC00SDhhNCA0IDAgMCAwLTQgNHYyIj48L3BhdGg+PGNpcmNsZSBjeD0iMTIiIGN5PSI3IiByPSI0Ij48L2NpcmNsZT48L3N2Zz4=`;
 }
 
 /**
  * Helper for client-side image fallback
- * If DiceBear fails (rare), we fall back to a clean Initials avatar
  */
-export const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, name: string, gender?: string | null) => {
-  const target = e.target as HTMLImageElement;
-  if (target.dataset.triedFallback === 'true') return; // Prevent infinite loop
-  
-  target.dataset.triedFallback = 'true';
-  const safeName = encodeURIComponent(name || 'User');
-  
-  // Secondary fallback: UI Avatars (initials)
-  target.src = `https://ui-avatars.com/api/?name=${safeName}&background=random&color=fff&size=128&bold=true`;
+export const handleImageError = (e: any) => {
+  const target = e.target;
+  target.onerror = null;
+  target.src = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkY0RDFBIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIwIDIxdi0yYTRhIDQgMCAwIDAtNC00SDhhNCA0IDAgMCAwLTQgNHYyIj48L3BhdGg+PGNpcmNsZSBjeD0iMTIiIGN5PSI3IiByPSI0Ij48L2NpcmNsZT48L3N2Zz4=`;
 };
