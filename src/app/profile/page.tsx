@@ -177,7 +177,7 @@ export default async function ProfilePage() {
                         alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer'
                      }}
-                     id="addProjectCard">
+                     id="addProjectAction">
                   <div style={{ fontSize: '28px', color: 'rgba(255,77,26,0.3)', marginBottom: '8px' }}>+</div>
                   <div style={{ fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,77,26,0.4)' }}>New Script</div>
                 </div>
@@ -276,10 +276,10 @@ export default async function ProfilePage() {
         <div className="status-item" id="statusTime"></div>
       </div>
 
-      <Script src="/scripts/api/api.js" strategy="beforeInteractive" />
-      <Script src="/scripts/utils/helpers.js" strategy="beforeInteractive" />
-      <Script src="/scripts/components/ui.js" strategy="beforeInteractive" />
-      <Script src="/scripts/animations/common.js" strategy="beforeInteractive" />
+      <Script src="/scripts/api/api.js" strategy="afterInteractive" />
+      <Script src="/scripts/utils/helpers.js" strategy="afterInteractive" />
+      <Script src="/scripts/components/ui.js" strategy="afterInteractive" />
+      <Script src="/scripts/animations/common.js" strategy="afterInteractive" />
       <Script src="/scripts/pages/profile.js" strategy="afterInteractive" />
     </>
   );

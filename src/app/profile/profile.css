@@ -39,10 +39,10 @@ body::before {
     background: repeating-linear-gradient(0deg,
             transparent,
             transparent 2px,
-            rgba(0, 0, 0, 0.12) 2px,
-            rgba(0, 0, 0, 0.12) 4px);
+            rgba(0, 0, 0, 0.1) 2px,
+            rgba(0, 0, 0, 0.1) 4px);
     pointer-events: none;
-    z-index: 9990;
+    z-index: 10;
 }
 
 /* ── GRAIN OVERLAY ── */
@@ -53,7 +53,7 @@ body::after {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
     background-size: 180px;
     pointer-events: none;
-    z-index: 9989;
+    z-index: 11;
 }
 
 /* ── CUSTOM CURSOR ── */
@@ -74,15 +74,15 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 5%;
-    height: 70px;
-    background: rgba(6, 8, 10, 0.75);
-    border-bottom: 1px solid rgba(255, 77, 26, 0.15);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    padding: 0 6%;
+    height: 80px;
+    background: rgba(6, 8, 10, 0.85);
+    border-bottom: 1px solid rgba(255, 77, 26, 0.2);
+    backdrop-filter: blur(25px) saturate(200%);
+    -webkit-backdrop-filter: blur(25px) saturate(200%);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 1000;
 }
 
 .logo {
@@ -106,17 +106,41 @@ header {
     animation: pulse 2s ease-in-out infinite;
 }
 
+nav {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+}
+
 nav a {
-    font-size: 9px;
-    letter-spacing: 0.3em;
+    font-size: 11px;
+    letter-spacing: 0.35em;
     text-transform: uppercase;
     color: var(--silver);
     text-decoration: none;
-    transition: color 0.3s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    padding: 4px 0;
+}
+
+nav a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--neon);
+    box-shadow: 0 0 10px var(--neon);
+    transition: width 0.3s ease;
 }
 
 nav a:hover {
     color: var(--cream);
+}
+
+nav a:hover::after {
+    width: 100%;
 }
 
 .profile-logout {
@@ -304,11 +328,26 @@ nav a:hover {
 
 .profile-card {
     display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 0;
-    margin-top: -72px;
+    grid-template-columns: 320px 1fr;
+    background: rgba(14, 18, 24, 0.45);
+    border: 1px solid rgba(255, 77, 26, 0.2);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 77, 26, 0.05);
     position: relative;
+    backdrop-filter: blur(15px);
+    overflow: hidden;
+    margin-top: -72px;
     z-index: 2;
+}
+
+.profile-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--neon);
+    box-shadow: 0 0 15px var(--neon);
 }
 
 @media (max-width: 800px) {
@@ -539,23 +578,40 @@ nav a:hover {
 }
 
 .ctab {
-    font-size: 9px;
+    padding: 18px 24px;
+    background: none;
+    border: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
     letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--silver);
-    background: none;
-    border: none;
-    padding: 14px 24px;
     cursor: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
     transition: all 0.3s;
+    position: relative;
+    opacity: 0.6;
 }
 
-.ctab.active,
 .ctab:hover {
+    color: var(--cream);
+    opacity: 1;
+}
+
+.ctab.active {
     color: var(--neon);
-    border-color: var(--neon);
+    opacity: 1;
+    background: rgba(255, 77, 26, 0.05);
+}
+
+.ctab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--neon);
+    box-shadow: 0 0 12px var(--neon);
 }
 
 .tab-count {
@@ -579,6 +635,12 @@ nav a:hover {
 
 .tab-pane.active {
     display: block;
+    animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── SECTION HEADER ── */

@@ -7,7 +7,10 @@ function switchTab(name, btn) {
     document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
 
     /* Activate the selected pane */
-    document.getElementById('tab-' + name).classList.add('active');
+    const targetPane = document.getElementById('tab-' + name);
+    if (targetPane) {
+        targetPane.classList.add('active');
+    }
 
     /* Activate the correct button */
     if (btn) {
@@ -15,7 +18,7 @@ function switchTab(name, btn) {
     } else {
         /* Called without a button reference (e.g. from "Edit Profile" link) */
         document.querySelectorAll('.ctab').forEach(b => {
-            if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(name)) {
+            if (b.getAttribute('data-tab') === name) {
                 b.classList.add('active');
             }
         });
@@ -47,23 +50,20 @@ function liveUpdateName(val) {
     if (val.trim()) el.textContent = val;
 }
 
-/* Utils moved to helpers.js */
-
-/* Moved to helpers.js as getCardTone */
-
 function renderSkillBadges(skills) {
     const wrap = document.getElementById('skillBadges');
     if (!wrap) return;
 
+    if (typeof splitSkills !== 'function') return;
     const items = splitSkills(skills);
     if (items.length === 0) {
         wrap.innerHTML = '<span class="badge">New Creator</span>';
-        updateStat('skillsCount', 0);
+        if (typeof updateStat === 'function') updateStat('skillsCount', 0);
         return;
     }
 
     wrap.innerHTML = items.map(skill => `<span class="badge">${skill}</span>`).join('');
-    updateStat('skillsCount', items.length);
+    if (typeof updateStat === 'function') updateStat('skillsCount', items.length);
 }
 
 function setProfileGate(show) {
@@ -81,9 +81,13 @@ function renderProjects(scripts) {
     if (!grid) return;
 
     const items = Array.isArray(scripts) ? scripts : [];
+    
+    // Check if getCardTone is available
+    const getTone = (typeof getCardTone === 'function') ? getCardTone : () => '#1C2330';
+
     const cards = items.map((script, index) => `
         <div class="project-card"
-             style="background: linear-gradient(160deg, ${getCardTone(script.genre)} 0%, #06080A 100%)">
+             style="background: linear-gradient(160deg, ${getTone(script.genre)} 0%, #06080A 100%)">
           <div class="pc-num">${String(index + 1).padStart(3, '0')}</div>
           <div class="pc-genre">${script.genre || 'General'}</div>
           <div class="pc-title">${script.title || 'Untitled Script'}</div>
@@ -101,61 +105,57 @@ function renderProjects(scripts) {
                     border: 1px dashed rgba(255,77,26,0.2);
                     display: flex; flex-direction: column;
                     align-items: center; justify-content: center;
-                    cursor: none;"
-             onclick="window.location='/project.htm#upload'">
+                    cursor: pointer;"
+             id="addProjectAction">
           <div style="font-size: 28px; color: rgba(255,77,26,0.3); margin-bottom: 8px;">+</div>
           <div style="font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase;
                       color: rgba(255,77,26,0.4);">New Script</div>
         </div>
     `;
 
-    updateStat('projCount', items.length);
+    if (typeof updateStat === 'function') updateStat('projCount', items.length);
 }
 
-/* Moved to ui.js */
-
 function populateProfile(profile) {
-    document.getElementById('profileName').textContent = profile.name || 'Creator Name';
-    document.getElementById('profileRole').textContent =
-        ['Filmmaker', profile.role || '']
+    if (!profile) return;
+    
+    const nameEl = document.getElementById('profileName');
+    if (nameEl) nameEl.textContent = profile.name || 'Creator Name';
+    
+    const roleEl = document.getElementById('profileRole');
+    if (roleEl) {
+        roleEl.textContent = profile.role || 'Independent Filmmaker';
+    }
+
+    const metaEl = document.getElementById('profileMeta');
+    if (metaEl) {
+        metaEl.textContent = [profile.college || 'College', profile.city || 'City']
             .filter(Boolean)
             .join(' · ');
-    document.getElementById('profileMeta').textContent =
-        [profile.city || '', profile.college || '']
-            .filter(Boolean)
-            .join(' · ') || 'Open to collaborations';
+    }
 
-    document.getElementById('profileBio').textContent =
-        profile.bio || `Based in ${profile.city || 'your city'} — open to collaborations.`;
+    const bioEl = document.getElementById('profileBio');
+    if (bioEl) {
+        bioEl.textContent = profile.bio || 'No bio provided yet.';
+    }
 
     if (profile.avatar_url) {
-        document.getElementById('profilePic').src = profile.avatar_url;
+        const picEl = document.getElementById('profilePic');
+        if (picEl) picEl.src = profile.avatar_url;
     }
 
-    document.getElementById('editName').value = profile.name || '';
-    if (document.getElementById('editRole')) {
-        document.getElementById('editRole').value = profile.role || '';
-    }
-    if (document.getElementById('editCollege')) {
-        document.getElementById('editCollege').value = profile.college || '';
-    }
-    if (document.getElementById('editCity')) {
-        document.getElementById('editCity').value = profile.city || '';
-    }
-    if (document.getElementById('editPortfolio')) {
-        document.getElementById('editPortfolio').value = profile.portfolio || '';
-    }
-    if (document.getElementById('editBio')) {
-        document.getElementById('editBio').value = profile.bio || '';
-    }
-    if (document.getElementById('editSkills')) {
-        document.getElementById('editSkills').value = profile.skills || '';
-    }
+    if (document.getElementById('editName')) document.getElementById('editName').value = profile.name || '';
+    if (document.getElementById('editRole')) document.getElementById('editRole').value = profile.role || '';
+    if (document.getElementById('editCollege')) document.getElementById('editCollege').value = profile.college || '';
+    if (document.getElementById('editCity')) document.getElementById('editCity').value = profile.city || '';
+    if (document.getElementById('editPortfolio')) document.getElementById('editPortfolio').value = profile.portfolio || '';
+    if (document.getElementById('editBio')) document.getElementById('editBio').value = profile.bio || '';
+    if (document.getElementById('editSkills')) document.getElementById('editSkills').value = profile.skills || '';
 
     renderSkillBadges(profile.skills);
     renderProjects(profile.scripts || []);
 
-    updateStat('profileCity', profile.city || '--');
+    if (typeof updateStat === 'function') updateStat('profileCity', profile.city || '--');
 }
 
 async function loadProfile() {
@@ -177,10 +177,9 @@ async function loadProfile() {
         }
     } catch (err) {
         console.error('Profile load failed:', err);
-        showToast(`Could not load profile ✦`);
+        if (typeof showToast === 'function') showToast(`Could not load profile ✦`);
     }
 }
-
 
 function requestCard(request, mode) {
     const otherName = mode === 'incoming'
@@ -193,7 +192,11 @@ function requestCard(request, mode) {
         ? `${request.requester_role || 'Crew'}${request.requester_city ? ' · ' + request.requester_city : ''}`
         : 'Project owner';
     const status = String(request.status || 'pending').toLowerCase();
-    const statusPill = `<div class="request-status ${escapeHTML(status)}">${escapeHTML(status)}</div>`;
+    
+    // Check if escapeHTML is available
+    const esc = (typeof escapeHTML === 'function') ? escapeHTML : (t) => t;
+
+    const statusPill = `<div class="request-status ${esc(status)}">${esc(status)}</div>`;
     const decisionActions = mode === 'incoming' && status === 'pending'
         ? `
             <div class="request-actions">
@@ -205,16 +208,16 @@ function requestCard(request, mode) {
         `
         : '';
     const contactLink = contactEmail
-        ? `<a class="request-contact" href="mailto:${escapeHTML(contactEmail)}?subject=TAKE%20ONE%20Collaboration">Contact</a>`
+        ? `<a class="request-contact" href="mailto:${esc(contactEmail)}?subject=TAKE%20ONE%20Collaboration">Contact</a>`
         : '';
 
     return `
         <div class="request-card">
             <div>
-                <div class="request-script">${escapeHTML(request.script_title || 'Untitled Script')}</div>
-                <div class="request-meta">${escapeHTML(request.script_genre || 'General')}</div>
-                <div class="request-person">${escapeHTML(otherName || 'Creator')} · ${escapeHTML(roleLine)}</div>
-                <div class="request-message">${escapeHTML(request.message || 'No message added.')}</div>
+                <div class="request-script">${esc(request.script_title || 'Untitled Script')}</div>
+                <div class="request-meta">${esc(request.script_genre || 'General')}</div>
+                <div class="request-person">${esc(otherName || 'Creator')} · ${esc(roleLine)}</div>
+                <div class="request-message">${esc(request.message || 'No message added.')}</div>
             </div>
             <div class="request-side">
                 ${statusPill}
@@ -247,10 +250,7 @@ async function updateRequestStatus(requestId, status, button) {
     if (typeof API === 'undefined' || !API.requests) return;
 
     const authUser = API.auth.getUser();
-    if (!authUser || !authUser.id) {
-        setProfileGate(true);
-        return;
-    }
+    if (!authUser || !authUser.id) return;
 
     const card = button?.closest('.request-card');
     const buttons = card ? card.querySelectorAll('button') : [];
@@ -258,12 +258,12 @@ async function updateRequestStatus(requestId, status, button) {
     try {
         buttons.forEach(item => item.disabled = true);
         await API.requests.updateStatus(requestId, status);
-        showToast(`Request ${status} ✦`);
+        if (typeof showToast === 'function') showToast(`Request ${status} ✦`);
         loadCollaborationRequests(authUser.id);
         loadNotifications(authUser.id);
     } catch (err) {
         console.error('Request status update failed:', err);
-        showToast(err.message || 'Could not update request ✦');
+        if (typeof showToast === 'function') showToast(err.message || 'Could not update request ✦');
         buttons.forEach(item => item.disabled = false);
     }
 }
@@ -296,8 +296,10 @@ function formatNotificationTime(value) {
 
 function notificationCard(notification) {
     const unread = Number(notification.is_read) === 0;
+    const esc = (typeof escapeHTML === 'function') ? escapeHTML : (t) => t;
+
     const openAction = notification.link_url
-        ? `<a class="notification-read" href="${escapeHTML(notification.link_url)}">Open</a>`
+        ? `<a class="notification-read" href="${esc(notification.link_url)}">Open</a>`
         : '';
     const readAction = unread
         ? `<button class="notification-read" type="button"
@@ -307,9 +309,9 @@ function notificationCard(notification) {
     return `
         <div class="notification-card ${unread ? 'unread' : ''}">
             <div>
-                <div class="notification-title">${escapeHTML(notification.title || 'Notification')}</div>
-                <div class="notification-body">${escapeHTML(notification.body || '')}</div>
-                <div class="notification-time">${escapeHTML(formatNotificationTime(notification.created_at))}</div>
+                <div class="notification-title">${esc(notification.title || 'Notification')}</div>
+                <div class="notification-body">${esc(notification.body || '')}</div>
+                <div class="notification-time">${esc(formatNotificationTime(notification.created_at))}</div>
             </div>
             <div class="notification-side">
                 ${openAction}
@@ -362,67 +364,47 @@ async function markNotificationRead(notificationId, button) {
         loadNotifications(authUser.id);
     } catch (err) {
         console.error('Notification read failed:', err);
-        showToast(err.message || 'Could not update notification ✦');
+        if (typeof showToast === 'function') showToast(err.message || 'Could not update notification ✦');
         if (button) button.disabled = false;
     }
 }
 
 async function markAllNotificationsRead() {
     const authUser = API.auth.getUser();
-    if (!authUser || !authUser.id) {
-        setProfileGate(true);
-        return;
-    }
+    if (!authUser || !authUser.id) return;
 
     try {
         await API.notifications.markAllRead(authUser.id);
         loadNotifications(authUser.id);
-        showToast('Notifications cleared ✦');
+        if (typeof showToast === 'function') showToast('Notifications cleared ✦');
     } catch (err) {
         console.error('Notification clear failed:', err);
-        showToast(err.message || 'Could not clear notifications ✦');
+        if (typeof showToast === 'function') showToast(err.message || 'Could not clear notifications ✦');
     }
 }
-
-/* Moved to helpers.js */
 
 /* ── SAVE PROFILE ── */
 async function saveProfile() {
     if (typeof API === 'undefined' || !API.auth || !API.users) return;
 
     const authUser = API.auth.getUser();
-    if (!authUser || !authUser.id) {
-        setProfileGate(true);
-        return;
-    }
+    if (!authUser || !authUser.id) return;
 
     const saveButton = document.querySelector('.save-btn') || document.getElementById('saveProfileBtn');
     const originalText = saveButton ? saveButton.textContent : '';
     
-    let college = '';
-    let city = '';
-    
-    if (document.getElementById('editCollege')) {
-        college = document.getElementById('editCollege').value.trim();
-        city = document.getElementById('editCity')?.value.trim() || '';
-    } else {
-        const split = splitCollegeCity(document.getElementById('editCollegeCity')?.value);
-        college = split.college;
-        city = split.city;
-    }
-
     const payload = {
         name: document.getElementById('editName')?.value.trim() || '',
         role: document.getElementById('editRole')?.value.trim() || '',
-        college,
-        city,
+        college: document.getElementById('editCollege')?.value.trim() || '',
+        city: document.getElementById('editCity')?.value.trim() || '',
         portfolio: document.getElementById('editPortfolio')?.value.trim() || '',
         bio: document.getElementById('editBio')?.value.trim() || '',
         skills: document.getElementById('editSkills')?.value.trim() || ''
     };
 
     if (!payload.name) {
-        showToast('Name is required ✦');
+        if (typeof showToast === 'function') showToast('Name is required ✦');
         return;
     }
 
@@ -442,11 +424,11 @@ async function saveProfile() {
                 college: response.data.college || '',
                 city: response.data.city || ''
             });
-            showToast('Profile saved permanently ✦');
+            if (typeof showToast === 'function') showToast('Profile saved permanently ✦');
         }
     } catch (err) {
         console.error('Profile save failed:', err);
-        showToast(err.message || 'Could not save profile ✦');
+        if (typeof showToast === 'function') showToast(err.message || 'Could not save profile ✦');
     } finally {
         if (saveButton) {
             saveButton.disabled = false;
@@ -455,6 +437,79 @@ async function saveProfile() {
     }
 }
 
-/* ── TOAST NOTIFICATION ── */
-/* Moved to ui.js */
+/* Initialization */
+function initProfile() {
+    console.log('[TAKE ONE] Initializing Profile Interactivity...');
 
+    /* Avatar Edit */
+    const avatarBtn = document.getElementById('avatarEditBtn');
+    const avatarInput = document.getElementById('avatarInput');
+    if (avatarBtn && avatarInput) {
+        avatarBtn.addEventListener('click', () => avatarInput.click());
+        avatarInput.addEventListener('change', (e) => changeAvatar(e.target));
+    }
+
+    /* Sidebar Edit Button -> Switch to About Tab */
+    const sidebarEditBtn = document.getElementById('sidebarEditBtn');
+    if (sidebarEditBtn) {
+        sidebarEditBtn.addEventListener('click', () => {
+            const aboutTabBtn = document.querySelector('.ctab[data-tab="about"]');
+            switchTab('about', aboutTabBtn);
+            document.getElementById('profileTabs')?.scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+
+    /* Tab Switching */
+    document.querySelectorAll('.ctab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.getAttribute('data-tab');
+            switchTab(tabName, btn);
+        });
+    });
+
+    /* Save Profile */
+    const saveBtn = document.getElementById('saveProfileBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            saveProfile();
+        });
+    }
+
+    /* Notifications */
+    const markReadBtn = document.getElementById('markReadBtn');
+    if (markReadBtn) {
+        markReadBtn.addEventListener('click', markAllNotificationsRead);
+    }
+
+    /* Project Add */
+    const addProj = document.getElementById('addProjectAction');
+    if (addProj) {
+        addProj.addEventListener('click', () => {
+            window.location.href = '/#upload';
+        });
+    }
+
+    /* Logout */
+    const logoutBtn = document.getElementById('profileLogoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (typeof API !== 'undefined' && API.auth) {
+                API.auth.logout();
+                window.location.href = '/';
+            }
+        });
+    }
+
+    /* Initial Load */
+    loadProfile().then(activateHashTab);
+}
+
+/* Handle Next.js hydration / Script load timing */
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initProfile();
+} else {
+    window.addEventListener('DOMContentLoaded', initProfile);
+}
+
+window.addEventListener('hashchange', activateHashTab);
