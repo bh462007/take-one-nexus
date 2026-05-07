@@ -458,5 +458,3 @@ async function saveProfile() {
 /* ── TOAST NOTIFICATION ── */
 /* Moved to ui.js */
 
-loadProfile().then(activateHashTab);
-window.addEventListener('hashchange', activateHashTab);

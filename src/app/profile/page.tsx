@@ -5,6 +5,9 @@ import { USER_ROLES } from '@/lib/constants';
 import Script from 'next/script';
 import './profile.css';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type Props = {
   params: Promise<{ id: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -40,7 +43,14 @@ export async function generateMetadata(
 }
 
 export default async function ProfilePage() {
-  const user = await getCurrentUser();
+  let user = null;
+  try {
+    user = await getCurrentUser();
+  } catch (error) {
+    console.error('[Profile Fetch Error]:', error);
+    // Return a specific error component or throw for the Error Boundary
+    throw new Error('Database connection failed');
+  }
 
   if (!user) {
     return (
@@ -92,8 +102,7 @@ export default async function ProfilePage() {
             <div className="avatar-wrap">
               <div className="avatar-ring">
                 <img src={user.avatar_url || "https://via.placeholder.com/150/0E1218/FF4D1A?text=C"}
-                     id="profilePic" alt="Profile Photo"
-                     onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/150/0E1218/FF4D1A?text=C"; }} />
+                     id="profilePic" alt="Profile Photo" />
               </div>
               <button className="avatar-edit" id="avatarEditBtn" type="button">✎</button>
               <input type="file" id="avatarInput" accept="image/*" style={{ display: 'none' }} />
