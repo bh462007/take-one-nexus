@@ -9,15 +9,11 @@ export default async function UsersPage() {
     orderBy: { created_at: 'desc' }
   });
 
-  // Convert Date objects to strings if needed for client component, 
-  // but Next.js handles Dates in props for Server Components to Client Components now (partially).
-  // Actually, we'll just pass them as they are.
-
   return (
     <div>
       <div className="admin-page-header">
-        <h1 className="page-title" style={{ fontFamily: 'var(--font-title)', fontSize: '3rem', margin: '0 0 10px 0' }}>User Management</h1>
-        <p className="page-subtitle" style={{ color: 'var(--text-dim)', marginBottom: '30px' }}>View, Filter and Manage TAKE ONE Creators</p>
+        <h1 className="page-title">Crew Database</h1>
+        <p className="page-subtitle">Accessing Encrypted Creator Profiles & Designations</p>
       </div>
 
       <UserManagement initialUsers={users} />

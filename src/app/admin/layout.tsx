@@ -1,32 +1,69 @@
-import React from 'react';
-import '@/styles/admin.css';
-import { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'TAKE ONE | Control Room',
-  description: 'Mission Control for TAKE ONE Nexus',
-};
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import '@/styles/admin.css';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [time, setTime] = useState('');
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTime(now.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+      }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="admin-container">
+      {/* ── FILMSTRIP RAIL ── */}
+      <aside className="filmstrip-v">
+        {[...Array(25)].map((_, i) => (
+          <div key={i} className="film-hole"></div>
+        ))}
+      </aside>
+
       <header className="admin-header">
-        <a href="/admin" className="logo">TAKE <span>ONE</span> <small>CONTROL ROOM</small></a>
+        <Link href="/admin" className="logo">
+          TAKE <span>ONE</span> <small>CONTROL ROOM</small>
+        </Link>
         <nav className="admin-nav">
-          <a href="/admin">Dashboard</a>
-          <a href="/admin/users">Users</a>
-          <a href="/">Exit to Site</a>
+          <Link href="/admin" className={pathname === '/admin' ? 'active' : ''}>Dashboard</Link>
+          <Link href="/admin/users" className={pathname.startsWith('/admin/users') ? 'active' : ''}>Users</Link>
+          <Link href="/">Exit Terminal</Link>
         </nav>
       </header>
+
       <main className="admin-main">
         {children}
       </main>
+
       <footer className="admin-footer">
-        <p>&copy; 2026 TAKE ONE Nexus — System Online</p>
+        <div className="status-group">
+          <div className="status-item">
+            <div className="status-dot"></div> SYSTEM ONLINE
+          </div>
+          <div className="status-item">
+            <div className="status-dot cyan"></div> SIGNAL SECURE
+          </div>
+        </div>
+        <div className="status-item">
+          TAKE ONE v2.2 // {time}
+        </div>
       </footer>
     </div>
   );

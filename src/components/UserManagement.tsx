@@ -55,53 +55,53 @@ export default function UserManagement({ initialUsers }: Props) {
         <input 
           type="text" 
           className="search-input" 
-          placeholder="Search by name, email or role..." 
+          placeholder="SEARCH CREW BY NAME, EMAIL OR DESIGNATION..." 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <button className="btn-add" onClick={() => router.push('/admin/users/add')}>+ Add User</button>
+        <button className="btn-add" onClick={() => router.push('/admin/users/add')}>+ NEW CREW SIGNAL</button>
       </div>
 
       <div className="admin-table-container">
         <table>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>College</th>
-              <th>City</th>
-              <th>Joined</th>
-              <th>Actions</th>
+              <th>CREW NAME</th>
+              <th>CHANNEL / EMAIL</th>
+              <th>DESIGNATION</th>
+              <th>BASE / COLLEGE</th>
+              <th>LOCATION</th>
+              <th>SYNC DATE</th>
+              <th>OPERATIONS</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.length > 0 ? (
               filteredUsers.map(user => (
                 <tr key={user.id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
+                  <td style={{ fontWeight: 'bold' }}>{user.name}</td>
+                  <td style={{ color: 'var(--silver)' }}>{user.email}</td>
                   <td>
-                    <span className="role-badge">{user.role || 'Unassigned'}</span>
+                    <span className="role-badge">{user.role || 'GHOST'}</span>
                   </td>
-                  <td>{user.college || '—'}</td>
-                  <td>{user.city || '—'}</td>
-                  <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td style={{ color: 'var(--silver)' }}>{user.college || '—'}</td>
+                  <td style={{ color: 'var(--silver)' }}>{user.city || '—'}</td>
+                  <td style={{ color: 'var(--silver)', fontSize: '10px' }}>{new Date(user.created_at).toLocaleDateString()}</td>
                   <td>
                     <button 
                       className="btn-action btn-delete" 
                       onClick={() => handleDelete(user.id)}
                       disabled={deletingId === user.id}
                     >
-                      {deletingId === user.id ? 'Deleting...' : 'Delete'}
+                      {deletingId === user.id ? 'WIPING...' : 'WIPE'}
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-dim)' }}>
-                  No users found matching your search.
+                <td colSpan={7} style={{ textAlign: 'center', padding: '60px', color: 'var(--text-dim)', letterSpacing: '4px', textTransform: 'uppercase', fontSize: '10px' }}>
+                  NO SIGNALS DETECTED IN CREW DATABASE.
                 </td>
               </tr>
             )}

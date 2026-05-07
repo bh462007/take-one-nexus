@@ -35,19 +35,22 @@ export default function AddUserForm() {
     return (
       <div className="modal-overlay">
         <div className="modal-content" style={{ textAlign: 'center' }}>
-          <h2 className="modal-title">Creator <span>Onboarded</span></h2>
-          <p style={{ marginBottom: '20px', fontSize: '12px', color: 'var(--text-dim)' }}>Copy the generated password below. It will only be shown once.</p>
+          <h2 className="modal-title">CREATOR <span>SYNCED</span></h2>
+          <p style={{ marginBottom: '25px', fontSize: '10px', color: 'var(--text-dim)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+            ACCESS KEY GENERATED. SECURE THIS SIGNAL IMMEDIATELY.
+          </p>
           
           <div style={{ 
-            background: 'black', 
-            padding: '30px', 
-            fontSize: '32px', 
-            letterSpacing: '8px', 
+            background: 'rgba(0,0,0,0.5)', 
+            padding: '40px', 
+            fontSize: '42px', 
+            letterSpacing: '10px', 
             color: 'var(--neon)', 
             border: '1px solid var(--border)',
-            marginBottom: '30px',
+            marginBottom: '40px',
             fontFamily: 'var(--font-title)',
-            boxShadow: '0 0 30px rgba(255, 77, 26, 0.1)'
+            boxShadow: '0 0 40px rgba(255, 77, 26, 0.2)',
+            textShadow: '0 0 10px var(--neon)'
           }}>
             {generatedPassword}
           </div>
@@ -56,11 +59,11 @@ export default function AddUserForm() {
             className="btn-add" 
             onClick={() => {
               navigator.clipboard.writeText(generatedPassword);
-              alert('Password copied to clipboard');
+              alert('ACCESS KEY COPIED TO TERMINAL CLIPBOARD');
             }}
-            style={{ marginBottom: '15px', width: '100%' }}
+            style={{ marginBottom: '20px', width: '100%' }}
           >
-            Copy Password
+            COPY ACCESS KEY
           </button>
           
           <button 
@@ -68,7 +71,7 @@ export default function AddUserForm() {
             onClick={() => router.push('/admin/users')}
             style={{ width: '100%' }}
           >
-            Go to User List →
+            RETURN TO CREW DATABASE →
           </button>
         </div>
       </div>
@@ -76,50 +79,50 @@ export default function AddUserForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: '800px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-dim)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '2px' }}>Full Name</label>
-          <input name="name" className="search-input" required placeholder="Arjun Mehta" />
+    <form onSubmit={handleSubmit} style={{ maxWidth: '900px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginBottom: '40px' }}>
+        <div className="form-group">
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '3px' }}>CREATOR NAME</label>
+          <input name="name" className="search-input" required placeholder="IDENTIFY PERSON..." />
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-dim)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '2px' }}>Email Address</label>
-          <input name="email" type="email" className="search-input" required placeholder="arjun@example.com" />
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '30px' }}>
-        <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-dim)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '2px' }}>Primary Role</label>
-        <select name="role" className="search-input" required style={{ width: '100%' }}>
-          {USER_ROLES.map(role => (
-            <option key={role} value={role}>{role}</option>
-          ))}
-          <option value="admin">System Admin</option>
-        </select>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-dim)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '2px' }}>College</label>
-          <input name="college" className="search-input" placeholder="FTII Pune" />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-dim)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '2px' }}>City</label>
-          <input name="city" className="search-input" placeholder="Mumbai" />
+        <div className="form-group">
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '3px' }}>TRANSMISSION CHANNEL</label>
+          <input name="email" type="email" className="search-input" required placeholder="EMAIL ADDRESS..." />
         </div>
       </div>
 
       <div style={{ marginBottom: '40px' }}>
-        <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-dim)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '2px' }}>Bio (Optional)</label>
-        <textarea name="bio" className="search-input" style={{ width: '100%', height: '120px', resize: 'vertical' }} placeholder="Tell the system about this creator..."></textarea>
+        <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '3px' }}>PRODUCTION DESIGNATION</label>
+        <select name="role" className="search-input" required style={{ width: '100%', height: '52px' }}>
+          {USER_ROLES.map(role => (
+            <option key={role} value={role}>{role.toUpperCase()}</option>
+          ))}
+          <option value="admin">SYSTEM ADMINISTRATOR</option>
+        </select>
       </div>
 
-      <div style={{ display: 'flex', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginBottom: '40px' }}>
+        <div className="form-group">
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '3px' }}>ACADEMIC BASE</label>
+          <input name="college" className="search-input" placeholder="COLLEGE / INSTITUTE..." />
+        </div>
+        <div className="form-group">
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '3px' }}>SECTOR / CITY</label>
+          <input name="city" className="search-input" placeholder="LOCATION..." />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '50px' }}>
+        <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '3px' }}>MISSION PROFILE (BIO)</label>
+        <textarea name="bio" className="search-input" style={{ width: '100%', height: '150px', resize: 'vertical', padding: '20px' }} placeholder="LOG CREATOR BIOGRAPHY..."></textarea>
+      </div>
+
+      <div style={{ display: 'flex', gap: '30px', borderTop: '1px solid var(--border)', paddingTop: '40px' }}>
         <button type="submit" className="btn-add" disabled={loading}>
-          {loading ? 'Transmitting...' : 'Onboard Creator →'}
+          {loading ? 'TRANSMITTING...' : 'ONBOARD CREATOR DESIGNATION →'}
         </button>
-        <button type="button" className="btn-action" onClick={() => router.back()}>Cancel</button>
+        <button type="button" className="btn-action" onClick={() => router.back()}>ABORT MISSION</button>
       </div>
     </form>
   );
