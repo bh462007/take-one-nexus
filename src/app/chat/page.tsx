@@ -58,6 +58,7 @@ export default function ChatPage() {
   const setActiveConversation = useCallback((conversation: Conversation, updateUrl = true) => {
     setActiveConv(conversation);
     setMessages([]);
+    localStorage.setItem('take_one_last_conversation', String(conversation.id));
 
     if (updateUrl && typeof window !== 'undefined') {
       const url = `/chat?conversationId=${conversation.id}`;
