@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import { getAvatarUrl } from '@/lib/avatars';
 import './chat.css';
@@ -23,11 +23,13 @@ interface ChatMessage {
 }
 
 interface Conversation {
-  id: number | null;
-  recipientId?: number;
+  id: number;
   users: User[];
   messages: ChatMessage[];
+  created?: boolean;
 }
+
+type ChatState = 'loading' | 'ready' | 'error' | 'not-found';
 
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -35,42 +37,121 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  
+  const [state, setState] = useState<ChatState>('loading');
+  const [statusText, setStatusText] = useState('Synchronizing with Nexus...');
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const activeRecipient = useMemo(() => {
+    if (!activeConv || !user) return null;
+    return activeConv.users.find((member) => member.id !== user.id) || null;
+  }, [activeConv, user]);
+
+  const getRecipient = useCallback((conv: Conversation) => {
+    return conv.users.find((member) => member.id !== user?.id) || conv.users[0];
+  }, [user?.id]);
+
+  const setActiveConversation = useCallback((conversation: Conversation, updateUrl = true) => {
+    setActiveConv(conversation);
+    setMessages([]);
+
+    if (updateUrl && typeof window !== 'undefined') {
+      const url = `/chat?conversationId=${conversation.id}`;
+      window.history.replaceState(null, '', url);
+    }
+  }, []);
+
+  const fetchMessages = useCallback(async (convId: number) => {
+    setMessageLoading(true);
+    try {
+      const res = await fetch(`/api/chat/messages/${convId}`);
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        setState(res.status === 403 || res.status === 404 ? 'not-found' : 'error');
+        setStatusText(json.message || 'Conversation could not be loaded.');
+        return;
+      }
+
+      setMessages(json.data || []);
+      setState('ready');
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } catch (err) {
+      console.error('Failed to fetch messages', err);
+      setState('error');
+      setStatusText('Conversation could not be loaded.');
+    } finally {
+      setMessageLoading(false);
+    }
+  }, []);
+
+  const fetchConversations = useCallback(async () => {
+    const res = await fetch('/api/chat/conversations');
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Could not load conversations');
+    }
+
+    const loaded = json.data || [];
+    setConversations(loaded);
+    return loaded as Conversation[];
+  }, []);
+
+  const openDirectConversation = useCallback(async (recipientId: number) => {
+    setState('loading');
+    setStatusText('Opening direct transmission...');
+
+    const res = await fetch('/api/chat/conversations/direct', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipientId })
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      setState(res.status === 404 ? 'not-found' : 'error');
+      setStatusText(json.message || 'Could not open that crew member.');
+      return null;
+    }
+
+    const conversation = json.data as Conversation;
+    setConversations((current) => {
+      const withoutDuplicate = current.filter((item) => item.id !== conversation.id);
+      return [conversation, ...withoutDuplicate];
+    });
+    setActiveConversation(conversation);
+    return conversation;
+  }, [setActiveConversation]);
 
   useEffect(() => {
-    const initializeUser = async () => {
-      // 1. Try Local Storage (using the correct key from api.js)
+    const initialize = async () => {
+      let currentUser: User | null = null;
       const storedUser = localStorage.getItem('take_one_user');
-      let currentUser = null;
 
       if (storedUser) {
         try {
           currentUser = JSON.parse(storedUser);
           setUser(currentUser);
-        } catch (e) {
-          console.error('Failed to parse stored user', e);
+        } catch (err) {
+          console.error('Failed to parse stored user', err);
         }
       }
 
-      // 2. Fallback: Try API if localStorage is empty or parse failed
       if (!currentUser) {
         try {
           const res = await fetch('/api/users/me');
           const json = await res.json();
+
           if (json.success && json.user) {
             currentUser = json.user;
             setUser(currentUser);
-            // Sync back to localStorage for other parts of the app
             localStorage.setItem('take_one_user', JSON.stringify(json.user));
           } else {
-            // Only redirect if API also fails (meaning no valid session cookie)
             window.location.href = '/?auth=login';
             return;
           }
@@ -81,112 +162,101 @@ export default function ChatPage() {
         }
       }
 
-      const params = new URLSearchParams(window.location.search);
-      const targetUserId = params.get('user');
-      fetchConversations(targetUserId);
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const targetUserId = Number(params.get('userId') || params.get('user') || 0);
+        const targetConversationId = Number(params.get('conversationId') || 0);
+        const loadedConversations = await fetchConversations();
+
+        if (targetUserId) {
+          const conversation = await openDirectConversation(targetUserId);
+          if (conversation) await fetchMessages(conversation.id);
+          return;
+        }
+
+        if (targetConversationId) {
+          const selected = loadedConversations.find((conversation) => conversation.id === targetConversationId);
+          if (!selected) {
+            setState('not-found');
+            setStatusText('Conversation not found or you do not have access.');
+            return;
+          }
+
+          setActiveConversation(selected, false);
+          await fetchMessages(selected.id);
+          return;
+        }
+
+        if (loadedConversations.length > 0) {
+          setActiveConversation(loadedConversations[0]);
+          await fetchMessages(loadedConversations[0].id);
+          return;
+        }
+
+        setState('ready');
+      } catch (err) {
+        console.error('Failed to initialize chat', err);
+        setState('error');
+        setStatusText('Could not load conversations.');
+      }
     };
 
-    initializeUser();
-  }, []);
+    initialize();
+  }, [fetchConversations, fetchMessages, openDirectConversation, setActiveConversation]);
 
   useEffect(() => {
-    if (activeConv) {
-      fetchMessages(activeConv.id);
-      subscribeToConversation(activeConv.id);
+    if (!activeConv) return;
+
+    if (!pusherRef.current) {
+      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
+      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+      if (pusherKey && pusherCluster) {
+        pusherRef.current = new Pusher(pusherKey, {
+          cluster: pusherCluster
+        });
+      }
     }
+
+    if (!pusherRef.current) return;
+
+    const channelName = `conversation-${activeConv.id}`;
+    const channel = pusherRef.current.subscribe(channelName);
+    channel.bind('new-message', (data: { message: ChatMessage }) => {
+      setMessages((prev) => {
+        if (prev.find((message) => message.id === data.message.id)) return prev;
+        return [...prev, data.message];
+      });
+      setConversations((current) => current.map((conversation) => (
+        conversation.id === data.message.conversation_id
+          ? { ...conversation, messages: [data.message] }
+          : conversation
+      )));
+    });
+
     return () => {
-      if (activeConv) unsubscribeFromConversation(activeConv.id);
+      channel.unbind_all();
+      pusherRef.current?.unsubscribe(channelName);
     };
   }, [activeConv]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, messageLoading]);
 
-  const fetchConversations = async (targetUserId: string | null = null) => {
-    try {
-      const res = await fetch('/api/chat/conversations');
-      const json = await res.json();
-      if (json.success) {
-        setConversations(json.data);
-        
-        if (targetUserId) {
-          const existing = json.data.find((c: Conversation) => c.users.some((u: User) => u.id === Number(targetUserId)));
-          if (existing) {
-            setActiveConv(existing);
-          } else {
-            // Initiate new conversation if not exists in list
-            const userRes = await fetch(`/api/users/${targetUserId}`);
-            const userJson = await userRes.json();
-            if (userJson.success) {
-               // Temporary mock conversation object until first message is sent
-               if (user) {
-                 setActiveConv({
-                   id: null,
-                   recipientId: Number(targetUserId),
-                   users: [user, userJson.data],
-                   messages: []
-                 });
-               }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch conversations', err);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (state === 'ready' && activeConv) {
+      inputRef.current?.focus();
     }
-  };
-
-  const fetchMessages = async (convId: number | null) => {
-    if (!convId) return;
-    try {
-      const res = await fetch(`/api/chat/messages/${convId}`);
-      const json = await res.json();
-      if (json.success) {
-        setMessages(json.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch messages', err);
-    }
-  };
-
-  const subscribeToConversation = (convId: number | null) => {
-    if (!convId) return;
-    if (!pusherRef.current) {
-      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
-      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
-      
-      if (!pusherKey || !pusherCluster) return;
-      
-      pusherRef.current = new Pusher(pusherKey, {
-        cluster: pusherCluster as string
-      });
-    }
-
-    const channel = pusherRef.current.subscribe(`conversation-${convId}`);
-    channel.bind('new-message', (data: { message: ChatMessage }) => {
-      setMessages((prev) => {
-        // Prevent duplicate messages
-        if (prev.find(m => m.id === data.message.id)) return prev;
-        return [...prev, data.message];
-      });
-    });
-  };
-
-  const unsubscribeFromConversation = (convId: number | null) => {
-    if (convId && pusherRef.current) {
-      pusherRef.current.unsubscribe(`conversation-${convId}`);
-    }
-  };
+  }, [activeConv, state]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeConv) return;
+    if (!newMessage.trim() || !activeConv || sending) return;
 
-    const content = newMessage;
+    const content = newMessage.trim();
     setNewMessage('');
+    setSending(true);
 
     try {
       const res = await fetch('/api/chat/messages', {
@@ -194,37 +264,38 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversationId: activeConv.id,
-          recipientId: activeConv.id ? null : activeConv.recipientId,
           content
         })
       });
-      
+
       const json = await res.json();
-      if (json.success) {
-        if (!activeConv.id) {
-          // If it was a new conversation, we now have an ID
-          const updatedConv: Conversation = { ...activeConv, id: json.data.conversation_id };
-          setActiveConv(updatedConv);
-          fetchConversations(); // Refresh list to show the new conversation
-        }
-        
-        setMessages((prev) => {
-           if (prev.find(m => m.id === json.data.id)) return prev;
-           return [...prev, json.data];
-        });
+
+      if (!res.ok || !json.success) {
+        setStatusText(json.message || 'Message could not be sent.');
+        setNewMessage(content);
+        return;
       }
+
+      setMessages((prev) => {
+        if (prev.find((message) => message.id === json.data.id)) return prev;
+        return [...prev, json.data];
+      });
+      setConversations((current) => current.map((conversation) => (
+        conversation.id === json.data.conversation_id
+          ? { ...conversation, messages: [json.data] }
+          : conversation
+      )));
+      requestAnimationFrame(() => inputRef.current?.focus());
     } catch (err) {
       console.error('Failed to send message', err);
+      setStatusText('Message could not be sent.');
+      setNewMessage(content);
+    } finally {
+      setSending(false);
     }
   };
 
-  const isPusherConfigured = typeof window !== 'undefined' && !!process.env.NEXT_PUBLIC_PUSHER_KEY;
-
-  if (loading) return <div className="chat-loading">Synchronizing with Nexus...</div>;
-
-  const getRecipient = (conv: Conversation) => {
-    return conv.users.find(u => u.id !== user?.id);
-  };
+  if (state === 'loading') return <div className="chat-loading">{statusText}</div>;
 
   return (
     <div className="chat-page">
@@ -232,17 +303,16 @@ export default function ChatPage() {
         <a href="/" className="logo">TAKE <span>ONE</span></a>
         <nav>
           <a href="/#explore">Explore</a>
-          <a href="/crew">Crew</a>
+          <a href="/crew.htm">Crew</a>
           <a href="/#upload">Upload</a>
           <a href="/profile">Profile</a>
-          <button onClick={() => window.location.href='/profile'} className="nav-cta" style={{ border: 'none', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif" }}>
+          <button onClick={() => window.location.href = '/profile'} className="nav-cta" style={{ border: 'none', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif" }}>
             My Signal
           </button>
         </nav>
       </header>
 
       <div className="chat-container">
-        {/* Sidebar */}
         <aside className="chat-sidebar">
           <div className="sidebar-header">
             <h2>Transmissions</h2>
@@ -250,69 +320,88 @@ export default function ChatPage() {
           <div className="conversation-list">
             {conversations.map((conv) => {
               const recipient = getRecipient(conv);
-              const lastMsg = conv.messages[0]?.content || 'Start a conversation';
+              const lastMsg = conv.messages[0]?.content || 'No messages yet';
               return (
-                <div 
-                  key={conv.id} 
+                <button
+                  key={conv.id}
+                  type="button"
                   className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''}`}
-                  onClick={() => setActiveConv(conv)}
+                  onClick={() => {
+                    setActiveConversation(conv);
+                    fetchMessages(conv.id);
+                  }}
+                  aria-pressed={activeConv?.id === conv.id}
                 >
-                  <img 
-                    src={getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)} 
-                    alt="" 
-                    className="conv-avatar" 
+                  <img
+                    src={getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
+                    alt=""
+                    className="conv-avatar"
                   />
                   <div className="conv-info">
-                    <div className="conv-name">{recipient?.name}</div>
+                    <div className="conv-name">{recipient?.name || 'Crew Member'}</div>
+                    <div className="conv-role">{recipient?.role || 'Crew Member'}</div>
                     <div className="conv-last-msg">{lastMsg}</div>
                   </div>
-                </div>
+                </button>
               );
             })}
             {conversations.length === 0 && (
-              <div className="sidebar-empty">No active signals. Request a collaboration to start chatting.</div>
+              <div className="sidebar-empty">No active transmissions yet. Open a crew profile and send the first message.</div>
             )}
           </div>
         </aside>
 
-        {/* Chat Window */}
         <main className="chat-window">
-          {activeConv ? (
+          {state === 'error' || state === 'not-found' ? (
+            <div className="chat-empty">
+              <div className="empty-kicker">{state === 'not-found' ? 'Conversation Not Found' : 'Signal Error'}</div>
+              <h3>Channel Unavailable</h3>
+              <p>{statusText}</p>
+              <a href="/crew.htm" className="chat-empty-action">Browse Crew</a>
+            </div>
+          ) : activeConv ? (
             <>
               <header className="chat-header">
                 <div className="header-info">
                   <div className="header-name-row">
-                    <h3>{getRecipient(activeConv)?.name}</h3>
+                    <h3>{activeRecipient?.name || 'Crew Member'}</h3>
                     <div className="status-indicator">
-                       <span className="status-dot online"></span>
-                       <span>Signal Live</span>
+                      <span className="status-dot online"></span>
+                      <span>Signal Live</span>
                     </div>
                   </div>
-                  <span className="header-role">{getRecipient(activeConv)?.role || 'Crew Member'}</span>
+                  <span className="header-role">{activeRecipient?.role || 'Crew Member'}</span>
                 </div>
               </header>
 
               <div className="messages-area">
-                {messages.map((msg) => (
-                  <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}>
-                    <div className="msg-content">{msg.content}</div>
-                    <small className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
-                  </div>
-                ))}
+                {messageLoading ? (
+                  <div className="message-state">Loading message history...</div>
+                ) : messages.length === 0 ? (
+                  <div className="message-state">No messages yet. Start the conversation.</div>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}>
+                      <div className="msg-content">{msg.content}</div>
+                      <small className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
+                    </div>
+                  ))
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
               <form className="chat-input-wrap" onSubmit={sendMessage}>
-                <div className={`input-container ${!isPusherConfigured ? 'disabled' : ''}`}>
-                  <input 
-                    type="text" 
-                    className="chat-input" 
-                    placeholder={isPusherConfigured ? "Type your transmission..." : "Signal Offline - Configure Pusher to enable"}
+                <div className="input-container">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className="chat-input"
+                    placeholder={`Message ${activeRecipient?.name || 'crew member'}...`}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    disabled={!isPusherConfigured}
+                    disabled={sending}
                   />
-                  <button type="submit" className="send-btn" disabled={!isPusherConfigured}>
+                  <button type="submit" className="send-btn" disabled={!newMessage.trim() || sending} aria-label="Send message">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                   </button>
                 </div>
@@ -326,7 +415,7 @@ export default function ChatPage() {
               </div>
               <div className="empty-kicker">Secure Signal Desk</div>
               <h3>Channel Idle</h3>
-              <p>Select a transmission from the sidebar to begin secure communication.</p>
+              <p>Select a transmission from the sidebar or message someone from the Crew page.</p>
             </div>
           )}
         </main>

@@ -13,7 +13,7 @@ export default function LegalPage() {
         <a className="logo" href="/">TAKE <span>ONE</span></a>
         <nav>
           <a href="/">Home</a>
-          <a href="/crew">Crew</a>
+          <a href="/crew.htm">Crew</a>
           <a href="/profile">Profile</a>
           <a href="/moderation">Moderation</a>
         </nav>

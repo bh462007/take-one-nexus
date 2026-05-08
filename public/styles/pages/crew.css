@@ -276,6 +276,7 @@ main {
   text-transform: uppercase;
   padding: 0 18px;
   cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
 }
 
 .result-status {
@@ -374,6 +375,12 @@ main {
   display: inline-flex;
   align-items: center;
   text-decoration: none;
+}
+
+.crew-contact:hover {
+  background: var(--amber);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(255, 166, 32, 0.24);
 }
 
 .crew-email {

@@ -43,7 +43,7 @@ export default function HomePage() {
         <a href="#" className="logo">TAKE <span>ONE</span></a>
         <nav>
           <a href="#explore">Explore</a>
-          <a href="/crew" id="navCrewLink">Crew</a>
+          <a href="/crew.htm" id="navCrewLink">Crew</a>
           <a href="#upload" id="navUploadLink">Upload</a>
           <a href="/profile">Profile</a>
           <button id="loginBtn" className="nav-cta" style={{ background: 'var(--neon)', border: 'none', padding: '9px 20px', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif", fontSize: '9px', letterSpacing: '0.3em', textTransform: 'uppercase' }}>
@@ -379,7 +379,7 @@ export default function HomePage() {
             <div className="footer-col">
               <h4>Navigate</h4>
               <a href="#explore">Explore</a>
-              <a href="/crew">Crew Roles</a>
+              <a href="/crew.htm">Crew Roles</a>
               <a href="#upload">Upload</a>
               <a href="/profile">Profile</a>
             </div>

@@ -1315,7 +1315,7 @@ function renderPeopleResults(people) {
       </div>
       <div class="person-actions">
         <a class="person-contact" href="mailto:${person.email}?subject=TAKE%20ONE%20Collaboration">Email</a>
-        <a class="person-chat-btn" href="/chat?user=${person.id}">Chat</a>
+        <a class="person-chat-btn" href="/chat?userId=${encodeURIComponent(person.id)}&username=${encodeURIComponent(person.name || 'Crew Member')}&role=${encodeURIComponent(person.role || 'Crew Member')}&avatar=${encodeURIComponent(person.avatar_url || '')}">Chat</a>
         <div class="person-email">${person.email || ''}</div>
       </div>
     </div>

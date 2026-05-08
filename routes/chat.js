@@ -15,6 +15,35 @@ const pusher = new Pusher({
   useTLS: true
 });
 
+function getConversationInclude() {
+  return {
+    users: {
+      select: {
+        id: true,
+        name: true,
+        avatar_url: true,
+        gender: true,
+        role: true
+      }
+    },
+    messages: {
+      orderBy: { created_at: 'desc' },
+      take: 1,
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            avatar_url: true,
+            gender: true,
+            role: true
+          }
+        }
+      }
+    }
+  };
+}
+
 /**
  * GET /api/chat/conversations
  * Get all conversations for the logged-in user
@@ -29,21 +58,7 @@ router.get('/conversations', authenticateUser, async (req, res) => {
           some: { id: userId }
         }
       },
-      include: {
-        users: {
-          select: {
-            id: true,
-            name: true,
-            avatar_url: true,
-            gender: true,
-            role: true
-          }
-        },
-        messages: {
-          orderBy: { created_at: 'desc' },
-          take: 1
-        }
-      },
+      include: getConversationInclude(),
       orderBy: { updated_at: 'desc' }
     });
 
@@ -54,6 +69,76 @@ router.get('/conversations', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Fetch conversations error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load conversations' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/direct
+ * Create or reuse a direct two-person conversation.
+ */
+router.post('/conversations/direct', authenticateUser, async (req, res) => {
+  try {
+    const senderId = Number(req.user.id);
+    const recipientId = Number(req.body.recipientId);
+
+    if (!recipientId || Number.isNaN(recipientId)) {
+      return res.status(400).json({ success: false, message: 'Valid recipient id is required' });
+    }
+
+    if (recipientId === senderId) {
+      return res.status(400).json({ success: false, message: 'You cannot start a direct conversation with yourself' });
+    }
+
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { id: true }
+    });
+
+    if (!recipient) {
+      return res.status(404).json({ success: false, message: 'Crew member not found' });
+    }
+
+    const candidates = await prisma.conversation.findMany({
+      where: {
+        AND: [
+          { users: { some: { id: senderId } } },
+          { users: { some: { id: recipientId } } }
+        ]
+      },
+      include: getConversationInclude(),
+      orderBy: { updated_at: 'desc' }
+    });
+
+    const existingConversation = candidates.find((conversation) => conversation.users.length === 2) || candidates[0];
+
+    if (existingConversation) {
+      return res.json({
+        success: true,
+        created: false,
+        data: existingConversation
+      });
+    }
+
+    const conversation = await prisma.conversation.create({
+      data: {
+        users: {
+          connect: [
+            { id: senderId },
+            { id: recipientId }
+          ]
+        }
+      },
+      include: getConversationInclude()
+    });
+
+    res.status(201).json({
+      success: true,
+      created: true,
+      data: conversation
+    });
+  } catch (error) {
+    console.error('Direct conversation error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not open conversation' });
   }
 });
 
@@ -89,7 +174,8 @@ router.get('/messages/:conversationId', authenticateUser, async (req, res) => {
             id: true,
             name: true,
             avatar_url: true,
-            gender: true
+            gender: true,
+            role: true
           }
         }
       }
@@ -118,22 +204,56 @@ router.post('/messages', authenticateUser, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid request' });
     }
 
-    if (!process.env.PUSHER_APP_ID) {
-      return res.status(503).json({ success: false, message: 'Chat system is offline (Pusher not configured)' });
+    let targetConversationId = conversationId;
+    let targetRecipientId = recipientId ? Number(recipientId) : null;
+
+    if (targetConversationId) {
+      const conversation = await prisma.conversation.findFirst({
+        where: {
+          id: Number(targetConversationId),
+          users: {
+            some: { id: senderId }
+          }
+        },
+        include: {
+          users: { select: { id: true } }
+        }
+      });
+
+      if (!conversation) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+
+      targetConversationId = conversation.id;
+      targetRecipientId = conversation.users.find((member) => member.id !== senderId)?.id || null;
     }
 
-    let targetConversationId = conversationId;
-
     // If no conversationId, check if a conversation already exists with recipient
-    if (!targetConversationId && recipientId) {
-      const existingConversation = await prisma.conversation.findFirst({
+    if (!targetConversationId && targetRecipientId) {
+      if (targetRecipientId === senderId) {
+        return res.status(400).json({ success: false, message: 'You cannot message yourself' });
+      }
+
+      const recipient = await prisma.user.findUnique({
+        where: { id: Number(targetRecipientId) },
+        select: { id: true }
+      });
+
+      if (!recipient) {
+        return res.status(404).json({ success: false, message: 'Recipient not found' });
+      }
+
+      const existingConversations = await prisma.conversation.findMany({
         where: {
           AND: [
             { users: { some: { id: senderId } } },
-            { users: { some: { id: Number(recipientId) } } }
+            { users: { some: { id: Number(targetRecipientId) } } }
           ]
-        }
+        },
+        include: { users: { select: { id: true } } },
+        orderBy: { updated_at: 'desc' }
       });
+      const existingConversation = existingConversations.find((conversation) => conversation.users.length === 2) || existingConversations[0];
 
       if (existingConversation) {
         targetConversationId = existingConversation.id;
@@ -144,7 +264,7 @@ router.post('/messages', authenticateUser, async (req, res) => {
             users: {
               connect: [
                 { id: senderId },
-                { id: Number(recipientId) }
+                { id: Number(targetRecipientId) }
               ]
             }
           }
@@ -166,7 +286,8 @@ router.post('/messages', authenticateUser, async (req, res) => {
             id: true,
             name: true,
             avatar_url: true,
-            gender: true
+            gender: true,
+            role: true
           }
         }
       }
@@ -185,8 +306,8 @@ router.post('/messages', authenticateUser, async (req, res) => {
       });
       
       // Also notify recipient's personal channel for unread indicators/sidebar updates
-      if (recipientId) {
-        pusher.trigger(`user-${recipientId}`, 'message-notification', {
+      if (targetRecipientId) {
+        pusher.trigger(`user-${targetRecipientId}`, 'message-notification', {
           conversationId: targetConversationId,
           message
         });

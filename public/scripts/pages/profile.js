@@ -213,7 +213,7 @@ function requestCard(request, mode) {
         : '';
     const contactLink = `
         <div class="request-actions-row">
-            <a class="request-chat-btn" href="/chat?user=${request.requester_id || request.owner_id}">Open Chat</a>
+            <a class="request-chat-btn" href="/chat?userId=${request.requester_id || request.owner_id}">Open Chat</a>
         </div>
     `;
 

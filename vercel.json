@@ -24,8 +24,15 @@
       "dest": "/profile"
     },
     {
+      "src": "/crew\\.htm",
+      "dest": "server.js"
+    },
+    {
       "src": "/crew",
-      "dest": "/crew"
+      "status": 308,
+      "headers": {
+        "Location": "/crew.htm"
+      }
     },
     {
       "src": "/legal",

@@ -127,7 +127,7 @@ app.get('/project', (req, res) => {
 });
 
 app.get('/crew', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'crew.htm'));
+  res.redirect(308, '/crew.htm');
 });
 
 app.get('/legal', (req, res) => {

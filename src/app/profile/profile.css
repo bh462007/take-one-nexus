@@ -1030,6 +1030,12 @@ nav a:hover::after {
     color: var(--void);
 }
 
+.request-chat-btn:hover {
+    background: var(--amber);
+    box-shadow: 0 10px 22px rgba(255, 166, 32, 0.22);
+    transform: translateY(-1px);
+}
+
 .request-side {
     display: flex;
     flex-direction: column;

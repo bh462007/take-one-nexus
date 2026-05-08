@@ -45,6 +45,12 @@ function renderRoleFilters(counts = {}) {
 function personCard(person) {
   const meta = [person.city, person.college].filter(Boolean).join(' · ') || 'Location not added';
   const skills = person.skills || 'Skills not added yet';
+  const chatParams = new URLSearchParams({
+    userId: String(person.id),
+    username: person.name || 'Crew Member',
+    role: person.role || 'Crew Member',
+    avatar: person.avatar_url || initials(person.name)
+  });
 
   return `
     <article class="crew-card">
@@ -55,7 +61,7 @@ function personCard(person) {
       <div class="crew-bio">${person.bio || 'Profile is live. Reach out and start a collaboration conversation.'}</div>
       <div class="crew-skills">${skills}</div>
       <div class="crew-actions">
-        <a class="crew-contact" href="/chat?user=${person.id}">Message</a>
+        <a class="crew-contact" href="/chat?${chatParams.toString()}">Message</a>
       </div>
     </article>
   `;
