@@ -10,32 +10,36 @@ const ADMIN_EMAILS = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Only protect /admin routes
-  if (pathname.startsWith('/admin')) {
+  // Protected routes for all authenticated users
+  const isProtectedRoute = pathname.startsWith('/chat') || pathname.startsWith('/profile');
+  const isAdminRoute = pathname.startsWith('/admin');
+
+  if (isProtectedRoute || isAdminRoute) {
     const token = request.cookies.get('token')?.value;
 
     if (!token) {
-      return NextResponse.redirect(new URL('/?login=required', request.url));
+      return NextResponse.redirect(new URL('/?auth=login', request.url));
     }
 
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET);
       const { payload } = await jwtVerify(token, secret);
 
-      const userEmail = payload.email as string;
-      const userRole = payload.role as string;
+      // Additional authorization for admin routes
+      if (isAdminRoute) {
+        const userEmail = payload.email as string;
+        const userRole = payload.role as string;
+        const isAuthorized = ADMIN_EMAILS.includes(userEmail) || userRole === 'admin';
 
-      // Authorization check
-      const isAuthorized = ADMIN_EMAILS.includes(userEmail) || userRole === 'admin';
-
-      if (!isAuthorized) {
-        return NextResponse.redirect(new URL('/?error=unauthorized', request.url));
+        if (!isAuthorized) {
+          return NextResponse.redirect(new URL('/?error=unauthorized', request.url));
+        }
       }
 
       return NextResponse.next();
     } catch (error) {
       console.error('Middleware JWT verification failed:', error);
-      return NextResponse.redirect(new URL('/?login=expired', request.url));
+      return NextResponse.redirect(new URL('/?auth=login', request.url));
     }
   }
 
@@ -43,5 +47,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/chat/:path*', '/profile/:path*'],
 };

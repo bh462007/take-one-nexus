@@ -45,18 +45,48 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    // Get user from local storage (hybrid app pattern)
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      window.location.href = '/?auth=login';
-    }
+    const initializeUser = async () => {
+      // 1. Try Local Storage (using the correct key from api.js)
+      const storedUser = localStorage.getItem('take_one_user');
+      let currentUser = null;
 
-    const params = new URLSearchParams(window.location.search);
-    const targetUserId = params.get('user');
+      if (storedUser) {
+        try {
+          currentUser = JSON.parse(storedUser);
+          setUser(currentUser);
+        } catch (e) {
+          console.error('Failed to parse stored user', e);
+        }
+      }
 
-    fetchConversations(targetUserId);
+      // 2. Fallback: Try API if localStorage is empty or parse failed
+      if (!currentUser) {
+        try {
+          const res = await fetch('/api/users/me');
+          const json = await res.json();
+          if (json.success && json.user) {
+            currentUser = json.user;
+            setUser(currentUser);
+            // Sync back to localStorage for other parts of the app
+            localStorage.setItem('take_one_user', JSON.stringify(json.user));
+          } else {
+            // Only redirect if API also fails (meaning no valid session cookie)
+            window.location.href = '/?auth=login';
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to fetch session user', err);
+          window.location.href = '/?auth=login';
+          return;
+        }
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const targetUserId = params.get('user');
+      fetchConversations(targetUserId);
+    };
+
+    initializeUser();
   }, []);
 
   useEffect(() => {

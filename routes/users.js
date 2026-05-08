@@ -290,6 +290,36 @@ async function safeQuery(sql, params = []) {
   }
 }
 
+/**
+ * GET /api/users/me
+ * Get current authenticated user data from session
+ */
+router.get('/me', authenticateUser, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const profile = await getProfileData(userId);
+
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      user: profile
+    });
+  } catch (error) {
+    console.error('Fetch me error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Could not load session data'
+    });
+  }
+});
+
+
 router.get('/search', async (req, res) => {
   try {
     const role = String(req.query.role || '').trim();
