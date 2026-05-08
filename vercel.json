@@ -36,6 +36,10 @@
       "dest": "/moderation"
     },
     {
+      "src": "/chat",
+      "dest": "/chat"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "server.js"
     },
@@ -56,7 +60,7 @@
       "dest": "server.js"
     },
     {
-      "src": "/((?!admin|api|_next|profile|crew|legal|moderation).*)",
+      "src": "/((?!admin|api|_next|profile|crew|legal|moderation|chat).*)",
       "dest": "server.js"
     }
   ]

@@ -110,6 +110,14 @@ export default async function ProfilePage() {
                 <input type="file" id="avatarInput" accept="image/*" style={{ display: 'none' }} />
               </div>
 
+              <div className="credit-badge-wrap">
+                <div className="credit-badge">
+                  <div className="cb-label">CREDITS</div>
+                  <div className="cb-value">{user?.credits ?? 0}</div>
+                  <div className="cb-glow"></div>
+                </div>
+              </div>
+
               <div id="profileName">{name}</div>
               <div className="profile-role" id="profileRole">{role}</div>
               <div className="profile-meta" id="profileMeta">

@@ -23,7 +23,7 @@ function createToken(user) {
 
 async function getProfileData(userId) {
   const [userRows] = await pool.query(
-    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, created_at
+    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, created_at
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -139,7 +139,8 @@ router.post('/register', async (req, res) => {
         role: user.role,
         college: user.college,
         city: user.city,
-        gender: user.gender
+        gender: user.gender,
+        credits: 0
       },
       token: token
     });
@@ -198,7 +199,7 @@ router.post('/login', async (req, res) => {
     let rows;
     try {
       [rows] = await pool.query(
-        `SELECT id, name, email, password, role, college, city
+        `SELECT id, name, email, password, role, college, city, credits
          FROM users
          WHERE email = ?
          LIMIT 1`,
@@ -242,7 +243,8 @@ router.post('/login', async (req, res) => {
         role: user.role || '',
         college: user.college || '',
         city: user.city || '',
-        gender: user.gender || 'Prefer not to say'
+        gender: user.gender || 'Prefer not to say',
+        credits: user.credits || 0
       },
       token: token
     });
@@ -292,7 +294,7 @@ router.get('/search', async (req, res) => {
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender
+      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits
       FROM users
       WHERE 1 = 1
     `;

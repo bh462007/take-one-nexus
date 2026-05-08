@@ -1,138 +1,116 @@
-# 🎬 TAKE ONE Nexus
+# 🎬 TAKE ONE NEXUS
 
-![Version](https://img.shields.io/badge/version-2.1.0--GOLD-orange?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Operational-green?style=for-the-badge)
-![Environment](https://img.shields.io/badge/Env-Production-red?style=for-the-badge)
+> **Nexus [nɛksəs]:** A connection or series of connections linking two or more things.
 
-> **"The signal is live. The director is on set. Welcome to the Nexus."**
+![TAKE ONE Nexus](https://img.shields.io/badge/PRODUCTION-READY-FF4D1A?style=for-the-badge&logo=vercel)
+![Tech Stack](https://img.shields.io/badge/STACK-NEXT.JS%20|%20EXPRESS%20|%20PRISMA-00D4FF?style=for-the-badge)
 
-TAKE ONE Nexus is a high-performance, cinematic collaboration platform for the next generation of filmmakers, writers, and creative technicians. Built with a "Director-first" philosophy, it streamlines the journey from script to screen.
+TAKE ONE Nexus is the definitive collaborative platform for the next generation of filmmakers, screenwriters, and creative technocrats. Built with a cinematic "Director-style" aesthetic, it bridges the gap between raw scripts and full-scale production crews.
 
 ---
 
-## ⚡ Project Overview
+## ⚡ CORE SYSTEMS
 
-Nexus is a hybrid ecosystem combining the speed of **Next.js 15** with the robustness of a **Custom Node.js/Express** backend. It serves as a central hub where creators can host their portfolios, pitch scripts, find technical crew, and manage real-time collaborations through an encrypted communication layer.
+### 🛰️ Secure Transmission (Chat)
+A fully integrated, real-time communication suite powered by Pusher.
+- **Direct Messaging:** Secure channels for collaboration requests.
+- **Live Sync:** Real-time message delivery with cinematic animations.
+- **Collaboration Context:** Direct links between project requests and conversations.
 
-## 🚀 Key Features
+### 💎 Creator Credits
+The heartbeat of the Nexus economy.
+- **System Integrity:** Every new creator starts with 0 credits.
+- **Visual Identity:** Cinematic glowing credit badges on every profile.
+- **Scaling:** Designed for future integration with project rewards and premium features.
 
-- **Cinematic Profile System**: Technical "Creator Mode" profiles with integrated portfolios and skill matrices.
-- **Script Vault**: Secure hosting and discovery for screenplays and storyboards.
-- **Real-time Comms**: Instant messaging system powered by Pusher for low-latency collaboration.
-- **Uplink Intelligence**: Automated matching system connecting scripts with relevant crew members.
-- **Admin Control Room**: A technical command center for platform oversight and user management.
-- **Responsive Geometry**: Fully adaptive UI optimized for desktop monitors and mobile field units.
+### 🎭 Production Profiles
+Dynamic, live creator profiles that serve as a digital reel.
+- **Skill Badges:** Highlight your technical expertise.
+- **Production History:** Showcase your uploaded scripts and collaborations.
+- **Live Status:** Real-time activity indicators.
 
-## 📸 Screenshots
+---
 
-| Dashboard | Creator Profile | Chat Uplink |
-| :---: | :---: | :---: |
-| ![Placeholder](https://placehold.co/600x400/06080A/FF4D1A?text=Nexus+Dashboard) | ![Placeholder](https://placehold.co/600x400/06080A/FF4D1A?text=Creator+Profile) | ![Placeholder](https://placehold.co/600x400/06080A/FF4D1A?text=Chat+Uplink) |
+## 🛠️ TECH STACK
 
-## 🛠 Tech Stack
+- **Frontend:** Next.js 14 (App Router), Vanilla CSS (Cinematic Theme)
+- **Backend:** Node.js, Express.js
+- **Database:** MySQL / TiDB
+- **ORM:** Prisma
+- **Real-time:** Pusher
+- **Authentication:** JWT (JSON Web Tokens) with secure cookie handling
 
-- **Frontend**: Next.js 15 (App Router), React 19, Vanilla CSS (Cinematic Grid System)
-- **Backend**: Node.js, Express (Hybrid API Layer)
-- **Database**: TiDB / MySQL (via Prisma ORM)
-- **Real-time**: Pusher Channels
-- **Auth**: JWT (JSON Web Tokens) with Secure Cookie Storage
-- **Styling**: Custom CSS Variables, Glassmorphism, Neon UI Tokens
-- **Deployment**: Vercel (Production Edge)
+---
 
-## 📦 Installation & Setup
+## 🚀 LOCAL DEVELOPMENT
 
 ### Prerequisites
-- Node.js 18.x or higher
-- MySQL-compatible database (TiDB, PlanetScale, or local MySQL)
+- Node.js 18+
+- MySQL / TiDB Database
+- Pusher Account (for Chat)
 
-### Steps
-1. **Clone the Uplink**:
+### Installation
+
+1. **Clone the repository**
    ```bash
    git clone https://github.com/alokr25012-lab/take-one-nexus.git
    cd take-one-nexus
    ```
 
-2. **Initialize Dependencies**:
+2. **Install Dependencies**
    ```bash
    npm install
    ```
 
-3. **Configure Environment**:
-   Copy `.env.example` to `.env` and fill in your credentials.
+3. **Environment Configuration**
+   Create a `.env` file in the root:
+   ```env
+   DATABASE_URL="mysql://user:password@host:port/database"
+   JWT_SECRET="your_secure_secret"
+   
+   # Pusher Configuration
+   PUSHER_APP_ID="your_app_id"
+   PUSHER_SECRET="your_secret"
+   NEXT_PUBLIC_PUSHER_KEY="your_key"
+   NEXT_PUBLIC_PUSHER_CLUSTER="your_cluster"
+   ```
 
-4. **Synchronize Database**:
+4. **Database Initialization**
    ```bash
    npx prisma generate
    npx prisma db push
    ```
 
-5. **Start Development Feed**:
+5. **Start Development Server**
    ```bash
    npm run dev
    ```
 
-## 🔑 Environment Variables
+---
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | Prisma connection string | `mysql://...` |
-| `JWT_SECRET` | Secret for token signing | `...` |
-| `PUSHER_APP_ID` | Real-time service ID | `...` |
-| `NEXT_PUBLIC_PUSHER_KEY` | Public client key | `...` |
-
-## 📂 Folder Structure
+## 📁 FOLDER STRUCTURE
 
 ```text
-├── prisma/               # Database Schema & Migrations
-├── public/               # Static Assets & Global Scripts
-├── src/
-│   ├── app/              # Next.js Pages & Routes
-│   ├── components/       # UI Components
-│   ├── lib/              # Core Utilities (Auth, DB, Constants)
-│   └── middleware/       # Route Protection
-├── utils/                # Helper Functions
-└── server.js             # Express API Integration
+├── src/app/          # Next.js App Router (Frontend)
+├── routes/           # Express API Routes (Backend)
+├── prisma/           # Database Schema & Migrations
+├── public/           # Static Assets & Legacy HTML
+├── server.js         # Hybrid Express/Next.js Server
+└── vercel.json       # Production Deployment Config
 ```
-
-## 🔐 Authentication Flow
-
-1. **Uplink Request**: User submits credentials via `/api/auth/login`.
-2. **Token Generation**: Server validates and issues a signed JWT.
-3. **Secure Storage**: JWT is stored in an `httpOnly` secure cookie.
-4. **Session Persistence**: `getCurrentUser()` utility verifies token on server-side renders.
-
-## 💬 Chat System Overview
-
-The Nexus Chat Uplink utilizes **Pusher** for real-time synchronization. 
-- **Channels**: `private-chat-{conversationId}`
-- **Events**: `new-message`, `typing-indicator`
-- **Persistence**: Messages are archived in the MySQL database via Prisma.
-
-## 👤 Profile & Avatar System
-
-Profiles are dynamic entities. Avatars are handled via a custom `getAvatarUrl` utility which supports:
-- User-uploaded assets.
-- Gender-specific fallbacks.
-- Identicon generation for new recruits.
-
-## 🔮 Future Improvements
-
-- [ ] **Nexus AI**: Automated script analysis and genre tagging.
-- [ ] **Scene Builder**: Interactive storyboard collaboration tool.
-- [ ] **Film Fund Integration**: Direct-to-producer pitching pipeline.
-- [ ] **PWA Support**: Full offline access for on-set coordination.
-
-## 👥 Contributors
-
-- **Lead Architect**: [Alok Raj](https://github.com/alokr25012)
-- **Dev Crew**: Nexus Core Team
-
-## ⚖️ License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
-<p align="center">
-  <b>TAKE ONE Nexus © 2026 — Built for the Future of Cinema</b>
-</p>
+## 🚢 DEPLOYMENT
+
+TAKE ONE Nexus is optimized for **Vercel**.
+1. Connect your repository to Vercel.
+2. Configure environment variables in the Vercel Dashboard.
+3. The `vercel.json` file handles the complex routing between Next.js and the Express backend automatically.
+
+---
+
+## 📜 LICENSE
+
+Production of **ALOK R** & the **TAKE ONE** Team. All Rights Reserved.
+Designed for the Cinematic Future.
