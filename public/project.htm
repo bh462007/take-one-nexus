@@ -20,6 +20,8 @@
 
     <link rel="stylesheet" href="/styles/pages/project.css">
     <link rel="stylesheet" href="/styles/components/global-chat-fab.css">
+    <link rel="stylesheet" href="/styles/components/unified-nav.css">
+    <link rel="stylesheet" href="/styles/components/global-issue-reporter.css">
 </head>
 
 <body>
@@ -54,18 +56,19 @@
     </div>
 
     <!-- ── HEADER ── -->
-    <header>
-        <a href="#" class="logo">TAKE <span>ONE</span></a>
+    <header class="fixed-nav">
+        <a href="/" class="logo">TAKE <span>ONE</span></a>
         <nav>
-            <a href="#explore">Explore</a>
+            <a href="/#explore" class="active">Explore</a>
             <a href="/crew.htm" id="navCrewLink">Crew</a>
-            <a href="#upload" id="navUploadLink">Upload</a>
+            <a href="/#upload" id="navUploadLink">Upload</a>
+            <a href="/chat">Chat</a>
             <a href="/profile">Profile</a>
-            <button id="loginBtn" class="nav-cta" style="background: var(--neon); border: none; padding: 9px 20px; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;">
-  Join Now
-</button>
         </nav>
     </header>
+
+    <div id="globalIssueReporterRoot"></div>
+
 
     <!-- ── HERO ── -->
     <section class="hero">
@@ -710,7 +713,7 @@
     <script src="/scripts/animations/common.js"></script>
     <script src="/scripts/pages/project.js"></script>
     <script src="/scripts/components/global-chat-fab.js"></script>
-   
+    <script src="/scripts/components/global-issue-reporter.js"></script>
 </body>
-
 </html>
+

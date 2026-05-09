@@ -76,19 +76,8 @@ export default async function ProfilePage() {
         {/* ── TOAST NOTIFICATION ── */}
         <div id="toast">Profile saved ✦</div>
 
-        {/* ── HEADER ── */}
-        <header>
-          <a href="/" className="logo">TAKE <span>ONE</span></a>
-          <nav>
-            <a href="/">Home</a>
-            <a href="/#explore">Explore</a>
-            <a href="/#upload">Upload</a>
-            <a href="/chat" className="nav-chat-link">Messages</a>
-            <button className="profile-logout" id="profileLogoutBtn" type="button">Logout</button>
-          </nav>
-        </header>
-
         {/* ── HERO BANNER ── */}
+
         <div className="profile-hero">
           <div className="hero-reel-deco"></div>
           <div className="hero-reel-deco2"></div>

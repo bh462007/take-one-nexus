@@ -1,0 +1,66 @@
+/* Unified Navigation Styles for Static Pages */
+header.fixed-nav {
+  position: sticky;
+  top: 0;
+  z-index: 9995;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5%;
+  background: rgba(6, 8, 10, 0.85);
+  border-bottom: 1px solid rgba(255, 77, 26, 0.15);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+header.fixed-nav .logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.2em;
+  color: #E8DFC8;
+  text-decoration: none;
+}
+
+header.fixed-nav .logo span {
+  color: #FF4D1A;
+  text-shadow: 0 0 14px rgba(255, 77, 26, 0.55);
+}
+
+header.fixed-nav nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+header.fixed-nav nav a {
+  color: #6B7A8D;
+  text-decoration: none;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  transition: color 0.25s, text-shadow 0.25s;
+  font-family: 'Space Mono', monospace;
+}
+
+header.fixed-nav nav a:hover,
+header.fixed-nav nav a.active {
+  color: #FF4D1A;
+  text-shadow: 0 0 10px rgba(255, 77, 26, 0.4);
+}
+
+@media (max-width: 768px) {
+  header.fixed-nav {
+    padding: 0 18px;
+    min-height: 60px;
+  }
+  
+  header.fixed-nav nav {
+    gap: 15px;
+  }
+  
+  header.fixed-nav nav a {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+  }
+}

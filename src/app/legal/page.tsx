@@ -9,17 +9,8 @@ export const metadata: Metadata = {
 export default function LegalPage() {
   return (
     <>
-      <header>
-        <a className="logo" href="/">TAKE <span>ONE</span></a>
-        <nav>
-          <a href="/">Home</a>
-          <a href="/crew.htm">Crew</a>
-          <a href="/profile">Profile</a>
-          <a href="/moderation">Moderation</a>
-        </nav>
-      </header>
-
       <main className="legal-shell">
+
         <section className="legal-hero">
           <div className="legal-kicker">Draft Legal Center</div>
           <h1>Privacy, Terms, and Safety</h1>

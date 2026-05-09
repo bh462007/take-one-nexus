@@ -38,19 +38,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── HEADER ── */}
-      <header>
-        <a href="#" className="logo">TAKE <span>ONE</span></a>
-        <nav>
-          <a href="#explore">Explore</a>
-          <a href="/crew.htm" id="navCrewLink">Crew</a>
-          <a href="#upload" id="navUploadLink">Upload</a>
-          <a href="/profile">Profile</a>
-          <button id="loginBtn" className="nav-cta" style={{ background: 'var(--neon)', border: 'none', padding: '9px 20px', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif", fontSize: '9px', letterSpacing: '0.3em', textTransform: 'uppercase' }}>
-            Join Now
-          </button>
-        </nav>
-      </header>
 
       {/* ── HERO ── */}
       <section className="hero">

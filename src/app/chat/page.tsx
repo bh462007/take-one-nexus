@@ -522,20 +522,8 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      <header>
-        <a href="/" className="logo">TAKE <span>ONE</span></a>
-        <nav>
-          <a href="/#explore">Explore</a>
-          <a href="/crew.htm">Crew</a>
-          <a href="/#upload">Upload</a>
-          <a href="/profile">Profile</a>
-          <button onClick={() => window.location.href = '/profile'} className="nav-cta" style={{ border: 'none', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif" }}>
-            My Signal
-          </button>
-        </nav>
-      </header>
-
       <div className="chat-container">
+
         <aside className="chat-sidebar">
           <div className="sidebar-header">
             <div className="sidebar-title-row">

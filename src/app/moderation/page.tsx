@@ -10,16 +10,8 @@ export const metadata: Metadata = {
 export default function ModerationPage() {
   return (
     <>
-      <header>
-        <a className="logo" href="/">TAKE <span>ONE</span></a>
-        <nav>
-          <a href="/">Home</a>
-          <a href="/profile">Profile</a>
-          <a href="/legal">Legal</a>
-        </nav>
-      </header>
-
       <main className="moderation-shell">
+
         <section className="moderation-head">
           <div className="kicker">Safety Dashboard</div>
           <h1>Moderation Tools</h1>

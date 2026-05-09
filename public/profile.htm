@@ -10,6 +10,8 @@
   <!-- Stylesheet -->
   <link rel="stylesheet" href="/styles/pages/profile.css">
   <link rel="stylesheet" href="/styles/components/global-chat-fab.css">
+  <link rel="stylesheet" href="/styles/components/unified-nav.css">
+  <link rel="stylesheet" href="/styles/components/global-issue-reporter.css">
 </head>
 <body>
 
@@ -20,15 +22,20 @@
   <div id="toast">Profile saved ✦</div>
 
   <!-- ── HEADER ── -->
-  <header>
-    <a href="/project.htm" class="logo">TAKE <span>ONE</span></a>
-    <nav style="display: flex; gap: 28px;">
-      <a href="/project">Home</a>
-      <a href="/project#explore">Explore</a>
-      <a href="/project#upload">Upload</a>
-      <button class="profile-logout" id="profileLogoutBtn" type="button">Logout</button>
+  <header class="fixed-nav">
+    <a href="/" class="logo">TAKE <span>ONE</span></a>
+    <nav>
+      <a href="/#explore">Explore</a>
+      <a href="/crew.htm">Crew</a>
+      <a href="/#upload">Upload</a>
+      <a href="/chat">Chat</a>
+      <a href="/profile" class="active">Profile</a>
+      <button class="profile-logout" id="profileLogoutBtn" type="button" style="background: none; border: 1px solid var(--neon); color: var(--neon); padding: 5px 12px; font-family: 'Bebas Neue'; cursor: pointer;">Logout</button>
     </nav>
   </header>
+
+  <div id="globalIssueReporterRoot"></div>
+
 
   <!-- ── HERO BANNER ── -->
   <div class="profile-hero">
@@ -254,6 +261,6 @@
   <script src="/scripts/animations/common.js"></script>
   <script src="/scripts/pages/profile.js"></script>
   <script src="/scripts/components/global-chat-fab.js"></script>
-
+  <script src="/scripts/components/global-issue-reporter.js"></script>
 </body>
 </html>

@@ -6,17 +6,24 @@
   <title>Moderation - TAKE ONE</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/pages/moderation.css">
-  <link rel="stylesheet" href="/styles/components/global-chat-fab.css">
+  <link rel="stylesheet" href="/styles/pages/moderation.css">
+  <link rel="stylesheet" href="/styles/components/unified-nav.css">
+  <link rel="stylesheet" href="/styles/components/global-issue-reporter.css">
 </head>
 <body>
-  <header>
-    <a class="logo" href="/project">TAKE <span>ONE</span></a>
+
+  <header class="fixed-nav">
+    <a href="/" class="logo">TAKE <span>ONE</span></a>
     <nav>
-      <a href="/project">Home</a>
+      <a href="/#explore">Explore</a>
+      <a href="/crew.htm">Crew</a>
       <a href="/profile">Profile</a>
-      <a href="/legal">Legal</a>
+      <a href="/legal.htm">Legal</a>
     </nav>
   </header>
+
+  <div id="globalIssueReporterRoot"></div>
+
 
   <main class="moderation-shell">
     <section class="moderation-head">
@@ -49,6 +56,7 @@
   <script src="/scripts/components/ui.js"></script>
   <script src="/scripts/animations/common.js"></script>
   <script src="/scripts/pages/moderation.js"></script>
+  <script src="/scripts/components/global-issue-reporter.js"></script>
   <script src="/scripts/components/global-chat-fab.js"></script>
 </body>
 </html>
