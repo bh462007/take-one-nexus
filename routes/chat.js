@@ -24,7 +24,12 @@ function getConversationInclude() {
         name: true,
         avatar_url: true,
         gender: true,
-        role: true
+        role: true,
+        college: true,
+        city: true,
+        skills: true,
+        credits: true,
+        created_at: true
       }
     },
     messages: {
@@ -42,6 +47,7 @@ function getConversationInclude() {
         }
       }
     }
+
   };
 }
 
@@ -506,5 +512,39 @@ router.post('/conversations/:id/leave', authenticateUser, async (req, res) => {
     res.status(500).json({ success: false, message: 'Could not leave group' });
   }
 });
+
+/**
+ * POST /api/chat/conversations/:id/clear
+ * Clear all messages in a conversation
+ */
+router.post('/conversations/:id/clear', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userId = Number(req.user.id);
+
+    // Check if user is part of the conversation
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        users: { some: { id: userId } }
+      }
+    });
+
+    if (!conversation) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Delete messages
+    await prisma.message.deleteMany({
+      where: { conversation_id: conversationId }
+    });
+
+    res.json({ success: true, message: 'Chat history cleared' });
+  } catch (error) {
+    console.error('Clear chat error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not clear chat history' });
+  }
+});
+
 
 module.exports = router;

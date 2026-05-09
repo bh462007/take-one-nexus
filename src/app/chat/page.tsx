@@ -12,7 +12,13 @@ interface User {
   avatar_url?: string;
   gender?: string;
   role?: string;
+  college?: string;
+  city?: string;
+  skills?: string;
+  credits?: number;
+  created_at?: string;
 }
+
 
 interface ChatMessage {
   id: number;
@@ -49,6 +55,14 @@ export default function ChatPage() {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [typingUsers, setTypingUsers] = useState<{[key: number]: string}>({});
+  
+  // New interaction states
+  const [showSearch, setShowSearch] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -174,11 +188,33 @@ export default function ChatPage() {
       if (res.ok) {
         setConversations(prev => prev.filter(c => c.id !== id));
         if (activeConv?.id === id) setActiveConv(null);
+        setShowDetails(false);
+        setShowMenu(false);
       }
     } catch (err) {
       console.error('Failed to leave group', err);
     }
   };
+
+  const handleClearChat = async (id: number) => {
+    if (!confirm('Are you sure you want to clear all messages in this conversation? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${id}/clear`, { method: 'POST' });
+      if (res.ok) {
+        setMessages([]);
+        setShowMenu(false);
+      }
+    } catch (err) {
+      console.error('Failed to clear chat', err);
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    setShowMenu(false);
+    // In a real app, this would call an API
+  };
+
 
   const handleTyping = (isTyping: boolean) => {
     if (!activeConv) return;
@@ -411,7 +447,28 @@ export default function ChatPage() {
   }, [messages, messageLoading]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSearch(false);
+        setShowMenu(false);
+        setShowDetails(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showMenu) setShowMenu(false);
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [showMenu]);
+
+  useEffect(() => {
     if (state === 'ready' && activeConv) {
+
       inputRef.current?.focus();
     }
   }, [activeConv, state]);
@@ -554,7 +611,7 @@ export default function ChatPage() {
             <>
               <header className="chat-header">
                 <div className="header-left">
-                  <div className="header-avatar-container">
+                  <div className="header-avatar-container" onClick={() => setShowDetails(!showDetails)} style={{ cursor: 'pointer' }}>
                     <img
                       src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
                       alt=""
@@ -562,7 +619,7 @@ export default function ChatPage() {
                     />
                     {!activeConv.is_group && <span className="presence-dot online"></span>}
                   </div>
-                  <div className="header-info">
+                  <div className="header-info" onClick={() => setShowDetails(!showDetails)} style={{ cursor: 'pointer' }}>
                     <div className="header-primary-row">
                       <h3 className="header-display-name">
                         {activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}
@@ -576,6 +633,7 @@ export default function ChatPage() {
                       {activeConv.is_group ? (
                         <div className="group-meta">
                           <span className="member-count">{activeConv.users.length} members</span>
+
                           <div className="members-preview">
                             {activeConv.users.slice(0, 3).map((u, i) => (
                               <img 
@@ -600,33 +658,94 @@ export default function ChatPage() {
                   </div>
                 </div>
 
+
                 <div className="header-actions">
-                  <button className="header-action-btn" title="Search Transmission">
+                  <button 
+                    className={`header-action-btn ${showSearch ? 'active' : ''}`} 
+                    title="Search Transmission"
+                    onClick={() => {
+                      setShowSearch(!showSearch);
+                      setShowMenu(false);
+                      setShowDetails(false);
+                    }}
+                  >
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                   </button>
                   {activeConv.is_group ? (
                     <>
-                      <button className="header-action-btn" title="Group Settings">
+                      <button 
+                        className={`header-action-btn ${showDetails ? 'active' : ''}`} 
+                        title="Group Settings"
+                        onClick={() => {
+                          setShowDetails(!showDetails);
+                          setShowSearch(false);
+                          setShowMenu(false);
+                        }}
+                      >
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                       </button>
-                      <button className="header-action-btn danger" title="Leave Group" onClick={() => handleLeaveGroup(activeConv.id)}>
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                      <button 
+                        className="header-action-btn" 
+                        title="More Options"
+                        onClick={() => setShowMenu(!showMenu)}
+                      >
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                       </button>
                     </>
                   ) : (
                     <>
-                      <button className="header-action-btn" title="More Options">
+                      <button 
+                        className={`header-action-btn ${showMenu ? 'active' : ''}`} 
+                        title="More Options"
+                        onClick={() => setShowMenu(!showMenu)}
+                      >
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-                      </button>
-                      <button className="header-action-btn danger" title="Delete Transmission" onClick={() => handleDeleteConversation(activeConv.id)}>
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                       </button>
                     </>
                   )}
                 </div>
+
               </header>
 
               <div className="messages-area">
+                {showSearch && (
+                  <div className="chat-message-search">
+                    <div className="search-bar-inner">
+                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      <input 
+                        type="text" 
+                        placeholder="Search messages..." 
+                        value={chatSearchQuery}
+                        onChange={(e) => setChatSearchQuery(e.target.value)}
+                        autoFocus
+                      />
+                      <button onClick={() => { setShowSearch(false); setChatSearchQuery(''); }} className="close-search">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showMenu && (
+                  <div className="chat-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                    {activeConv.is_group ? (
+                      <>
+                        <button onClick={() => { setShowDetails(true); setShowMenu(false); }}>Group Info</button>
+                        <button onClick={() => toggleMute()}>{isMuted ? 'Unmute Group' : 'Mute Group'}</button>
+                        <button onClick={() => handleClearChat(activeConv.id)}>Clear Chat</button>
+                        <button className="danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => { setShowDetails(true); setShowMenu(false); }}>View Profile</button>
+                        <button onClick={() => toggleMute()}>{isMuted ? 'Unmute Signal' : 'Mute Signal'}</button>
+                        <button onClick={() => handleClearChat(activeConv.id)}>Clear History</button>
+                        <button className="danger" onClick={() => handleDeleteConversation(activeConv.id)}>Delete Transmission</button>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {messageLoading ? (
                   <div className="message-state">
                     <div className="skeleton-loader">
@@ -639,13 +758,15 @@ export default function ChatPage() {
                 ) : messages.length === 0 ? (
                   <div className="message-state">No messages yet. Start the conversation.</div>
                 ) : (
-                  messages.map((msg) => (
-                    <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}>
-                      {activeConv?.is_group && msg.sender_id !== user?.id && <div className="msg-sender-name">{msg.sender ? msg.sender.name : 'Deleted User'}</div>}
-                      <div className="msg-content">{msg.content}</div>
-                      <small className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
-                    </div>
-                  ))
+                  messages
+                    .filter(msg => msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                    .map((msg) => (
+                      <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}>
+                        {activeConv?.is_group && msg.sender_id !== user?.id && <div className="msg-sender-name">{msg.sender ? msg.sender.name : 'Deleted User'}</div>}
+                        <div className="msg-content">{msg.content}</div>
+                        <small className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
+                      </div>
+                    ))
                 )}
                 {Object.keys(typingUsers).length > 0 && (
                   <div className="typing-indicator">
@@ -655,7 +776,84 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {showDetails && (
+                <div className="chat-details-panel">
+                  <header className="details-header">
+                    <h3>{activeConv.is_group ? 'Group Details' : 'Crew Member'}</h3>
+                    <button onClick={() => setShowDetails(false)} className="close-details">
+                      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </header>
+                  <div className="details-content">
+                    <div className="details-main-info">
+                      <img 
+                        src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
+                        alt="" 
+                        className="details-avatar" 
+                      />
+                      <h4>{activeConv.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}</h4>
+                      {!activeConv.is_group && <span className="details-role">{activeRecipient?.role || 'Crew Member'}</span>}
+                    </div>
+
+                    {activeConv.is_group ? (
+                      <div className="details-section">
+                        <div className="section-title">Members ({activeConv.users.length})</div>
+                        <div className="details-members-list">
+                          {activeConv.users.map(u => (
+                            <div key={u.id} className="member-item">
+                              <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" />
+                              <div className="member-info">
+                                <span className="member-name">{u.name}</span>
+                                <span className="member-role">{u.role || 'Member'}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="details-actions">
+                          <button className="details-btn danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="details-section">
+                        <div className="section-title">Field Intel</div>
+                        <div className="intel-grid">
+                          <div className="intel-cell">
+                            <label>Credits</label>
+                            <span>{activeRecipient?.credits || 0}</span>
+                          </div>
+                          <div className="intel-cell">
+                            <label>College</label>
+                            <span>{activeRecipient?.college || 'N/A'}</span>
+                          </div>
+                          <div className="intel-cell">
+                            <label>City</label>
+                            <span>{activeRecipient?.city || 'N/A'}</span>
+                          </div>
+                          <div className="intel-cell">
+                            <label>Joined</label>
+                            <span>{activeRecipient?.created_at ? new Date(activeRecipient.created_at).toLocaleDateString() : 'Recently'}</span>
+                          </div>
+                        </div>
+                        {activeRecipient?.skills && (
+                          <div className="intel-skills">
+                            <label>Skills</label>
+                            <div className="skills-wrap">
+                              {activeRecipient.skills.split(',').map(s => <span key={s} className="skill-tag">{s.trim()}</span>)}
+                            </div>
+                          </div>
+                        )}
+                        <div className="details-actions">
+                          <button className="details-btn" onClick={() => window.location.href = `/profile/${activeRecipient?.id}`}>View Profile</button>
+                          <button className="details-btn danger" onClick={() => handleDeleteConversation(activeConv.id)}>Delete History</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <form className="chat-input-wrap" onSubmit={sendMessage}>
+
                 <div className="input-container">
                   <input
                     ref={inputRef}
