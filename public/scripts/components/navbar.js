@@ -53,9 +53,12 @@ const Navbar = {
             html += `<a href="${href}" ${item.id ? `id="${item.id}"` : ''}>${label}</a>`;
         });
 
-        // Add Admin Panel for admins
-        if (user && user.role && user.role.toLowerCase() === 'admin') {
-            html += `<a href="/admin" style="color: var(--neon); font-weight: bold;">Admin Panel</a>`;
+        // Add Admin Panel for admins, developers, and moderators
+        if (user && user.role) {
+            const role = user.role.toLowerCase();
+            if (role === 'admin' || role === 'developer' || role === 'moderator') {
+                html += `<a href="/admin" style="color: var(--neon); font-weight: bold;">Admin Panel</a>`;
+            }
         }
 
         // Add Login/Logout button
