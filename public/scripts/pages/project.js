@@ -227,7 +227,7 @@ const ROLE_WORKSPACES = {
     secondary: 'Update Crew Profile'
   },
   defaultCrew: {
-    label: 'Crew',
+    label: 'Workspace',
     title: 'Crew Opportunities',
     subtitle: 'This workspace is for crew members to find productions and request to join.',
     heading: 'Crew Mode',
@@ -1088,21 +1088,23 @@ registerForm?.addEventListener('submit', async (e) => {
 });
 
 function updateUIAfterLogin(user) {
-  const loginBtnEl = document.getElementById('loginBtn');
-  const navCta = document.querySelector('.nav-cta');
-  
-  if (loginBtnEl) {
-    loginBtnEl.textContent = 'Logout';
-    loginBtnEl.style.pointerEvents = 'auto';
-    loginBtnEl.style.opacity = '1';
-  }
-  
-  if (navCta) {
-    navCta.textContent = `Logout`;
-    navCta.onclick = (e) => {
-      e.preventDefault();
-      API.auth.logout();
-    };
+  if (typeof Navbar !== 'undefined') {
+    Navbar.render(user);
+  } else {
+    // Fallback if Navbar.js is not loaded
+    const navCta = document.querySelector('.nav-cta');
+    if (navCta) {
+      navCta.textContent = 'Logout';
+      navCta.onclick = (e) => {
+        e.preventDefault();
+        API.auth.logout();
+      };
+    }
+    const navCrewLink = document.getElementById('navCrewLink');
+    if (navCrewLink) {
+      navCrewLink.href = '/crew.htm';
+      navCrewLink.textContent = 'Crew';
+    }
   }
 
   applyRoleBasedUI(user);
@@ -1123,9 +1125,9 @@ function applyRoleBasedUI(user) {
   if (!creatorUploadZone || !crewModePanel) return;
 
   if (!user) {
-    const adminLink = document.getElementById('adminPanelLink');
-    if (adminLink) adminLink.remove();
-
+    if (typeof Navbar !== 'undefined') {
+      Navbar.render(null);
+    }
     applyRoleSkin('');
     renderRoleToolkit(null, workspace);
     creatorUploadZone.hidden = true;
@@ -1141,10 +1143,6 @@ function applyRoleBasedUI(user) {
         openModal(registerModal);
       };
     }
-    if (navUploadLink) {
-      navUploadLink.textContent = 'Workspace';
-      navUploadLink.setAttribute('href', '#upload');
-    }
     applyCrewWorkspaceCopy(workspace);
     return;
   }
@@ -1153,23 +1151,29 @@ function applyRoleBasedUI(user) {
   applyRoleSkin(user.role);
   renderRoleToolkit(user, workspace);
 
-  // Admin Panel Link logic
-  const nav = document.querySelector('header nav');
-  let adminLink = document.getElementById('adminPanelLink');
-
-  if (isAdmin(user)) {
-    if (!adminLink && nav) {
-      adminLink = document.createElement('a');
-      adminLink.id = 'adminPanelLink';
-      adminLink.href = '/admin';
-      adminLink.textContent = 'Admin Panel';
-      adminLink.style.color = 'var(--neon)';
-      adminLink.style.fontWeight = 'bold';
-      // Insert before the logout/login button
-      nav.insertBefore(adminLink, document.getElementById('loginBtn') || nav.lastElementChild);
+  if (typeof Navbar !== 'undefined') {
+    Navbar.render(user);
+  } else {
+    // Legacy logic if Navbar script fails
+    const nav = document.querySelector('header nav');
+    let adminLink = document.getElementById('adminPanelLink');
+    if (isAdmin(user)) {
+      if (!adminLink && nav) {
+        adminLink = document.createElement('a');
+        adminLink.id = 'adminPanelLink';
+        adminLink.href = '/admin';
+        adminLink.textContent = 'Admin Panel';
+        adminLink.style.color = 'var(--neon)';
+        adminLink.style.fontWeight = 'bold';
+        nav.insertBefore(adminLink, document.getElementById('loginBtn') || nav.lastElementChild);
+      }
+    } else if (adminLink) {
+      adminLink.remove();
     }
-  } else if (adminLink) {
-    adminLink.remove();
+    if (navUploadLink) {
+      const cleanLabel = workspace.label === 'Crew' ? 'Workspace' : workspace.label;
+      navUploadLink.textContent = cleanLabel;
+    }
   }
 
   if (creatorMode) {

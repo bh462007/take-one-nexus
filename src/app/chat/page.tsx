@@ -529,6 +529,9 @@ export default function ChatPage() {
           <a href="/crew.htm">Crew</a>
           <a href="/#upload">Upload</a>
           <a href="/profile">Profile</a>
+          {user?.role?.toLowerCase() === 'admin' && (
+            <a href="/admin" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
+          )}
           <button onClick={() => window.location.href = '/profile'} className="nav-cta" style={{ border: 'none', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif" }}>
             My Signal
           </button>
