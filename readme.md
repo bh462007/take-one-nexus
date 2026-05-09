@@ -14,8 +14,15 @@ TAKE ONE Nexus is the definitive collaborative platform for the next generation 
 ### 🛰️ Secure Transmission (Chat)
 A fully integrated, real-time communication suite powered by Pusher.
 - **Direct Messaging:** Secure channels for collaboration requests.
+- **Group Chats:** Create multi-user channels for production crews and teams.
 - **Live Sync:** Real-time message delivery with cinematic animations.
-- **Collaboration Context:** Direct links between project requests and conversations.
+- **Intelligent Unread:** Accurate unread message tracking and global notifications.
+
+### 🛡️ Developer & Platform Security
+Robust systems for maintaining platform integrity.
+- **Issue Reporting:** Integrated global bug reporting modal with screenshot support.
+- **Developer Dashboard:** Secure, role-based dashboard for managing platform issues.
+- **Intelligent Formatting:** Automated display name normalization (Title Case) across all APIs.
 
 ### 💎 Creator Credits
 The heartbeat of the Nexus economy.
@@ -25,6 +32,7 @@ The heartbeat of the Nexus economy.
 
 ### 🎭 Production Profiles
 Dynamic, live creator profiles that serve as a digital reel.
+- **Smart Onboarding:** College and City autocomplete logic during registration.
 - **Skill Badges:** Highlight your technical expertise.
 - **Production History:** Showcase your uploaded scripts and collaborations.
 - **Live Status:** Real-time activity indicators.

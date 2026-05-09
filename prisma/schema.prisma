@@ -28,6 +28,7 @@ model User {
   collaboration_reqs    CollaborationRequest[] @relation("RequesterRequests")
   sent_messages         Message[]              @relation("SentMessages")
   conversations         Conversation[]         @relation("UserConversations")
+  issues                Issue[]
 
   @@map("users")
 }
@@ -72,12 +73,31 @@ model CollaborationRequest {
 
 model Conversation {
   id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  name       String?   @db.VarChar(255)
+  is_group   Boolean   @default(false)
+  avatar_url String?   @db.VarChar(255)
   created_at DateTime  @default(now()) @db.Timestamp(0)
   updated_at DateTime  @default(now()) @updatedAt @db.Timestamp(0)
   users      User[]    @relation("UserConversations")
   messages   Message[]
 
   @@map("conversations")
+}
+
+model Issue {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  user_id     Int?     @db.UnsignedInt
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  location    String?  @db.VarChar(255)
+  severity    String   @default("low") @db.VarChar(50)
+  screenshot  String?  @db.VarChar(255)
+  status      String   @default("open") @db.VarChar(50)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
+  user        User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@map("issues")
 }
 
 model Message {

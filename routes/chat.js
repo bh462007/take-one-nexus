@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticateUser } = require('../middleware/auth');
 const { PrismaClient } = require('@prisma/client');
 const Pusher = require('pusher');
+const { formatDisplayName } = require('../utils/formatting');
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -64,11 +65,41 @@ router.get('/conversations', authenticateUser, async (req, res) => {
 
     res.json({
       success: true,
-      data: conversations
+      data: conversations.map(c => ({
+        ...c,
+        users: c.users.map(u => ({ ...u, name: formatDisplayName(u.name) })),
+        messages: c.messages.map(m => ({
+          ...m,
+          sender: { ...m.sender, name: formatDisplayName(m.sender.name) }
+        }))
+      }))
     });
   } catch (error) {
     console.error('Fetch conversations error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load conversations' });
+  }
+});
+
+/**
+ * GET /api/chat/unread-count
+ * Get unread message count for the logged-in user
+ */
+router.get('/unread-count', authenticateUser, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const count = await prisma.message.count({
+      where: {
+        is_read: false,
+        sender_id: { not: userId },
+        conversation: {
+          users: { some: { id: userId } }
+        }
+      }
+    });
+    res.json({ success: true, count });
+  } catch (error) {
+    console.error('Fetch unread count error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not load unread count' });
   }
 });
 
@@ -134,11 +165,51 @@ router.post('/conversations/direct', authenticateUser, async (req, res) => {
     res.status(201).json({
       success: true,
       created: true,
-      data: conversation
+      data: {
+        ...conversation,
+        users: conversation.users.map(u => ({ ...u, name: formatDisplayName(u.name) }))
+      }
     });
   } catch (error) {
     console.error('Direct conversation error:', error.message);
     res.status(500).json({ success: false, message: 'Could not open conversation' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/group
+ * Create a group conversation.
+ */
+router.post('/conversations/group', authenticateUser, async (req, res) => {
+  try {
+    const senderId = Number(req.user.id);
+    const { name, userIds } = req.body;
+    
+    if (!name || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid group data' });
+    }
+
+    const allUserIds = [...new Set([senderId, ...userIds.map(id => Number(id))])];
+    
+    const conversation = await prisma.conversation.create({
+      data: {
+        name: name,
+        is_group: true,
+        users: { connect: allUserIds.map(id => ({ id })) }
+      },
+      include: getConversationInclude()
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...conversation,
+        users: conversation.users.map(u => ({ ...u, name: formatDisplayName(u.name) }))
+      }
+    });
+  } catch (error) {
+    console.error('Group conversation error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not create group conversation' });
   }
 });
 
@@ -165,6 +236,16 @@ router.get('/messages/:conversationId', authenticateUser, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
+    // Mark messages as read
+    await prisma.message.updateMany({
+      where: {
+        conversation_id: conversationId,
+        sender_id: { not: userId },
+        is_read: false
+      },
+      data: { is_read: true }
+    });
+
     const messages = await prisma.message.findMany({
       where: { conversation_id: conversationId },
       orderBy: { created_at: 'asc' },
@@ -183,7 +264,10 @@ router.get('/messages/:conversationId', authenticateUser, async (req, res) => {
 
     res.json({
       success: true,
-      data: messages
+      data: messages.map(m => ({
+        ...m,
+        sender: { ...m.sender, name: formatDisplayName(m.sender.name) }
+      }))
     });
   } catch (error) {
     console.error('Fetch messages error:', error.message);

@@ -649,9 +649,10 @@
           <option value="Prefer not to say" selected>Prefer not to say</option>
         </select>
       </div>
-      <div class="form-group">
+      <div class="form-group" style="position: relative;">
         <label for="registerCollege">College / University</label>
-        <input type="text" id="registerCollege" placeholder="e.g., FTII Pune">
+        <input type="text" id="registerCollege" placeholder="e.g., FTII Pune" autocomplete="off">
+        <div id="collegeSuggestions" class="autocomplete-dropdown"></div>
       </div>
       <div class="form-group" style="position: relative;">
         <label for="registerCity">City</label>
@@ -704,6 +705,7 @@
     <script src="/scripts/api/api.js"></script>
     <script src="/scripts/utils/helpers.js"></script>
     <script src="/scripts/utils/locations.js"></script>
+    <script src="/scripts/utils/colleges.js"></script>
     <script src="/scripts/components/ui.js"></script>
     <script src="/scripts/animations/common.js"></script>
     <script src="/scripts/pages/project.js"></script>

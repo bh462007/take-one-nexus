@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 import { getAvatarUrl } from '@/lib/avatars';
+import CreateGroupModal from '@/components/CreateGroupModal';
 import './chat.css';
 
 interface User {
@@ -24,6 +25,9 @@ interface ChatMessage {
 
 interface Conversation {
   id: number;
+  name?: string;
+  is_group?: boolean;
+  avatar_url?: string;
   users: User[];
   messages: ChatMessage[];
   created?: boolean;
@@ -41,6 +45,7 @@ export default function ChatPage() {
   const [statusText, setStatusText] = useState('Synchronizing with Nexus...');
   const [messageLoading, setMessageLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +132,29 @@ export default function ChatPage() {
     });
     setActiveConversation(conversation);
     return conversation;
+  }, [setActiveConversation]);
+
+  const createGroupConversation = useCallback(async (name: string, userIds: number[]) => {
+    setState('loading');
+    setStatusText('Creating group transmission...');
+
+    const res = await fetch('/api/chat/conversations/group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, userIds })
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      setState('error');
+      setStatusText(json.message || 'Could not create group.');
+      return;
+    }
+
+    const conversation = json.data as Conversation;
+    setConversations((current) => [conversation, ...current]);
+    setActiveConversation(conversation);
+    setState('ready');
   }, [setActiveConversation]);
 
   useEffect(() => {
@@ -315,8 +343,9 @@ export default function ChatPage() {
 
       <div className="chat-container">
         <aside className="chat-sidebar">
-          <div className="sidebar-header">
+          <div className="sidebar-header flex justify-between items-center px-4 py-2">
             <h2>Transmissions</h2>
+            <button onClick={() => setIsGroupModalOpen(true)} className="text-xs bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded text-white font-bold" aria-label="Create Group">+</button>
           </div>
           <div className="conversation-list">
             {conversations.map((conv) => {
@@ -334,13 +363,13 @@ export default function ChatPage() {
                   aria-pressed={activeConv?.id === conv.id}
                 >
                   <img
-                    src={getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
+                    src={conv.is_group ? (conv.avatar_url || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
                     alt=""
                     className="conv-avatar"
                   />
                   <div className="conv-info">
-                    <div className="conv-name">{recipient?.name || 'Crew Member'}</div>
-                    <div className="conv-role">{recipient?.role || 'Crew Member'}</div>
+                    <div className="conv-name">{conv.is_group ? conv.name : (recipient?.name || 'Crew Member')}</div>
+                    <div className="conv-role">{conv.is_group ? `${conv.users.length} Members` : (recipient?.role || 'Crew Member')}</div>
                     <div className="conv-last-msg">{lastMsg}</div>
                   </div>
                 </button>
@@ -365,13 +394,13 @@ export default function ChatPage() {
               <header className="chat-header">
                 <div className="header-info">
                   <div className="header-name-row">
-                    <h3>{activeRecipient?.name || 'Crew Member'}</h3>
+                    <h3>{activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}</h3>
                     <div className="status-indicator">
                       <span className="status-dot online"></span>
                       <span>Signal Live</span>
                     </div>
                   </div>
-                  <span className="header-role">{activeRecipient?.role || 'Crew Member'}</span>
+                  <span className="header-role">{activeConv?.is_group ? `${activeConv.users.length} Members` : (activeRecipient?.role || 'Crew Member')}</span>
                 </div>
               </header>
 
@@ -383,6 +412,7 @@ export default function ChatPage() {
                 ) : (
                   messages.map((msg) => (
                     <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}>
+                      {activeConv?.is_group && msg.sender_id !== user?.id && <div className="text-xs text-gray-400 mb-1 font-bold">{msg.sender.name}</div>}
                       <div className="msg-content">{msg.content}</div>
                       <small className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
                     </div>
@@ -397,7 +427,7 @@ export default function ChatPage() {
                     ref={inputRef}
                     type="text"
                     className="chat-input"
-                    placeholder={`Message ${activeRecipient?.name || 'crew member'}...`}
+                    placeholder={`Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     disabled={sending}
@@ -421,6 +451,7 @@ export default function ChatPage() {
           )}
         </main>
       </div>
+      <CreateGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} onCreate={createGroupConversation} />
     </div>
   );
 }

@@ -1625,9 +1625,88 @@ function initLocationAutocomplete() {
   });
 }
 
+function initCollegeAutocomplete() {
+  const collegeInput = document.getElementById('registerCollege');
+  const suggestionsBox = document.getElementById('collegeSuggestions');
+  if (!collegeInput || !suggestionsBox) return;
+
+  let selectedIndex = -1;
+
+  collegeInput.addEventListener('input', () => {
+    const query = collegeInput.value.toLowerCase().trim();
+    if (!query) {
+      suggestionsBox.innerHTML = '';
+      suggestionsBox.classList.remove('active');
+      return;
+    }
+
+    const matches = (window.INDIAN_COLLEGES || []).filter(college => 
+      college.toLowerCase().includes(query)
+    ).slice(0, 10);
+
+    if (matches.length > 0) {
+      suggestionsBox.innerHTML = matches.map((college, index) => `
+        <div class="suggestion-item" data-index="${index}">${college}</div>
+      `).join('');
+      suggestionsBox.classList.add('active');
+    } else {
+      suggestionsBox.innerHTML = '';
+      suggestionsBox.classList.remove('active');
+    }
+    selectedIndex = -1;
+  });
+
+  collegeInput.addEventListener('keydown', (e) => {
+    const items = suggestionsBox.querySelectorAll('.suggestion-item');
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+      selectedIndex = (selectedIndex + 1) % items.length;
+      updateSelection(items);
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      updateSelection(items);
+      e.preventDefault();
+    } else if (e.key === 'Enter' && selectedIndex > -1) {
+      selectCollege(items[selectedIndex].textContent);
+      e.preventDefault();
+    }
+  });
+
+  function updateSelection(items) {
+    items.forEach((item, i) => {
+      item.classList.toggle('selected', i === selectedIndex);
+    });
+  }
+
+  function selectCollege(college) {
+    collegeInput.value = college;
+    suggestionsBox.innerHTML = '';
+    suggestionsBox.classList.remove('active');
+  }
+
+  suggestionsBox.addEventListener('click', (e) => {
+    const item = e.target.closest('.suggestion-item');
+    if (item) {
+      selectCollege(item.textContent);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!collegeInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+      suggestionsBox.classList.remove('active');
+    }
+  });
+}
+
 // Initialize on load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initLocationAutocomplete);
+  document.addEventListener('DOMContentLoaded', () => {
+    initLocationAutocomplete();
+    initCollegeAutocomplete();
+  });
 } else {
   initLocationAutocomplete();
+  initCollegeAutocomplete();
 }

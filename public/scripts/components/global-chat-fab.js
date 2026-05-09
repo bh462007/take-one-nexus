@@ -42,18 +42,20 @@
     if (!hasLocalSession()) return;
 
     try {
-      const response = await fetch('/api/chat/conversations', {
+      const response = await fetch('/api/chat/unread-count', {
         credentials: 'same-origin'
       });
       const json = await response.json();
-      const count = Array.isArray(json.data) ? json.data.length : 0;
+      const count = json.success && typeof json.count === 'number' ? json.count : 0;
 
       if (response.ok && json.success && count > 0) {
         badge.textContent = count > 9 ? '9+' : String(count);
         badge.classList.add('is-visible');
+      } else {
+        badge.classList.remove('is-visible');
       }
     } catch (error) {
-      console.warn('Could not load chat count', error);
+      console.warn('Could not load chat unread count', error);
     }
   }
 

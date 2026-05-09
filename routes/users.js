@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const { authenticateUser, requireSameUser } = require('../middleware/auth');
 const { PrismaClient } = require('@prisma/client');
+const { formatDisplayName } = require('../utils/formatting');
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -41,6 +42,7 @@ async function getProfileData(userId) {
 
   return {
     ...userRows[0],
+    name: formatDisplayName(userRows[0].name),
     scripts: scriptRows
   };
 }
@@ -110,7 +112,7 @@ router.post('/register', async (req, res) => {
 
     const user = {
       id: result.insertId,
-      name: name.trim(),
+      name: formatDisplayName(name.trim()),
       email: normalizedEmail,
       role: role || '',
       college: college || '',
@@ -241,7 +243,7 @@ router.post('/login', async (req, res) => {
       success: true,
       user: {
         id: user.id,
-        name: user.name,
+        name: formatDisplayName(user.name),
         email: user.email,
         role: user.role || '',
         college: user.college || '',
@@ -355,7 +357,7 @@ router.get('/search', async (req, res) => {
     res.json({
       success: true,
       count: rows.length,
-      data: rows
+      data: rows.map(r => ({ ...r, name: formatDisplayName(r.name) }))
     });
   } catch (error) {
     console.error('User search error:', error.message);
@@ -411,7 +413,10 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
     res.json({
       success: true,
       message: 'Profile updated successfully via Prisma',
-      data: updatedUser
+      data: {
+        ...updatedUser,
+        name: formatDisplayName(updatedUser.name)
+      }
     });
   } catch (error) {
     console.error('Profile update error:', error.message);
