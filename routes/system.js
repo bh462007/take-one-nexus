@@ -86,7 +86,15 @@ router.post('/email/test', authenticateUser, async (req, res) => {
 router.get('/analytics', authenticateUser, async (req, res) => {
   try {
     const role = req.user.role;
-    if (role !== 'Developer' && role !== 'Admin') {
+    const email = (req.user.email || '').toLowerCase();
+    
+    const isAuthorized = 
+      role === 'Developer' || 
+      role === 'Admin' || 
+      email === 'aarushgupta289@gmail.com' ||
+      email === 'alok.r25012@csds.rishihood.edu.in';
+
+    if (!isAuthorized) {
       return res.status(403).json({ success: false, message: 'Access denied: Requires Admin or Developer role' });
     }
 

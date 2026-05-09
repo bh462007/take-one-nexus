@@ -39,11 +39,13 @@ export async function proxy(request: NextRequest) {
 
       const userEmail = (payload.email as string || '').toLowerCase();
       const userRole = (payload.role as string || '').toLowerCase();
+      const isAdminEmail = ADMIN_EMAILS.map(e => e.toLowerCase()).includes(userEmail);
+      const isDeveloperEmail = DEVELOPER_EMAILS.map(e => e.toLowerCase()).includes(userEmail);
 
       // Admin route: require admin email or admin role
       if (isAdminRoute) {
         const isAuthorized =
-          ADMIN_EMAILS.map(e => e.toLowerCase()).includes(userEmail) ||
+          isAdminEmail ||
           userRole === 'admin';
 
         if (!isAuthorized) {
@@ -54,7 +56,8 @@ export async function proxy(request: NextRequest) {
       // Developer route: require developer/admin email or role
       if (pathname.startsWith('/developer')) {
         const isAuthorized =
-          DEVELOPER_EMAILS.map(e => e.toLowerCase()).includes(userEmail) ||
+          isDeveloperEmail ||
+          isAdminEmail ||
           userRole === 'developer' ||
           userRole === 'admin';
 

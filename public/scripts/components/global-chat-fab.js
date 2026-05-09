@@ -55,12 +55,8 @@
       const pusher = new Pusher(key, { cluster });
       const channel = pusher.subscribe(`user-${userId}`);
       channel.bind('message-notification', () => {
-        // Increment the badge or fetch exact count
-        let countText = badge.textContent;
-        let count = countText === '9+' ? 10 : (parseInt(countText) || 0);
-        count++;
-        badge.textContent = count > 9 ? '9+' : String(count);
-        badge.classList.add('is-visible');
+        // Fetch exact count from server for accuracy
+        updateConversationCount(badge);
       });
     }
   }

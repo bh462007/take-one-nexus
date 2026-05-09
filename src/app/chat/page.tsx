@@ -30,7 +30,8 @@ interface Conversation {
   avatar_url?: string;
   users: User[];
   messages: ChatMessage[];
-  created?: boolean;
+  unread?: number;
+  updated_at?: string;
 }
 
 type ChatState = 'loading' | 'ready' | 'error' | 'not-found';
@@ -46,11 +47,14 @@ export default function ChatPage() {
   const [messageLoading, setMessageLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typingUsers, setTypingUsers] = useState<{[key: number]: string}>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
   const pusherConfigRef = useRef<{key: string, cluster: string} | null>(null);
+  const typingTimeoutRef = useRef<{[key: number]: NodeJS.Timeout}>({});
 
   const activeRecipient = useMemo(() => {
     if (!activeConv || !user) return null;
@@ -73,6 +77,9 @@ export default function ChatPage() {
     setActiveConv(conversation);
     setMessages([]);
     localStorage.setItem('take_one_last_conversation', String(conversation.id));
+
+    // Clear unread for this conversation locally
+    setConversations(prev => prev.map(c => c.id === conversation.id ? { ...c, unread: 0 } : c));
 
     if (updateUrl && typeof window !== 'undefined') {
       const url = `/chat?conversationId=${conversation.id}`;
@@ -141,11 +148,59 @@ export default function ChatPage() {
     const conversation = json.data as Conversation;
     setConversations((current) => {
       const withoutDuplicate = current.filter((item) => item.id !== conversation.id);
-      return [conversation, ...withoutDuplicate];
+      return [{ ...conversation, unread: 0 }, ...withoutDuplicate];
     });
     setActiveConversation(conversation);
     return conversation;
   }, [setActiveConversation]);
+
+  const handleDeleteConversation = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this conversation? This will remove it from your signal desk.')) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setConversations(prev => prev.filter(c => c.id !== id));
+        if (activeConv?.id === id) setActiveConv(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete conversation', err);
+    }
+  };
+
+  const handleLeaveGroup = async (id: number) => {
+    if (!confirm('Are you sure you want to leave this group?')) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${id}/leave`, { method: 'POST' });
+      if (res.ok) {
+        setConversations(prev => prev.filter(c => c.id !== id));
+        if (activeConv?.id === id) setActiveConv(null);
+      }
+    } catch (err) {
+      console.error('Failed to leave group', err);
+    }
+  };
+
+  const handleTyping = (isTyping: boolean) => {
+    if (!activeConv) return;
+    fetch('/api/chat/typing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId: activeConv.id, isTyping })
+    }).catch(() => {});
+  };
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    handleTyping(true);
+    
+    if (typingTimeoutRef.current[activeConv?.id || 0]) {
+      clearTimeout(typingTimeoutRef.current[activeConv?.id || 0]);
+    }
+    
+    typingTimeoutRef.current[activeConv?.id || 0] = setTimeout(() => {
+      handleTyping(false);
+    }, 2000);
+  };
 
   const createGroupConversation = useCallback(async (name: string, userIds: number[]) => {
     setState('loading');
@@ -270,7 +325,12 @@ export default function ChatPage() {
         const convIndex = current.findIndex((c) => c.id === data.conversationId);
         if (convIndex > -1) {
           const conv = current[convIndex];
-          const updatedConv = { ...conv, messages: [data.message] };
+          const isCurrentActive = activeConv?.id === data.conversationId;
+          const updatedConv = { 
+            ...conv, 
+            messages: [data.message], 
+            unread: isCurrentActive ? 0 : (conv.unread || 0) + 1 
+          };
           const newConvs = [...current];
           newConvs.splice(convIndex, 1);
           return [updatedConv, ...newConvs];
@@ -285,7 +345,7 @@ export default function ChatPage() {
       userChannel.unbind_all();
       pusherRef.current?.unsubscribe(userChannelName);
     };
-  }, [user, fetchConversations]);
+  }, [user, activeConv?.id, fetchConversations]);
 
   useEffect(() => {
     if (!activeConv) return;
@@ -306,15 +366,22 @@ export default function ChatPage() {
     const channelName = `conversation-${activeConv.id}`;
     const channel = pusherRef.current.subscribe(channelName);
     channel.bind('new-message', (data: { message: ChatMessage }) => {
-      setMessages((prev) => {
-        if (prev.find((message) => message.id === data.message.id)) return prev;
-        return [...prev, data.message];
-      });
+      if (activeConv.id === data.message.conversation_id) {
+        setMessages((prev) => {
+          if (prev.find((message) => message.id === data.message.id)) return prev;
+          return [...prev, data.message];
+        });
+      }
+      
       setConversations((current) => {
         const convIndex = current.findIndex((c) => c.id === data.message.conversation_id);
         if (convIndex > -1) {
           const conv = current[convIndex];
-          const updatedConv = { ...conv, messages: [data.message] };
+          const updatedConv = { 
+            ...conv, 
+            messages: [data.message],
+            unread: activeConv.id === conv.id ? 0 : (conv.unread || 0) + 1
+          };
           const newConvs = [...current];
           newConvs.splice(convIndex, 1);
           return [updatedConv, ...newConvs];
@@ -323,11 +390,21 @@ export default function ChatPage() {
       });
     });
 
+    channel.bind('user-typing', (data: { userId: number, userName: string, isTyping: boolean }) => {
+      if (data.userId === user?.id) return;
+      setTypingUsers(prev => {
+        const next = { ...prev };
+        if (data.isTyping) next[data.userId] = data.userName;
+        else delete next[data.userId];
+        return next;
+      });
+    });
+
     return () => {
       channel.unbind_all();
       pusherRef.current?.unsubscribe(channelName);
     };
-  }, [activeConv]);
+  }, [activeConv, user?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -403,38 +480,62 @@ export default function ChatPage() {
 
       <div className="chat-container">
         <aside className="chat-sidebar">
-          <div className="sidebar-header flex justify-between items-center px-4 py-2">
-            <h2>Transmissions</h2>
-            <button onClick={() => setIsGroupModalOpen(true)} className="text-xs bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded text-white font-bold" aria-label="Create Group">+</button>
+          <div className="sidebar-header">
+            <div className="sidebar-title-row">
+              <h2>Transmissions</h2>
+              <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta" style={{ border: 'none', cursor: 'pointer', padding: '6px 12px', height: 'auto' }} aria-label="Create Group">+</button>
+            </div>
+            <div className="sidebar-search-wrap">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input 
+                type="text" 
+                className="sidebar-search-input" 
+                placeholder="Search Nexus..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
           <div className="conversation-list">
-            {conversations.map((conv) => {
-              const recipient = getRecipient(conv);
-              const lastMsg = conv.messages[0]?.content || 'No messages yet';
-              return (
-                <button
-                  key={conv.id}
-                  type="button"
-                  className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''}`}
-                  onClick={() => {
-                    setActiveConversation(conv);
-                    fetchMessages(conv.id);
-                  }}
-                  aria-pressed={activeConv?.id === conv.id}
-                >
-                  <img
-                    src={conv.is_group ? (conv.avatar_url || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
-                    alt=""
-                    className="conv-avatar"
-                  />
-                  <div className="conv-info">
-                    <div className="conv-name">{conv.is_group ? conv.name : (recipient?.name || 'Crew Member')}</div>
-                    <div className="conv-role">{conv.is_group ? `${conv.users.length} Members` : (recipient?.role || 'Crew Member')}</div>
-                    <div className="conv-last-msg">{lastMsg}</div>
-                  </div>
-                </button>
-              );
-            })}
+            {conversations
+              .filter(c => {
+                const recipient = getRecipient(c);
+                const name = c.is_group ? c.name : recipient?.name;
+                return name?.toLowerCase().includes(searchQuery.toLowerCase());
+              })
+              .map((conv) => {
+                const recipient = getRecipient(conv);
+                const lastMsg = conv.messages[0]?.content || 'No messages yet';
+                const lastTime = conv.messages[0] ? new Date(conv.messages[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                
+                return (
+                  <button
+                    key={conv.id}
+                    type="button"
+                    className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveConversation(conv);
+                      fetchMessages(conv.id);
+                    }}
+                    aria-pressed={activeConv?.id === conv.id}
+                  >
+                    <img
+                      src={conv.is_group ? (conv.avatar_url || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
+                      alt=""
+                      className="conv-avatar"
+                    />
+                    <div className="conv-info">
+                      <div className="conv-name">{conv.is_group ? conv.name : (recipient?.name || 'Crew Member')}</div>
+                      <div className="conv-role">{conv.is_group ? `${conv.users.length} Members` : (recipient?.role || 'Crew Member')}</div>
+                      <div className="conv-last-msg">{lastMsg}</div>
+                    </div>
+                    <div className="conv-meta">
+                      {lastTime && <div className="conv-time">{lastTime}</div>}
+                      {conv.unread ? <div className="unread-badge">{conv.unread > 9 ? '9+' : conv.unread}</div> : null}
+                    </div>
+                  </button>
+                );
+              })}
             {conversations.length === 0 && (
               <div className="sidebar-empty">No active transmissions yet. Open a crew profile and send the first message.</div>
             )}
@@ -462,6 +563,20 @@ export default function ChatPage() {
                   </div>
                   <span className="header-role">{activeConv?.is_group ? `${activeConv.users.length} Members` : (activeRecipient?.role || 'Crew Member')}</span>
                 </div>
+                <div className="header-actions">
+                  <button className="header-btn" title="Search messages">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  </button>
+                  {activeConv.is_group ? (
+                    <button className="header-btn danger" title="Leave group" onClick={() => handleLeaveGroup(activeConv.id)}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
+                  ) : (
+                    <button className="header-btn danger" title="Delete chat" onClick={() => handleDeleteConversation(activeConv.id)}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    </button>
+                  )}
+                </div>
               </header>
 
               <div className="messages-area">
@@ -478,6 +593,11 @@ export default function ChatPage() {
                     </div>
                   ))
                 )}
+                {Object.keys(typingUsers).length > 0 && (
+                  <div className="typing-indicator">
+                    {Object.values(typingUsers).join(', ')} {Object.keys(typingUsers).length > 1 ? 'are' : 'is'} typing...
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -489,7 +609,7 @@ export default function ChatPage() {
                     className="chat-input"
                     placeholder={(!activeConv?.is_group && activeRecipient?.id === -1) ? 'This user is no longer available.' : `Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`}
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={onInputChange}
                     disabled={sending || (!activeConv?.is_group && activeRecipient?.id === -1)}
                   />
                   <button type="submit" className="send-btn" disabled={!newMessage.trim() || sending || (!activeConv?.is_group && activeRecipient?.id === -1)} aria-label="Send message">

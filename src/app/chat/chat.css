@@ -105,16 +105,58 @@ nav a:hover::after { width: 100%; }
 }
 
 .sidebar-header {
-  padding: 24px;
+  padding: 20px;
   border-bottom: 1px solid var(--border);
+  background: rgba(14, 18, 24, 0.98);
+}
+
+.sidebar-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
 }
 
 .sidebar-header h2 {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
-  letter-spacing: 0.2em;
+  font-size: 22px;
+  letter-spacing: 0.22em;
   color: var(--cream);
   margin: 0;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(6, 8, 10, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  transition: all 0.3s;
+}
+
+.sidebar-search-wrap:focus-within {
+  border-color: var(--neon);
+  box-shadow: 0 0 15px rgba(255, 77, 26, 0.1);
+}
+
+.sidebar-search-wrap svg {
+  width: 14px;
+  height: 14px;
+  color: var(--dim);
+  margin-right: 10px;
+}
+
+.sidebar-search-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--cream);
+  font-size: 11px;
+  width: 100%;
+  letter-spacing: 0.05em;
 }
 
 .conversation-list {
@@ -192,6 +234,41 @@ nav a:hover::after { width: 100%; }
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: var(--font-main);
+  opacity: 0.7;
+}
+
+.conv-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.conv-time {
+  font-size: 9px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.unread-badge {
+  background: var(--neon);
+  color: var(--void);
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px var(--glow);
+  animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+  0% { box-shadow: 0 0 0px var(--glow); }
+  50% { box-shadow: 0 0 10px var(--glow); }
+  100% { box-shadow: 0 0 0px var(--glow); }
 }
 
 /* ── MAIN CHAT ── */
@@ -258,6 +335,47 @@ nav a:hover::after { width: 100%; }
   text-transform: uppercase;
   letter-spacing: 0.25em;
   font-family: var(--font-main);
+}
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+}
+
+.header-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  color: var(--silver);
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.header-btn:hover {
+  background: rgba(255, 77, 26, 0.08);
+  border-color: var(--neon);
+  color: var(--neon);
+}
+
+.header-btn.danger:hover {
+  background: rgba(255, 0, 0, 0.1);
+  border-color: #ff3333;
+  color: #ff3333;
+}
+
+.typing-indicator {
+  font-size: 10px;
+  color: var(--cyan);
+  font-style: italic;
+  margin-bottom: 4px;
+  height: 14px;
+  letter-spacing: 0.05em;
 }
 
 .messages-area {

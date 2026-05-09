@@ -92,16 +92,9 @@ router.get('/unread-count', authenticateUser, async (req, res) => {
     const count = await prisma.message.count({
       where: {
         is_read: false,
-        OR: [
-          { sender_id: { not: userId } },
-          { sender_id: null }
-        ],
+        sender_id: { not: userId },
         conversation: {
-          users: { some: { id: userId } },
-          OR: [
-            { is_group: true },
-            { users: { some: { id: { not: userId } } } }
-          ]
+          users: { some: { id: userId } }
         }
       }
     });
@@ -131,7 +124,7 @@ router.post('/conversations/direct', authenticateUser, async (req, res) => {
     }
 
     if (recipientId === senderId) {
-      return res.status(400).json({ success: false, message: 'You cannot start a direct conversation with yourself' });
+      return res.status(400).json({ success: false, message: 'Take One: You cannot start a self-transmission.' });
     }
 
     const recipient = await prisma.user.findUnique({
@@ -426,6 +419,91 @@ router.post('/messages', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Send message error:', error.message);
     res.status(500).json({ success: false, message: 'Could not send message' });
+  }
+});
+
+/**
+ * POST /api/chat/typing
+ * Notify others that user is typing
+ */
+router.post('/typing', authenticateUser, async (req, res) => {
+  try {
+    const { conversationId, isTyping } = req.body;
+    const userId = Number(req.user.id);
+    const userName = formatDisplayName(req.user.name);
+
+    if (process.env.PUSHER_APP_ID) {
+      pusher.trigger(`conversation-${conversationId}`, 'user-typing', {
+        userId,
+        userName,
+        isTyping
+      });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false });
+  }
+});
+
+/**
+ * DELETE /api/chat/conversations/:id
+ * Remove user from a conversation (effectively deleting it for them)
+ */
+router.delete('/conversations/:id', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userId = Number(req.user.id);
+
+    // Disconnect user from conversation
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        users: {
+          disconnect: { id: userId }
+        }
+      }
+    });
+
+    res.json({ success: true, message: 'Conversation removed' });
+  } catch (error) {
+    console.error('Delete conversation error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not remove conversation' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/:id/leave
+ * Leave a group conversation
+ */
+router.post('/conversations/:id/leave', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userId = Number(req.user.id);
+
+    // First check if it's a group
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { is_group: true }
+    });
+
+    if (!conversation?.is_group) {
+      return res.status(400).json({ success: false, message: 'Can only leave group conversations' });
+    }
+
+    // Disconnect user
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        users: {
+          disconnect: { id: userId }
+        }
+      }
+    });
+
+    res.json({ success: true, message: 'Left group conversation' });
+  } catch (error) {
+    console.error('Leave group error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not leave group' });
   }
 });
 

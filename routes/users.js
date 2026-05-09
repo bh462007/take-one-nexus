@@ -12,8 +12,14 @@ const router = express.Router();
 function createToken(user) {
   const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
   
+  // Ensure primary admin/dev email always has the Developer role in the session token
+  let role = user.role || '';
+  if (user.email?.toLowerCase() === 'aarushgupta289@gmail.com') {
+    role = 'Developer';
+  }
+
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role || '' },
+    { id: user.id, email: user.email, role: role },
     secret,
     { expiresIn: '10d' }
   );
