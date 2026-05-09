@@ -12,13 +12,41 @@ const ADMIN_EMAILS = [
 ];
 
 function requireDeveloperOrAdmin(req, res, next) {
-  const role = (req.user.role || '').toLowerCase();
-  const email = (req.user.email || '').toLowerCase();
-  
-  if (role !== 'developer' && role !== 'admin' && !ADMIN_EMAILS.includes(email)) {
-    return res.status(403).json({ success: false, message: 'Access denied: Requires Developer role' });
-  }
-  next();
+  // Execute async wrapper to avoid uncaught promises in middleware
+  (async () => {
+    try {
+      const userId = Number(req.user.id);
+      const dbUser = await prisma.user.findUnique({ where: { id: userId } });
+      
+      if (!dbUser) {
+        return res.status(403).json({ success: false, message: 'User not found' });
+      }
+
+      const email = (dbUser.email || '').toLowerCase();
+      let role = (dbUser.role || '').toLowerCase();
+
+      // Auto-promote explicitly authorized emails to developer role if they aren't already
+      if (ADMIN_EMAILS.includes(email) && role !== 'developer' && role !== 'admin') {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { role: 'developer' }
+        });
+        role = 'developer';
+      }
+
+      if (role !== 'developer' && role !== 'admin' && !ADMIN_EMAILS.includes(email)) {
+        return res.status(403).json({ success: false, message: 'Access denied: Requires Developer role' });
+      }
+
+      // Populate user info for downstream routes
+      req.user.role = role;
+      req.user.email = email;
+      next();
+    } catch (error) {
+      console.error('Role validation error:', error.message);
+      res.status(500).json({ success: false, message: 'Server error during role validation' });
+    }
+  })();
 }
 
 /**

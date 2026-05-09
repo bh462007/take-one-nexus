@@ -50,6 +50,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
+  const pusherConfigRef = useRef<{key: string, cluster: string} | null>(null);
 
   const activeRecipient = useMemo(() => {
     if (!activeConv || !user) return null;
@@ -109,6 +110,10 @@ export default function ChatPage() {
 
     if (!res.ok || !json.success) {
       throw new Error(json.message || 'Could not load conversations');
+    }
+
+    if (json.pusherKey && json.pusherCluster) {
+      pusherConfigRef.current = { key: json.pusherKey, cluster: json.pusherCluster };
     }
 
     const loaded = json.data || [];
@@ -245,8 +250,8 @@ export default function ChatPage() {
     if (!user) return;
 
     if (!pusherRef.current) {
-      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
-      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+      const pusherKey = pusherConfigRef.current?.key || process.env.NEXT_PUBLIC_PUSHER_KEY;
+      const pusherCluster = pusherConfigRef.current?.cluster || process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
@@ -286,8 +291,8 @@ export default function ChatPage() {
     if (!activeConv) return;
 
     if (!pusherRef.current) {
-      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
-      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+      const pusherKey = pusherConfigRef.current?.key || process.env.NEXT_PUBLIC_PUSHER_KEY;
+      const pusherCluster = pusherConfigRef.current?.cluster || process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {

@@ -72,7 +72,9 @@ router.get('/conversations', authenticateUser, async (req, res) => {
           ...m,
           sender: { ...m.sender, name: formatDisplayName(m.sender.name) }
         }))
-      }))
+      })),
+      pusherKey: process.env.NEXT_PUBLIC_PUSHER_KEY || process.env.PUSHER_KEY || '',
+      pusherCluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || process.env.PUSHER_CLUSTER || ''
     });
   } catch (error) {
     console.error('Fetch conversations error:', error.message);
@@ -95,7 +97,11 @@ router.get('/unread-count', authenticateUser, async (req, res) => {
           { sender_id: null }
         ],
         conversation: {
-          users: { some: { id: userId } }
+          users: { some: { id: userId } },
+          OR: [
+            { is_group: true },
+            { users: { some: { id: { not: userId } } } }
+          ]
         }
       }
     });
