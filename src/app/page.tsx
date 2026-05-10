@@ -42,6 +42,7 @@ export default function HomePage() {
       <header>
         <a href="#" className="logo">TAKE <span>ONE</span></a>
         <nav>
+          {/* Initial links for SEO; Navbar.render() will update this dynamically */}
           <a href="#explore">Explore</a>
           <a href="/crew.htm" id="navCrewLink">Crew</a>
           <a href="#upload" id="navUploadLink">Upload</a>
@@ -398,6 +399,143 @@ export default function HomePage() {
         </div>
       </footer>
 
+      {/* ── MODALS ── */}
+      <div id="loginModal" className="modal">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h2 className="modal-title">LOGIN</h2>
+            <button className="modal-close" id="closeLoginBtn">&times;</button>
+          </div>
+          <form id="loginForm">
+            <div className="form-group">
+              <label htmlFor="loginEmail">Email Address</label>
+              <input type="email" id="loginEmail" placeholder="your@email.com" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="loginPassword">Password</label>
+              <input type="password" id="loginPassword" placeholder="Your password" required />
+            </div>
+            <button type="submit" className="form-submit">Sign In →</button>
+          </form>
+          <div className="form-footer">
+            Don't have an account? <a id="registerLink">Create one</a>
+          </div>
+        </div>
+      </div>
+
+      <div id="registerModal" className="modal">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h2 className="modal-title">CREATE ACCOUNT</h2>
+            <button className="modal-close" id="closeRegisterBtn">&times;</button>
+          </div>
+          <form id="registerForm">
+            <div className="form-group">
+              <label htmlFor="registerName">Full Name</label>
+              <input type="text" id="registerName" placeholder="Arjun Mehta" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="registerEmail">Email Address</label>
+              <input type="email" id="registerEmail" placeholder="your@email.com" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="registerPassword">Password</label>
+              <input type="password" id="registerPassword" placeholder="At least 6 characters" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="registerConfirmPassword">Confirm Password</label>
+              <input type="password" id="registerConfirmPassword" placeholder="Re-enter password" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="registerRole">Your Role</label>
+              <select id="registerRole">
+                <option value="Director">Director</option>
+                <option value="Cinematographer / DP">Cinematographer / DP</option>
+                <option value="Writer">Writer</option>
+                <option value="Editor">Editor</option>
+                <option value="Sound Designer">Sound Designer</option>
+                <option value="Designer">Designer</option>
+                <option value="Actor">Actor</option>
+                <option value="Producer">Producer</option>
+                <option value="Lighting Crew">Lighting Crew</option>
+                <option value="Set Support">Set Support</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="registerScreenName">Screen Name / Stage Name (Optional)</label>
+              <input type="text" id="registerScreenName" placeholder="e.g., RK Visuals, AR Motion Lab" />
+            </div>
+            <div className="form-group">
+              <label htmlFor="registerDisplayPreference">Display Preference</label>
+              <select id="registerDisplayPreference">
+                <option value="Show Real Name Only">Show Real Name Only</option>
+                <option value="Show Screen Name Only">Show Screen Name Only</option>
+                <option value="Show Both">Show Both (Name • Screen Name)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="registerGender">Gender</label>
+              <select id="registerGender" className="profile-role-dropdown">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ position: 'relative' }}>
+              <label htmlFor="registerCollege">College / University</label>
+              <input type="text" id="registerCollege" placeholder="e.g., FTII Pune" autoComplete="off" />
+              <div id="collegeSuggestions" className="autocomplete-dropdown"></div>
+            </div>
+            <div className="form-group" style={{ position: 'relative' }}>
+              <label htmlFor="registerCity">City</label>
+              <input type="text" id="registerCity" placeholder="e.g., Mumbai" autoComplete="off" />
+              <div id="citySuggestions" className="autocomplete-dropdown"></div>
+            </div>
+            <button type="submit" className="form-submit">Create Account →</button>
+          </form>
+          <div className="form-footer">
+            Already have an account? <a id="backToLoginLink">Sign in</a>
+          </div>
+        </div>
+      </div>
+
+      <div id="peopleModal" className="modal">
+        <div className="modal-content people-modal-content">
+          <div className="modal-header">
+            <h2 className="modal-title" id="peopleModalTitle">Registered Crew</h2>
+            <button className="modal-close" id="closePeopleModalBtn">&times;</button>
+          </div>
+          <div className="people-modal-subtitle" id="peopleModalSubtitle">Browse and contact available crew.</div>
+          <div id="crewRoleBrowser" className="crew-role-browser"></div>
+          <div id="peopleResults" className="people-results"></div>
+        </div>
+      </div>
+
+      <div id="scriptModal" className="modal">
+        <div className="modal-content script-modal-content">
+          <div className="modal-header">
+            <h2 className="modal-title" id="scriptModalTitle">Script Preview</h2>
+            <button className="modal-close" id="closeScriptModalBtn">&times;</button>
+          </div>
+          <div className="script-modal-body">
+            <div className="script-poster-preview" id="scriptModalPoster">
+              <span id="scriptModalGenre">General</span>
+            </div>
+            <div className="script-modal-info">
+              <div className="script-modal-kicker" id="scriptModalAuthor">TAKE ONE creator</div>
+              <p id="scriptModalSynopsis">Open a live script to see the story, crew needs, and project signal.</p>
+              <div className="script-modal-tags">
+                <span id="scriptModalRoles">Open for collaboration</span>
+                <span id="scriptModalStatus">Live</span>
+              </div>
+              <button className="btn-upload" id="scriptModalRequestBtn" type="button">Request To Join →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ── STATUS BAR ── */}
       <div className="status-bar" role="status" aria-live="polite">
         <div className="status-item">
@@ -410,12 +548,14 @@ export default function HomePage() {
         <div className="status-item" id="statusTime"></div>
       </div>
 
-      {/* Scripts */}
-      <Script src="/scripts/api/api.js" strategy="afterInteractive" />
-      <Script src="/scripts/utils/helpers.js" strategy="afterInteractive" />
+      {/* Page-specific Scripts */}
+      <Script src="/scripts/utils/locations.js" strategy="afterInteractive" />
+      <Script src="/scripts/utils/colleges.js" strategy="afterInteractive" />
       <Script src="/scripts/components/ui.js" strategy="afterInteractive" />
+      <Script src="/scripts/components/navbar.js" strategy="afterInteractive" />
       <Script src="/scripts/animations/common.js" strategy="afterInteractive" />
-      <Script src="/scripts/pages/project.js" strategy="lazyOnload" />
+      <Script src="/scripts/utils/user.js" strategy="afterInteractive" />
+      <Script src="/scripts/pages/project.js" strategy="afterInteractive" />
     </>
   );
 }

@@ -58,12 +58,17 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${spaceMono.variable} ${bebasNeue.variable} ${cormorantGaramond.variable}`}>
       <head>
+        <link rel="stylesheet" href="/styles/pages/project.css" />
         <link rel="stylesheet" href="/styles/components/global-chat-fab.css" />
       </head>
       <body className={`${spaceMono.className}`}>
         <div className="scroll-progress" id="scrollProgress"></div>
         {children}
         <GlobalIssueReporter />
+        <Script src="/scripts/constants/roles.js" strategy="beforeInteractive" />
+        <Script src="/scripts/api/api.js" strategy="afterInteractive" />
+        <Script src="/scripts/utils/helpers.js" strategy="afterInteractive" />
+        <Script src="/scripts/components/modal.js" strategy="afterInteractive" />
         <Script src="/scripts/components/global-chat-fab.js" strategy="afterInteractive" />
       </body>
     </html>

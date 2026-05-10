@@ -208,12 +208,21 @@ function openCrewFinderPage(role = '') {
 
 /* Role helpers moved to /scripts/utils/helpers.js */
 
-const CREW_ROLE_OPTIONS = window.TAKE_ONE_ROLES.map(role => ({
-  key: window.ROLE_SLUGS[role],
-  query: role,
-  label: role + 's', // basic pluralization
-  icon: window.ROLE_ICONS[role] || '◎'
-}));
+let CREW_ROLE_OPTIONS = [];
+if (window.TAKE_ONE_ROLES) {
+  CREW_ROLE_OPTIONS = window.TAKE_ONE_ROLES.map(role => {
+    let label = role + 's';
+    if (role === 'Other') label = 'Other Crew';
+    if (role.includes('/')) label = role.split('/')[0].trim() + 's';
+    
+    return {
+      key: window.ROLE_SLUGS[role],
+      query: role,
+      label: label,
+      icon: window.ROLE_ICONS[role] || '◎'
+    };
+  });
+}
 
 const ROLE_WORKSPACES = {
   guest: {
@@ -1080,23 +1089,7 @@ const scriptModal = document.getElementById('scriptModal');
 const closeScriptModalBtn = document.getElementById('closeScriptModalBtn');
 const scriptModalRequestBtn = document.getElementById('scriptModalRequestBtn');
 
-/* Centralized Modal Management */
-function openModal(modal) {
-  if (!modal) return;
-  modal.classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeModal(modal) {
-  if (!modal) return;
-  modal.classList.remove('show');
-  
-  // Only re-enable scrolling if no other modals are open
-  const openModals = document.querySelectorAll('.modal.show');
-  if (openModals.length === 0) {
-    document.body.style.overflow = '';
-  }
-}
+/* Modal logic moved to /scripts/components/modal.js */
 
 loginBtn?.addEventListener('click', () => {
   if (API.auth.isLoggedIn()) {

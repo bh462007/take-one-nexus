@@ -27,15 +27,20 @@ document.addEventListener('mousemove', e => {
     requestAnimationFrame(animateCursor);
 })();
 
-/* Scale crosshair on hover over interactive elements */
+/* Scale crosshair on hover over interactive elements (Event Delegation) */
 function initCursorInteractions() {
-    document.querySelectorAll('a, button, .role-card, .movie-card, .ctab, .project-card').forEach(el => {
-        el.addEventListener('mouseenter', () => {
-            if (cross) cross.style.transform = 'translate(-50%, -50%) scale(1.6)';
-        });
-        el.addEventListener('mouseleave', () => {
-            if (cross) cross.style.transform = 'translate(-50%, -50%) scale(1)';
-        });
+    document.addEventListener('mouseover', (e) => {
+        const interactive = e.target.closest('a, button, .role-card, .movie-card, .ctab, .project-card');
+        if (interactive && cross) {
+            cross.style.transform = 'translate(-50%, -50%) scale(1.6)';
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const interactive = e.target.closest('a, button, .role-card, .movie-card, .ctab, .project-card');
+        if (interactive && cross) {
+            cross.style.transform = 'translate(-50%, -50%) scale(1)';
+        }
     });
 }
 

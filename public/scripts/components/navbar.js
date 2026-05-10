@@ -81,8 +81,9 @@ const Navbar = {
         // Re-attach login modal listener if guest
         if (!user) {
             const btn = document.getElementById('loginBtn');
-            if (btn && typeof openModal === 'function' && typeof loginModal !== 'undefined') {
-                btn.addEventListener('click', () => openModal(loginModal));
+            const modal = document.getElementById('loginModal');
+            if (btn && typeof openModal === 'function' && modal) {
+                btn.addEventListener('click', () => openModal(modal));
             }
         }
     }
