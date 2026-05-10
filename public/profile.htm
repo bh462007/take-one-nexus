@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile — TAKE ONE</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap" rel="stylesheet">
 
   <!-- Stylesheet -->
@@ -59,7 +61,7 @@
         <div class="avatar-wrap">
           <div class="avatar-ring">
             <img src="https://via.placeholder.com/150/0E1218/FF4D1A?text=C"
-                 id="profilePic" alt="Profile Photo">
+                 id="profilePic" alt="Profile Photo" loading="lazy" decoding="async">
           </div>
           <button class="avatar-edit"
                   onclick="document.getElementById('avatarInput').click()">✎</button>
@@ -248,12 +250,12 @@
   </div>
 
   <!-- ── SCRIPTS ── -->
-  <script src="/scripts/api/api.js"></script>
-  <script src="/scripts/utils/helpers.js"></script>
-  <script src="/scripts/components/ui.js"></script>
-  <script src="/scripts/animations/common.js"></script>
-  <script src="/scripts/pages/profile.js"></script>
-  <script src="/scripts/components/global-chat-fab.js"></script>
+  <script src="/scripts/api/api.js" defer></script>
+  <script src="/scripts/utils/helpers.js" defer></script>
+  <script src="/scripts/components/ui.js" defer></script>
+  <script src="/scripts/animations/common.js" defer></script>
+  <script src="/scripts/pages/profile.js" defer></script>
+  <script src="/scripts/components/global-chat-fab.js" defer></script>
 
 </body>
 </html>

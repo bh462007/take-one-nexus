@@ -98,6 +98,17 @@ INSERT INTO users (
   'Reliable set support for student productions and shoots.',
   'Set Support, Logistics, Unit Help',
   'https://portfolio.example/naman'
+),
+(
+  'Aisha Verma',
+  'aisha@takeone.test',
+  '$2a$10$abcdefghijklmnopqrstuvabcdefghijklmnopqrstuvabcd',
+  'Designer',
+  'NID Ahmedabad',
+  'Ahmedabad',
+  'Designer crafting posters and motion graphics for films.',
+  'Poster Design, Motion Graphics, Branding',
+  'https://portfolio.example/aisha'
 );
 
 INSERT INTO scripts (

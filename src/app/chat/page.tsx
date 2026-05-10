@@ -583,6 +583,7 @@ export default function ChatPage() {
                       src={conv.is_group ? (conv.avatar_url || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
                       alt=""
                       className="conv-avatar"
+                      loading="lazy" decoding="async"
                     />
                     <div className="conv-info">
                       <div className="conv-name">{conv.is_group ? conv.name : (recipient?.name || 'Crew Member')}</div>
@@ -619,6 +620,7 @@ export default function ChatPage() {
                       src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
                       alt=""
                       className="header-avatar"
+                      loading="lazy" decoding="async"
                     />
                     {!activeConv.is_group && <span className="presence-dot online"></span>}
                   </div>
@@ -645,6 +647,7 @@ export default function ChatPage() {
                                 alt="" 
                                 className="mini-avatar"
                                 style={{ zIndex: 10 - i, marginLeft: i > 0 ? '-8px' : '0' }}
+                                loading="lazy" decoding="async"
                               />
                             ))}
                             {activeConv.users.length > 3 && <span className="more-members">+{activeConv.users.length - 3}</span>}
@@ -793,6 +796,7 @@ export default function ChatPage() {
                         src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
                         alt="" 
                         className="details-avatar" 
+                        loading="lazy" decoding="async"
                       />
                       <h4>{activeConv.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}</h4>
                       {!activeConv.is_group && <span className="details-role">{activeRecipient?.role || 'Crew Member'}</span>}
@@ -804,7 +808,7 @@ export default function ChatPage() {
                         <div className="details-members-list">
                           {activeConv.users.map(u => (
                             <div key={u.id} className="member-item">
-                              <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" />
+                              <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" loading="lazy" decoding="async" />
                               <div className="member-info">
                                 <span className="member-name">{u.name}</span>
                                 <span className="member-role">{u.role || 'Member'}</span>

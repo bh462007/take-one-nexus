@@ -83,6 +83,7 @@ const CREW_ROLE_OPTIONS = [
   { key: 'writer', query: 'Writer', label: 'Writers', icon: '✍' },
   { key: 'sound', query: 'Sound', label: 'Sound Crew', icon: '🎙' },
   { key: 'editor', query: 'Editor', label: 'Editors', icon: '✂' },
+  { key: 'designer', query: 'Designer', label: 'Designers', icon: '🎨' },
   { key: 'gaffer', query: 'Gaffer', label: 'Lighting Crew', icon: '💡' },
   { key: 'actor', query: 'Actor', label: 'Actors', icon: '🎭' },
   { key: 'spot_boy', query: 'Spot', label: 'Spot Crew', icon: '⚙' }
@@ -198,6 +199,20 @@ const ROLE_WORKSPACES = {
     primary: 'Find Edit Projects →',
     secondary: 'Update Editor Profile'
   },
+  designer: {
+    label: 'Designer',
+    title: 'Design Opportunities',
+    subtitle: 'This workspace is for UI/UX, Motion, and Graphic Designers.',
+    heading: 'Design Department',
+    description: 'Find productions that need poster design, branding, UI interfaces, and motion graphics.',
+    list: [
+      'Browse scripts looking for design support',
+      'Request to join projects that match your style',
+      'Add portfolio links and software skills to your profile'
+    ],
+    primary: 'Find Design Projects →',
+    secondary: 'Update Designer Profile'
+  },
   actor: {
     label: 'Actor',
     title: 'Casting Opportunities',
@@ -253,6 +268,7 @@ function getWorkspaceForRole(role) {
   if (normalized.includes('gaffer') || normalized.includes('light')) return ROLE_WORKSPACES.gaffer;
   if (normalized.includes('sound')) return ROLE_WORKSPACES.sound;
   if (normalized.includes('editor')) return ROLE_WORKSPACES.editor;
+  if (normalized.includes('designer')) return ROLE_WORKSPACES.designer;
   if (normalized.includes('actor')) return ROLE_WORKSPACES.actor;
   if (normalized.includes('spot')) return ROLE_WORKSPACES.spot;
 
@@ -270,6 +286,7 @@ function getRoleSkinKey(role) {
   if (normalized.includes('gaffer') || normalized.includes('light')) return 'gaffer';
   if (normalized.includes('sound')) return 'sound';
   if (normalized.includes('editor')) return 'editor';
+  if (normalized.includes('designer')) return 'designer';
   if (normalized.includes('spot')) return 'spot';
 
   return 'crew';
@@ -285,6 +302,7 @@ function applyRoleSkin(role) {
     'role-skin-gaffer',
     'role-skin-sound',
     'role-skin-editor',
+    'role-skin-designer',
     'role-skin-spot',
     'role-skin-crew'
   );
@@ -334,6 +352,11 @@ function getRoleTools(role) {
       ['Edit Calls', 'Find projects asking for editor, trailer cut, or post-production help.'],
       ['Timeline Skills', 'Show editing software, color, sync, and storytelling strengths.'],
       ['Post Match', 'Request scripts that fit your editing taste.']
+    ],
+    designer: [
+      ['Visual Pitch', 'Request projects by showing moodboards and visual ideas.'],
+      ['Design Board', 'Use your profile to show past poster designs, UI, and branding.'],
+      ['Asset Match', 'Find projects asking for UI interfaces, posters, or motion graphics.']
     ],
     spot: [
       ['Set Calls', 'Find productions that need support, logistics, and on-set help.'],
@@ -559,6 +582,9 @@ function roleKeywords(role) {
   }
   if (normalized.includes('editor')) {
     return ['editor', 'edit', 'post'];
+  }
+  if (normalized.includes('designer')) {
+    return ['designer', 'design', 'ui/ux', 'motion graphics', 'poster'];
   }
   if (normalized.includes('actor')) {
     return ['actor', 'cast', 'casting', 'performer'];

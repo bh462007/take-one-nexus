@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Designer Desk — TAKE ONE</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/styles/pages/project.css">
+  <link rel="stylesheet" href="/styles/pages/designer.css">
+  <link rel="stylesheet" href="/styles/components/global-chat-fab.css">
+</head>
+
+<body class="role-skin-designer">
+  <header>
+    <a href="/project.htm" class="logo">TAKE <span>ONE</span></a>
+    <nav>
+      <a href="/project.htm#explore">Scripts</a>
+      <a href="/crew.htm">Crew Finder</a>
+      <a href="/designer.html" class="active">Designers</a>
+      <a href="/profile">Profile</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="designer-hero">
+      <div class="designer-glow"></div>
+      <div class="designer-hero-content">
+        <div class="designer-kicker">Visual Arts Department</div>
+        <h1>Shape The Look.</h1>
+        <p>
+          Every great film needs a strong visual identity. Connect with directors to design posters, title sequences, UI interfaces, and motion graphics that define the cinematic experience.
+        </p>
+        <a href="/crew.htm?role=Designer" class="btn-primary">Find Design Projects →</a>
+      </div>
+    </section>
+
+    <section class="designer-section">
+      <h2 class="section-title">Designer Categories</h2>
+      <div class="cards-grid">
+        <div class="designer-card">
+          <div class="card-icon">💻</div>
+          <div class="card-title">UI/UX Designers</div>
+          <div class="card-desc">Design fake interfaces, screens, and apps used by characters on set.</div>
+        </div>
+        <div class="designer-card">
+          <div class="card-icon">🎨</div>
+          <div class="card-title">Graphic Designers</div>
+          <div class="card-desc">Create logos, branding, set decals, and in-world graphics.</div>
+        </div>
+        <div class="designer-card">
+          <div class="card-icon">🎞</div>
+          <div class="card-title">Motion Designers</div>
+          <div class="card-desc">Animate title sequences, credits, and VFX tracking markers.</div>
+        </div>
+        <div class="designer-card">
+          <div class="card-icon">🖼</div>
+          <div class="card-title">Poster Artists</div>
+          <div class="card-desc">Craft the official film poster and marketing materials.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="designer-section" style="background: var(--machine)">
+      <h2 class="section-title">Creative Tools & Networking</h2>
+      <div class="cards-grid">
+        <div class="designer-card">
+          <div class="card-title">Visual Pitching</div>
+          <div class="card-desc">Pitch moodboards and style guides to directors before shooting begins.</div>
+        </div>
+        <div class="designer-card">
+          <div class="card-title">Portfolio Integration</div>
+          <div class="card-desc">Link your Behance, Dribbble, or personal site directly on your TAKE ONE profile.</div>
+        </div>
+        <div class="designer-card">
+          <div class="card-title">Asset Handover</div>
+          <div class="card-desc">Collaborate securely and track your design credits on every project.</div>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 50px;">
+        <a href="/profile" class="btn-primary">Build Your Designer Profile</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="/scripts/api/api.js" defer></script>
+  <script src="/scripts/utils/helpers.js" defer></script>
+  <script src="/scripts/components/ui.js" defer></script>
+  <script src="/scripts/components/navbar.js" defer></script>
+  <script src="/scripts/animations/common.js" defer></script>
+  <script src="/scripts/pages/crew.js" defer></script>
+  <script src="/scripts/components/global-chat-fab.js" defer></script>
+</body>
+
+</html>

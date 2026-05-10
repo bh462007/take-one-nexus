@@ -4,6 +4,7 @@ export const USER_ROLES = [
   'Writer',
   'Editor',
   'Sound Designer',
+  'Designer',
   'Actor',
   'Producer',
   'Other'
