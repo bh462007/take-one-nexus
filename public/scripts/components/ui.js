@@ -37,8 +37,34 @@ function updateStat(id, value) {
     if (el) el.textContent = value;
 }
 
+function populateRoleDropdowns() {
+    if (typeof window.TAKE_ONE_ROLES === 'undefined') return;
+    
+    const dropdowns = [
+        document.getElementById('registerRole'),
+        document.getElementById('editRole')
+    ];
+    
+    dropdowns.forEach(dropdown => {
+        if (!dropdown) return;
+        
+        // Preserve any currently selected value if applicable
+        const currentVal = dropdown.value;
+        
+        dropdown.innerHTML = window.TAKE_ONE_ROLES.map(role => 
+            `<option value="${role}">${role}</option>`
+        ).join('');
+        
+        // If it was editing a profile and the user had a value, try to select it
+        if (currentVal && window.TAKE_ONE_ROLES.includes(currentVal)) {
+            dropdown.value = currentVal;
+        }
+    });
+}
+
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
+    populateRoleDropdowns();
     setInterval(updateStatusBarTime, 1000);
     updateStatusBarTime();
 });

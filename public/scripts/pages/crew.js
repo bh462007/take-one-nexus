@@ -1,13 +1,10 @@
 const ROLE_FILTERS = [
   { key: '', label: 'All Roles', icon: '◎' },
-  { key: 'Director', label: 'Directors', icon: '🎬' },
-  { key: 'Cinematographer', label: 'Camera Crew', icon: '📷' },
-  { key: 'Writer', label: 'Writers', icon: '✍' },
-  { key: 'Actor', label: 'Actors', icon: '🎭' },
-  { key: 'Editor', label: 'Editors', icon: '✂' },
-  { key: 'Sound', label: 'Sound Crew', icon: '🎙' },
-  { key: 'Gaffer', label: 'Lighting Crew', icon: '💡' },
-  { key: 'Spot', label: 'Set Support', icon: '⚙' }
+  ...window.TAKE_ONE_ROLES.map(role => ({
+    key: role,
+    label: role,
+    icon: window.ROLE_ICONS[role] || '◎'
+  }))
 ];
 
 let activeRole = new URLSearchParams(window.location.search).get('role') || '';

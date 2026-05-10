@@ -174,7 +174,9 @@
             </div>
             <div class="about-item">
               <label for="editRole">Primary Role</label>
-              <input type="text" id="editRole" placeholder="Director · Writer · DP · etc.">
+              <select id="editRole" class="profile-role-dropdown">
+                <!-- Populated dynamically via JS -->
+              </select>
             </div>
             <div class="about-item">
               <label for="editCollegeCity">College / City</label>
@@ -254,6 +256,7 @@
   </div>
 
   <!-- ── SCRIPTS ── -->
+  <script src="/scripts/constants/roles.js" defer></script>
   <script src="/scripts/api/api.js" defer></script>
   <script src="/scripts/utils/helpers.js" defer></script>
   <script src="/scripts/components/ui.js" defer></script>

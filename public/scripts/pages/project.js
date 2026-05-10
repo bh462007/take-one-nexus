@@ -77,17 +77,12 @@ function openCrewFinderPage(role = '') {
 
 /* Role helpers moved to /scripts/utils/helpers.js */
 
-const CREW_ROLE_OPTIONS = [
-  { key: 'director', query: 'Director', label: 'Directors', icon: '🎬' },
-  { key: 'camera', query: 'Cinematographer', label: 'Camera Crew', icon: '📷' },
-  { key: 'writer', query: 'Writer', label: 'Writers', icon: '✍' },
-  { key: 'sound', query: 'Sound', label: 'Sound Crew', icon: '🎙' },
-  { key: 'editor', query: 'Editor', label: 'Editors', icon: '✂' },
-  { key: 'designer', query: 'Designer', label: 'Designers', icon: '🎨' },
-  { key: 'gaffer', query: 'Gaffer', label: 'Lighting Crew', icon: '💡' },
-  { key: 'actor', query: 'Actor', label: 'Actors', icon: '🎭' },
-  { key: 'spot_boy', query: 'Spot', label: 'Spot Crew', icon: '⚙' }
-];
+const CREW_ROLE_OPTIONS = window.TAKE_ONE_ROLES.map(role => ({
+  key: window.ROLE_SLUGS[role],
+  query: role,
+  label: role + 's', // basic pluralization
+  icon: window.ROLE_ICONS[role] || '◎'
+}));
 
 const ROLE_WORKSPACES = {
   guest: {

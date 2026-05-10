@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/db');
+const { TAKE_ONE_ROLES, ROLE_SLUGS, LEGACY_ROLE_MAPPING } = require('../public/scripts/constants/roles.js');
 
 const router = express.Router();
 
@@ -8,41 +9,25 @@ function firstNumber(value) {
 }
 
 function normalizeRoleCounts(rows) {
-  const base = {
-    director: 0,
-    camera: 0,
-    writer: 0,
-    sound: 0,
-    editor: 0,
-    gaffer: 0,
-    actor: 0,
-    spot_boy: 0
-  };
+  const base = {};
+  TAKE_ONE_ROLES.forEach(role => {
+    base[ROLE_SLUGS[role]] = 0;
+  });
 
   rows.forEach((row) => {
-    const role = String(row.role || '').toLowerCase();
+    const rawRole = String(row.role || '').trim();
+    // Check legacy mapping first
+    let finalRole = LEGACY_ROLE_MAPPING[rawRole] || rawRole;
+    
+    // Check if the finalRole matches any valid role (case insensitive)
+    const validRole = TAKE_ONE_ROLES.find(r => r.toLowerCase() === finalRole.toLowerCase());
+    
     const count = firstNumber(row.count);
-
-    if (role.includes('director')) {
-      base.director += count;
-    } else if (
-      role.includes('camera') ||
-      role.includes('dp') ||
-      role.includes('cinematographer')
-    ) {
-      base.camera += count;
-    } else if (role.includes('writer')) {
-      base.writer += count;
-    } else if (role.includes('sound')) {
-      base.sound += count;
-    } else if (role.includes('editor')) {
-      base.editor += count;
-    } else if (role.includes('gaffer')) {
-      base.gaffer += count;
-    } else if (role.includes('actor')) {
-      base.actor += count;
-    } else if (role.includes('spot')) {
-      base.spot_boy += count;
+    if (validRole) {
+      base[ROLE_SLUGS[validRole]] += count;
+    } else if (base[ROLE_SLUGS['Other']] !== undefined) {
+      // Catch-all for undefined or custom legacy roles
+      base[ROLE_SLUGS['Other']] += count;
     }
   });
 
