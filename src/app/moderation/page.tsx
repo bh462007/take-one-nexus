@@ -10,6 +10,8 @@ export const metadata: Metadata = {
 export default function ModerationPage() {
   return (
     <>
+      <link rel="stylesheet" href="/styles/pages/moderation.css" />
+
       <header>
         <a className="logo" href="/">TAKE <span>ONE</span></a>
         <nav>
@@ -45,7 +47,6 @@ export default function ModerationPage() {
         </div>
       </main>
 
-      <Script src="/scripts/api/api.js" strategy="beforeInteractive" />
       <Script src="/scripts/utils/helpers.js" strategy="beforeInteractive" />
       <Script src="/scripts/components/ui.js" strategy="beforeInteractive" />
       <Script src="/scripts/animations/common.js" strategy="beforeInteractive" />

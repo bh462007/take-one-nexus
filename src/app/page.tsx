@@ -10,6 +10,8 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <>
+      <link rel="stylesheet" href="/styles/pages/project.css" />
+
       {/* ── CUSTOM CURSOR ── */}
       <div className="cur-dot" id="dot"></div>
       <div className="cur-cross" id="cross"></div>

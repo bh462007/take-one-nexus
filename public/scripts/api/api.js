@@ -193,7 +193,17 @@ const API = (() => {
       },
       getUser() {
         const raw = localStorage.getItem(USER_KEY);
-        return raw ? JSON.parse(raw) : null;
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw);
+        } catch (error) {
+          console.warn('Stored TAKE ONE user session was invalid. Clearing local session.', error);
+          localStorage.removeItem(USER_KEY);
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem('take_one_session_start');
+          return null;
+        }
       },
       isLoggedIn() {
         return Boolean(localStorage.getItem(TOKEN_KEY));

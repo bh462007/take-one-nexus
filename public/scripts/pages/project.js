@@ -1069,6 +1069,7 @@ async function performSearch(query) {
 }
 
 document.addEventListener('click', (e) => {
+  if (!(e.target instanceof Element)) return;
   if (!e.target.closest('.search-bar-wrapper')) {
     searchResults.style.display = 'none';
   }
@@ -1091,40 +1092,64 @@ const scriptModalRequestBtn = document.getElementById('scriptModalRequestBtn');
 
 /* Modal logic moved to /scripts/components/modal.js */
 
+function openTakeOneModal(modal) {
+  if (!modal) return;
+  if (typeof openModal === 'function') {
+    openModal(modal);
+    return;
+  }
+
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTakeOneModal(modal) {
+  if (!modal) return;
+  if (typeof closeModal === 'function') {
+    closeModal(modal);
+    return;
+  }
+
+  modal.classList.remove('show');
+  if (!document.querySelector('.modal.show')) {
+    document.body.style.overflow = '';
+  }
+}
+
 loginBtn?.addEventListener('click', () => {
   if (API.auth.isLoggedIn()) {
     API.auth.logout();
   } else {
-    openModal(loginModal);
+    openTakeOneModal(loginModal);
   }
 });
 
 registerLink?.addEventListener('click', (e) => {
   e.preventDefault();
-  closeModal(loginModal);
-  openModal(registerModal);
+  closeTakeOneModal(loginModal);
+  openTakeOneModal(registerModal);
 });
 
 backToLoginLink?.addEventListener('click', (e) => {
   e.preventDefault();
-  closeModal(registerModal);
-  openModal(loginModal);
+  closeTakeOneModal(registerModal);
+  openTakeOneModal(loginModal);
 });
 
-closeLoginBtn?.addEventListener('click', () => closeModal(loginModal));
-closeRegisterBtn?.addEventListener('click', () => closeModal(registerModal));
-closePeopleModalBtn?.addEventListener('click', () => closeModal(peopleModal));
-closeScriptModalBtn?.addEventListener('click', () => closeModal(scriptModal));
+closeLoginBtn?.addEventListener('click', () => closeTakeOneModal(loginModal));
+closeRegisterBtn?.addEventListener('click', () => closeTakeOneModal(registerModal));
+closePeopleModalBtn?.addEventListener('click', () => closeTakeOneModal(peopleModal));
+closeScriptModalBtn?.addEventListener('click', () => closeTakeOneModal(scriptModal));
 
 function openAuthFromUrl() {
   const authMode = new URLSearchParams(window.location.search).get('auth');
-  if (authMode === 'login') openModal(loginModal);
-  if (authMode === 'register') openModal(registerModal);
+  if (authMode === 'login') openTakeOneModal(loginModal);
+  if (authMode === 'register') openTakeOneModal(registerModal);
 }
 
 window.addEventListener('click', (e) => {
-  if (e.target.classList.contains('modal')) {
-    closeModal(e.target);
+  if (e.target instanceof Element && e.target.classList.contains('modal')) {
+    closeTakeOneModal(e.target);
   }
 });
 
@@ -1151,7 +1176,7 @@ loginForm?.addEventListener('submit', async (e) => {
     if (response.success) {
       API.auth.saveToken(response.token, response.user);
       showToast(`Welcome back, ${response.user.name}! ✦`);
-      closeModal(loginModal);
+      closeTakeOneModal(loginModal);
       loginForm.reset();
       updateUIAfterLogin(response.user);
     }
@@ -1218,7 +1243,7 @@ registerForm?.addEventListener('submit', async (e) => {
     if (response.success) {
       API.auth.saveToken(response.token, response.user);
       showToast(`Welcome to the set, ${response.user.name}! ✦`);
-      closeModal(registerModal);
+      closeTakeOneModal(registerModal);
       registerForm.reset();
       updateUIAfterLogin(response.user);
     }
@@ -1294,7 +1319,7 @@ function applyRoleBasedUI(user) {
       heroSecondaryAction.setAttribute('href', '#');
       heroSecondaryAction.onclick = (event) => {
         event.preventDefault();
-        openModal(registerModal);
+        openTakeOneModal(registerModal);
       };
     }
     applyCrewWorkspaceCopy(workspace);
@@ -1443,7 +1468,7 @@ function openCrewFinderModal() {
   renderCrewRoleBrowser(latestHomeStats.roleCounts || {});
   showPeopleIntro();
 
-  openModal(peopleModal);
+  openTakeOneModal(peopleModal);
 }
 
 function renderPeopleResults(people) {
@@ -1509,7 +1534,7 @@ function openScriptModal(scriptId) {
     scriptModalRequestBtn.textContent = 'Request To Join →';
   }
 
-  openModal(scriptModal);
+  openTakeOneModal(scriptModal);
 }
 
 async function openPeopleModal(roleQuery, roleLabel) {
@@ -1528,12 +1553,12 @@ async function openPeopleModal(roleQuery, roleLabel) {
     if (results) {
       results.innerHTML = `<div class="people-empty">${roleLabel || 'This role'} is not available yet. When someone registers for this role, they will appear here.</div>`;
     }
-    openModal(peopleModal);
+    openTakeOneModal(peopleModal);
     return;
   }
 
   if (results) results.innerHTML = '<div class="people-empty">Loading people...</div>';
-  openModal(peopleModal);
+  openTakeOneModal(peopleModal);
 
   try {
     const response = await API.users.search({ role: roleQuery });
@@ -1559,6 +1584,7 @@ document.querySelectorAll('[data-open-crew-finder]').forEach((link) => {
 });
 
 document.getElementById('crewRoleBrowser')?.addEventListener('click', (event) => {
+  if (!(event.target instanceof Element)) return;
   const button = event.target.closest('.crew-role-option');
   if (!button) return;
 
@@ -1597,6 +1623,7 @@ async function requestToJoinScript(scriptId, ownerId, button) {
 }
 
 document.getElementById('cardRow')?.addEventListener('click', async (event) => {
+  if (!(event.target instanceof Element)) return;
   const btn = event.target.closest('.request-join-btn');
   const card = event.target.closest('.movie-card');
 
@@ -1612,6 +1639,7 @@ document.getElementById('cardRow')?.addEventListener('click', async (event) => {
 });
 
 document.getElementById('cardRow')?.addEventListener('mousemove', (event) => {
+  if (!(event.target instanceof Element)) return;
   const card = event.target.closest('.movie-card');
   if (!card) return;
 
@@ -1639,7 +1667,7 @@ scriptModalRequestBtn?.addEventListener('click', async () => {
 
   if (sent && scriptModal) {
     setTimeout(() => {
-      closeModal(scriptModal);
+      closeTakeOneModal(scriptModal);
     }, 600);
   }
 });

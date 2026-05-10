@@ -30,6 +30,7 @@ document.addEventListener('mousemove', e => {
 /* Scale crosshair on hover over interactive elements (Event Delegation) */
 function initCursorInteractions() {
     document.addEventListener('mouseover', (e) => {
+        if (!(e.target instanceof Element)) return;
         const interactive = e.target.closest('a, button, .role-card, .movie-card, .ctab, .project-card');
         if (interactive && cross) {
             cross.style.transform = 'translate(-50%, -50%) scale(1.6)';
@@ -37,6 +38,7 @@ function initCursorInteractions() {
     });
 
     document.addEventListener('mouseout', (e) => {
+        if (!(e.target instanceof Element)) return;
         const interactive = e.target.closest('a, button, .role-card, .movie-card, .ctab, .project-card');
         if (interactive && cross) {
             cross.style.transform = 'translate(-50%, -50%) scale(1)';
@@ -45,14 +47,20 @@ function initCursorInteractions() {
 }
 
 /* ── SCROLL REVEAL ── */
-const revealObserver = new IntersectionObserver(entries => {
+const revealObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
     entries.forEach(e => {
         if (e.isIntersecting) e.target.classList.add('visible');
     });
-}, { threshold: 0.1 });
+}, { threshold: 0.1 }) : null;
 
 function initScrollReveal() {
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    document.querySelectorAll('.reveal').forEach(el => {
+        if (revealObserver) {
+            revealObserver.observe(el);
+        } else {
+            el.classList.add('visible');
+        }
+    });
 }
 
 /* ── SCROLL PROGRESS ── */

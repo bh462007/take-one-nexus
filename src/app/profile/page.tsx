@@ -350,7 +350,6 @@ export default async function ProfilePage() {
           <div className="status-item" id="statusTime"></div>
         </div>
 
-        <Script src="/scripts/api/api.js" strategy="afterInteractive" />
         <Script src="/scripts/utils/helpers.js" strategy="afterInteractive" />
         <Script src="/scripts/components/ui.js" strategy="afterInteractive" />
         <Script src="/scripts/animations/common.js" strategy="afterInteractive" />

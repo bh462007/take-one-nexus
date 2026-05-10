@@ -8,7 +8,7 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "legacy:dev": "nodemon -L --watch server.js --watch routes --watch config --ext js,json server.js",
+    "legacy:dev": "PORT=5001 nodemon -L --watch server.js --watch routes --watch config --ext js,json server.js",
     "legacy:start": "node server.js",
     "lint": "eslint src --ext .ts,.tsx,.js,.jsx"
   },

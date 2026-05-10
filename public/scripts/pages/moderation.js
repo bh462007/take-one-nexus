@@ -25,6 +25,13 @@ async function loadReports() {
   const list = document.getElementById('reportList');
   const status = document.getElementById('statusFilter')?.value || '';
 
+  if (!list) return;
+
+  if (typeof API === 'undefined') {
+    list.innerHTML = '<div class="empty">Moderation API is still loading. Refresh if this message remains.</div>';
+    return;
+  }
+
   if (!API.auth.isLoggedIn()) {
     list.innerHTML = '<div class="empty">Login as an admin or moderator to view reports.</div>';
     return;
@@ -47,6 +54,11 @@ async function loadReports() {
 }
 
 async function updateReport(id, status) {
+  if (typeof API === 'undefined') {
+    alert('Moderation API is not ready yet. Please retry.');
+    return;
+  }
+
   try {
     await API.moderation.updateReport(id, {
       status,

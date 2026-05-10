@@ -58,7 +58,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${spaceMono.variable} ${bebasNeue.variable} ${cormorantGaramond.variable}`}>
       <head>
-        <link rel="stylesheet" href="/styles/pages/project.css" />
         <link rel="stylesheet" href="/styles/components/global-chat-fab.css" />
       </head>
       <body className={`${spaceMono.className}`}>
