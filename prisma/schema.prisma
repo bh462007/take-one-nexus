@@ -20,6 +20,9 @@ model User {
   portfolio             String?                @db.VarChar(255)
   avatar_url            String?                @db.VarChar(255)
   gender                String?                @db.VarChar(20)
+  screen_name           String?                @db.VarChar(100)
+  display_preference    String?                @default("Show Real Name Only") @db.VarChar(50)
+  social_links          String?                @db.Text
   credits               Int                    @default(0) @db.UnsignedInt
   created_at            DateTime               @default(now()) @db.Timestamp(0)
   updated_at            DateTime               @default(now()) @updatedAt @db.Timestamp(0)
@@ -41,6 +44,9 @@ model Script {
   synopsis              String?                @db.Text
   poster_url            String?                @db.VarChar(255)
   roles_needed          String?                @db.VarChar(255)
+  work_type             String                 @default("Script") @db.VarChar(50)
+  media_links           String?                @db.Text
+  role_data             String?                @db.Text
   status                String                 @default("Open for collaboration") @db.VarChar(80)
   created_at            DateTime               @default(now()) @db.Timestamp(0)
   updated_at            DateTime               @default(now()) @updatedAt @db.Timestamp(0)

@@ -42,9 +42,11 @@ function renderRoleFilters(counts = {}) {
 function personCard(person) {
   const meta = [person.city, person.college].filter(Boolean).join(' · ') || 'Location not added';
   const skills = person.skills || 'Skills not added yet';
+  const name = (typeof UserUtils !== 'undefined') ? UserUtils.getDisplayName(person) : (person.name || 'Unnamed Creator');
+  
   const chatParams = new URLSearchParams({
     userId: String(person.id),
-    username: person.name || 'Crew Member',
+    username: name,
     role: person.role || 'Crew Member',
     avatar: person.avatar_url || initials(person.name)
   });
@@ -52,7 +54,7 @@ function personCard(person) {
   return `
     <article class="crew-card">
       <div class="crew-avatar">${initials(person.name)}</div>
-      <div class="crew-name">${person.name || 'Unnamed Creator'}</div>
+      <div class="crew-name">${name}</div>
       <div class="crew-role">${person.role || 'Crew Member'}</div>
       <div class="crew-meta">${meta}</div>
       <div class="crew-bio">${person.bio || 'Profile is live. Reach out and start a collaboration conversation.'}</div>

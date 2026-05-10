@@ -9,6 +9,8 @@ import './chat.css';
 interface User {
   id: number;
   name: string;
+  screen_name?: string;
+  display_preference?: string;
   avatar_url?: string;
   gender?: string;
   role?: string;
@@ -79,10 +81,18 @@ export default function ChatPage() {
     return member || null;
   }, [activeConv, user]);
 
+  const getDisplayName = useCallback((u: User | null) => {
+    if (!u) return 'Unnamed Creator';
+    const { name, screen_name, display_preference } = u;
+    if (display_preference === 'Show Screen Name Only' && screen_name) return screen_name;
+    if (display_preference === 'Show Both' && screen_name) return `${name} • ${screen_name}`;
+    return name;
+  }, []);
+
   const getRecipient = useCallback((conv: Conversation) => {
     const member = conv.users.find((member) => member.id !== user?.id);
     if (!member && !conv.is_group) {
-      return { id: -1, name: 'Deleted User', role: 'Unknown', gender: 'Other' };
+      return { id: -1, name: 'Deleted User', role: 'Unknown', gender: 'Other' } as User;
     }
     return member || conv.users[0];
   }, [user?.id]);
@@ -560,7 +570,7 @@ export default function ChatPage() {
             {conversations
               .filter(c => {
                 const recipient = getRecipient(c);
-                const name = c.is_group ? c.name : recipient?.name;
+                const name = c.is_group ? c.name : getDisplayName(recipient);
                 return name?.toLowerCase().includes(searchQuery.toLowerCase());
               })
               .map((conv) => {
@@ -586,7 +596,7 @@ export default function ChatPage() {
                       loading="lazy" decoding="async"
                     />
                     <div className="conv-info">
-                      <div className="conv-name">{conv.is_group ? conv.name : (recipient?.name || 'Crew Member')}</div>
+                      <div className="conv-name">{conv.is_group ? conv.name : getDisplayName(recipient)}</div>
                       <div className="conv-role">{conv.is_group ? `${conv.users.length} Members` : (recipient?.role || 'Crew Member')}</div>
                       <div className="conv-last-msg">{lastMsg}</div>
                     </div>
@@ -627,7 +637,7 @@ export default function ChatPage() {
                   <div className="header-info" onClick={() => setShowDetails(!showDetails)} style={{ cursor: 'pointer' }}>
                     <div className="header-primary-row">
                       <h3 className="header-display-name">
-                        {activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}
+                        {activeConv?.is_group ? activeConv.name : getDisplayName(activeRecipient)}
                       </h3>
                       {!activeConv.is_group && activeRecipient?.role && (
                         <span className="header-role-tag">{activeRecipient.role}</span>
@@ -768,7 +778,7 @@ export default function ChatPage() {
                     .filter(msg => msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()))
                     .map((msg) => (
                       <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}>
-                        {activeConv?.is_group && msg.sender_id !== user?.id && <div className="msg-sender-name">{msg.sender ? msg.sender.name : 'Deleted User'}</div>}
+                        {activeConv?.is_group && msg.sender_id !== user?.id && <div className="msg-sender-name">{getDisplayName(msg.sender)}</div>}
                         <div className="msg-content">{msg.content}</div>
                         <small className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
                       </div>

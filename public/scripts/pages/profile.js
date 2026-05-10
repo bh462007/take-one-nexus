@@ -116,11 +116,89 @@ function renderProjects(scripts) {
     if (typeof updateStat === 'function') updateStat('projCount', items.length);
 }
 
+function renderPortfolio(profile) {
+    const detailsWrap = document.getElementById('portfolioRoleDetails');
+    const gridWrap = document.getElementById('portfolioGrid');
+    if (!detailsWrap || !gridWrap) return;
+
+    const role = profile.role || 'Other';
+    const scripts = profile.scripts || [];
+    
+    // 1. Render Role-Specific Details Cards
+    let detailsHtml = '';
+    const socialLinks = profile.social_links || '';
+    
+    if (role.includes('Director')) {
+        detailsHtml = `
+            <div className="portfolio-card-mini">
+                <strong>Director's Vision</strong>
+                <p>${profile.bio ? profile.bio.substring(0, 100) + '...' : 'Building a vision...'}</p>
+            </div>
+            <div className="portfolio-card-mini">
+                <strong>Socials</strong>
+                <p>${socialLinks || 'No links added'}</p>
+            </div>
+        `;
+    } else if (role.includes('Cinematographer') || role.includes('DP')) {
+         detailsHtml = `
+            <div className="portfolio-card-mini">
+                <strong>Camera Gear</strong>
+                <p>${profile.skills || 'Add gear to skills'}</p>
+            </div>
+            <div className="portfolio-card-mini">
+                <strong>Showreel</strong>
+                <p><a href="${profile.portfolio || '#'}" target="_blank">View Reel →</a></p>
+            </div>
+        `;
+    } else {
+        detailsHtml = `
+            <div className="portfolio-card-mini">
+                <strong>Creator Stats</strong>
+                <p>${scripts.length} Projects · ${profile.credits} Credits</p>
+            </div>
+            <div className="portfolio-card-mini">
+                <strong>Bio</strong>
+                <p>${profile.bio ? profile.bio.substring(0, 60) + '...' : 'New Creator'}</p>
+            </div>
+        `;
+    }
+    
+    detailsWrap.innerHTML = detailsHtml;
+
+    // 2. Render Featured Work Cards
+    if (scripts.length === 0) {
+        gridWrap.innerHTML = `
+            <div class="collab-empty">
+                <p>No projects uploaded to showcase yet.</p>
+                <a href="/#upload" class="btn-sm">Add Work →</a>
+            </div>
+        `;
+    } else {
+        gridWrap.innerHTML = scripts.map((script, i) => `
+            <div class="portfolio-item-card">
+                <div class="pi-header">
+                    <span class="pi-type">${script.work_type || 'Project'}</span>
+                    <span class="pi-num">0${i+1}</span>
+                </div>
+                <div class="pi-title">${script.title}</div>
+                <div class="pi-meta">${script.genre || 'General'} · ${script.status || 'Active'}</div>
+                ${script.media_links ? `<a href="${script.media_links}" target="_blank" class="pi-link">View Media →</a>` : ''}
+            </div>
+        `).join('');
+    }
+}
+
 function populateProfile(profile) {
     if (!profile) return;
     
     const nameEl = document.getElementById('profileName');
-    if (nameEl) nameEl.textContent = profile.name || 'Creator Name';
+    if (nameEl) {
+        if (typeof UserUtils !== 'undefined') {
+            nameEl.textContent = UserUtils.getDisplayName(profile);
+        } else {
+            nameEl.textContent = profile.name || 'Creator Name';
+        }
+    }
     
     const roleEl = document.getElementById('profileRole');
     if (roleEl) {
@@ -151,9 +229,13 @@ function populateProfile(profile) {
     if (document.getElementById('editPortfolio')) document.getElementById('editPortfolio').value = profile.portfolio || '';
     if (document.getElementById('editBio')) document.getElementById('editBio').value = profile.bio || '';
     if (document.getElementById('editSkills')) document.getElementById('editSkills').value = profile.skills || '';
+    if (document.getElementById('editScreenName')) document.getElementById('editScreenName').value = profile.screen_name || '';
+    if (document.getElementById('editDisplayPreference')) document.getElementById('editDisplayPreference').value = profile.display_preference || 'Show Real Name Only';
+    if (document.getElementById('editSocialLinks')) document.getElementById('editSocialLinks').value = profile.social_links || '';
 
     renderSkillBadges(profile.skills);
     renderProjects(profile.scripts || []);
+    renderPortfolio(profile);
 
     if (typeof updateStat === 'function') updateStat('profileCity', profile.city || '--');
 }
@@ -413,7 +495,10 @@ async function saveProfile() {
         gender: document.getElementById('editGender')?.value || 'Prefer not to say',
         portfolio: document.getElementById('editPortfolio')?.value.trim() || '',
         bio: document.getElementById('editBio')?.value.trim() || '',
-        skills: document.getElementById('editSkills')?.value.trim() || ''
+        skills: document.getElementById('editSkills')?.value.trim() || '',
+        screen_name: document.getElementById('editScreenName')?.value.trim() || '',
+        display_preference: document.getElementById('editDisplayPreference')?.value || 'Show Real Name Only',
+        social_links: document.getElementById('editSocialLinks')?.value.trim() || ''
     };
 
     if (!payload.name) {

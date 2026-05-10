@@ -158,8 +158,8 @@
                 script to final cut.
             </span>
             <div class="hero-actions">
-                <a href="#explore" class="btn-primary" id="heroPrimaryAction">Browse Scripts →</a>
-                <a href="#upload" class="btn-secondary" id="heroSecondaryAction">Upload Your Script</a>
+                <a href="#explore" class="btn-primary" id="heroPrimaryAction">Browse Work →</a>
+                <a href="#upload" class="btn-secondary" id="heroSecondaryAction">Upload Your Work</a>
             </div>
             <div class="hero-stats">
                 <div>
@@ -237,16 +237,16 @@
             <div class="feat reveal" data-feature-card="scripts">
                 <div class="feat-num">01</div>
                 <div class="feat-icon">✍</div>
-                <div class="feat-title">Script Showcase</div>
+                <div class="feat-title">Work Showcase</div>
                 <p class="feat-desc">
-                    Upload your screenplay with poster art, synopsis, and role
+                    Upload your creative work with posters, showreels, and role
                     requirements. Get discovered by directors and producers across campuses.
                 </p>
                 <div class="feat-live">
                     <span id="featureScriptCount">0</span>
-                    <small>Live scripts on TAKE ONE</small>
+                    <small>Live projects on TAKE ONE</small>
                 </div>
-                <button class="feat-action" type="button" data-feature-action="scripts">Browse Scripts →</button>
+                <button class="feat-action" type="button" data-feature-action="scripts">Browse Work →</button>
             </div>
             <div class="feat reveal reveal-d1" data-feature-card="team">
                 <div class="feat-num">02</div>
@@ -307,8 +307,8 @@
         </div>
         <div class="deck-preview" id="deckPreview">
             <div class="deck-preview-label">Active Stage</div>
-            <h3 id="deckPreviewTitle">Script Showcase</h3>
-            <p id="deckPreviewText">Browse live scripts, search by genre, and open script previews before requesting to join.</p>
+            <h3 id="deckPreviewTitle">Work Showcase</h3>
+            <p id="deckPreviewText">Browse live projects, search by role, and open work previews before requesting to join.</p>
         </div>
     </section>
 
@@ -398,49 +398,14 @@
         </p>
 
         <div class="upload-zone reveal reveal-d3" id="creatorUploadZone">
-            <div class="upload-panel">
-                <div class="data-num">01</div>
-                <label for="scriptTitle">Script Title</label>
-                <input type="text" id="scriptTitle" placeholder="Enter your script's title…">
-            </div>
+          <div id="dynamicFormFields" class="dynamic-form-grid">
+            <!-- Inject fields here via project.js -->
+          </div>
 
-            <div class="upload-panel">
-                <div class="data-num">02</div>
-                <label for="scriptTheme">Genre</label>
-                <select id="scriptTheme">
-                    <option value="horror">Horror</option>
-                    <option value="romance">Romance</option>
-                    <option value="action">Action</option>
-                    <option value="comedy">Comedy</option>
-                    <option value="drama">Drama</option>
-                    <option value="thriller">Thriller</option>
-                    <option value="sci-fi">Sci-Fi</option>
-                </select>
-            </div>
-
-            <div class="upload-panel upload-full">
-                <div class="data-num">03</div>
-                <label for="scriptDesc">Synopsis</label>
-                <textarea id="scriptDesc"
-                    placeholder="Describe your script — the story, tone, characters, roles you need…"></textarea>
-            </div>
-
-            <div class="upload-panel">
-                <div class="data-num">04</div>
-                <label for="posterInput">Poster / Cover Image</label>
-                <input type="file" id="posterInput" accept="image/*">
-            </div>
-
-            <div class="upload-panel">
-                <div class="data-num">05</div>
-                <label for="authorName">Your Name / Alias</label>
-                <input type="text" id="authorName" placeholder="Director · Writer · etc.">
-            </div>
-
-            <div class="upload-actions">
-                <p id="liveCommunityText">Reviewed within 24 hrs. Join 0 creators across 0 colleges.</p>
-                <button class="btn-upload" id="uploadActionButton" onclick="uploadScript()">Submit Script →</button>
-            </div>
+          <div class="upload-actions">
+            <p id="liveCommunityText">Reviewed within 24 hrs. Join 0 creators across 0 colleges.</p>
+            <button class="btn-upload" id="uploadActionButton">Submit Work →</button>
+          </div>
         </div>
 
         <div class="crew-mode-panel reveal reveal-d3" id="crewModePanel" hidden>
@@ -631,14 +596,28 @@
         <label for="registerRole">Your Role</label>
         <select id="registerRole">
           <option value="Director">Director</option>
-          <option value="Cinematographer">Cinematographer / DP</option>
+          <option value="Cinematographer / DP">Cinematographer / DP</option>
           <option value="Writer">Writer</option>
           <option value="Editor">Editor</option>
           <option value="Sound Designer">Sound Designer</option>
           <option value="Designer">Designer</option>
           <option value="Actor">Actor</option>
           <option value="Producer">Producer</option>
+          <option value="Lighting Crew">Lighting Crew</option>
+          <option value="Set Support">Set Support</option>
           <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="registerScreenName">Screen Name / Stage Name (Optional)</label>
+        <input type="text" id="registerScreenName" placeholder="e.g., RK Visuals, AR Motion Lab">
+      </div>
+      <div class="form-group">
+        <label for="registerDisplayPreference">Display Preference</label>
+        <select id="registerDisplayPreference">
+          <option value="Show Real Name Only">Show Real Name Only</option>
+          <option value="Show Screen Name Only">Show Screen Name Only</option>
+          <option value="Show Both">Show Both (Name • Screen Name)</option>
         </select>
       </div>
       <div class="form-group">
@@ -711,7 +690,8 @@
     <script src="/scripts/components/ui.js" defer></script>
     <script src="/scripts/components/navbar.js" defer></script>
     <script src="/scripts/animations/common.js" defer></script>
-    <script src="/scripts/pages/project.js" defer></script>
+    <script src="/scripts/utils/user.js"></script>
+    <script src="/scripts/pages/project.js"></script>
     <script src="/scripts/components/global-chat-fab.js" defer></script>
    
 </body>

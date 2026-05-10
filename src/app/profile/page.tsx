@@ -67,6 +67,16 @@ export default async function ProfilePage() {
     const scripts = user?.scripts || [];
     const skills = user?.skills ? String(user.skills).split(',').filter(Boolean) : [];
     const avatarUrl = getAvatarUrl(name, user?.gender, user?.avatar_url);
+    
+    // Display Name Logic
+    const screenName = user?.screen_name || '';
+    const displayPreference = user?.display_preference || 'Show Real Name Only';
+    let displayName = name;
+    if (displayPreference === 'Show Screen Name Only' && screenName) {
+      displayName = screenName;
+    } else if (displayPreference === 'Show Both' && screenName) {
+      displayName = `${name} • ${screenName}`;
+    }
 
     return (
       <>
@@ -118,7 +128,10 @@ export default async function ProfilePage() {
                 </div>
               </div>
 
-              <div id="profileName">{name}</div>
+              <div id="profileName">{displayName}</div>
+              {screenName && displayPreference !== 'Show Screen Name Only' && (
+                <div className="profile-screen-name">@{screenName}</div>
+              )}
               <div className="profile-role" id="profileRole">{role}</div>
               <div className="profile-meta" id="profileMeta">
                 {[college, city].filter(Boolean).join(' · ') || 'Location Pending'}
@@ -160,6 +173,7 @@ export default async function ProfilePage() {
                 <button className="ctab active" data-tab="projects">Projects</button>
                 <button className="ctab"        data-tab="about">About</button>
                 <button className="ctab"        data-tab="collab">Collaborate</button>
+                <button className="ctab"        data-tab="portfolio">Portfolio</button>
                 <button className="ctab"        data-tab="notifications">
                   Notifications <span className="tab-count" id="notificationCount">0</span>
                 </button>
@@ -233,6 +247,22 @@ export default async function ProfilePage() {
                       <option value="Prefer not to say">Prefer not to say</option>
                     </select>
                   </div>
+                  <div className="about-item">
+                    <label htmlFor="editScreenName">Screen Name / Stage Name</label>
+                    <input type="text" id="editScreenName" defaultValue={screenName} placeholder="RK Visuals..." />
+                  </div>
+                  <div className="about-item">
+                    <label htmlFor="editDisplayPreference">Display Preference</label>
+                    <select id="editDisplayPreference" className="profile-role-dropdown" defaultValue={displayPreference}>
+                      <option value="Show Real Name Only">Show Real Name Only</option>
+                      <option value="Show Screen Name Only">Show Screen Name Only</option>
+                      <option value="Show Both">Show Both (Name • Screen Name)</option>
+                    </select>
+                  </div>
+                  <div className="about-item full">
+                    <label htmlFor="editSocialLinks">Social Links (Instagram, LinkedIn, etc.)</label>
+                    <input type="text" id="editSocialLinks" defaultValue={user?.social_links || ''} placeholder="Instagram: @rk_visuals, LinkedIn: rk-sharma..." />
+                  </div>
                   <div className="about-item full">
                     <label htmlFor="editPortfolio">Portfolio / Reel</label>
                     <input type="text" id="editPortfolio" defaultValue={user?.portfolio || ''} placeholder="https://…" />
@@ -263,6 +293,36 @@ export default async function ProfilePage() {
                     <div className="collab-column-title">My Sent Requests</div>
                     <div id="outgoingRequests" className="request-list">
                       <div className="collab-empty"><div className="collab-reel"><span>🎬</span></div><p>Loading requests...</p></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── PORTFOLIO TAB ── */}
+              <div className="tab-pane" id="tab-portfolio">
+                <div className="section-head">
+                  <h3>Creative Portfolio</h3>
+                  <div className="portfolio-badge">PRO PROFILE</div>
+                </div>
+                <div className="portfolio-container">
+                  <div className="portfolio-intro">
+                    <div className="pi-num">ROLE: {role.toUpperCase()}</div>
+                    <p>Showcasing specialized work, gear, and professional milestones.</p>
+                  </div>
+                  
+                  <div className="portfolio-role-details" id="portfolioRoleDetails">
+                    {/* Inject role-specific details here via profile.js */}
+                    <div className="collab-empty">
+                      <div className="collab-reel"><span>⚙</span></div>
+                      <p>Complete your profile to see specialized role cards</p>
+                    </div>
+                  </div>
+
+                  <div className="portfolio-grid-head">Featured Work</div>
+                  <div className="portfolio-grid" id="portfolioGrid">
+                    {/* Inject featured work cards here via profile.js */}
+                    <div className="collab-empty">
+                        <p>No featured work added to portfolio yet.</p>
                     </div>
                   </div>
                 </div>

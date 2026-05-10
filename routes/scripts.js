@@ -14,16 +14,8 @@ const pusher = new Pusher({
   useTLS: true
 });
 
-function isCreatorRole(role) {
-  const normalized = String(role || '').toLowerCase();
-
-  return (
-    normalized.includes('director') ||
-    normalized.includes('writer') ||
-    normalized.includes('producer') ||
-    normalized.includes('screenwriter')
-  );
-}
+  // All roles can now upload work in the new ecosystem
+  return true;
 
 async function safeQuery(sql, params = []) {
   try {
@@ -51,7 +43,12 @@ router.get('/search', async (req, res) => {
         scripts.status,
         scripts.roles_needed,
         scripts.poster_url,
-        users.name AS author_name
+        scripts.work_type,
+        scripts.media_links,
+        scripts.role_data,
+        users.name AS author_name,
+        users.screen_name,
+        users.display_preference
       FROM scripts
       LEFT JOIN users ON users.id = scripts.user_id
       WHERE 1 = 1
@@ -87,7 +84,7 @@ router.get('/search', async (req, res) => {
 
 router.post('/', authenticateUser, async (req, res) => {
   try {
-    const { title, genre, synopsis, roles_needed, status } = req.body;
+    const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;
 
     if (!title) {
       return res.status(400).json({
@@ -118,15 +115,19 @@ router.post('/', authenticateUser, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO scripts (user_id, title, genre, synopsis, roles_needed, status)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO scripts (user_id, title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         Number(req.user.id),
         String(title).trim(),
         genre || null,
         synopsis || null,
         roles_needed || null,
-        status || 'Open for collaboration'
+        status || 'Open for collaboration',
+        work_type || 'Script',
+        media_links || null,
+        role_data || null,
+        poster_url || null
       ]
     );
 
@@ -139,8 +140,13 @@ router.post('/', authenticateUser, async (req, res) => {
         scripts.roles_needed,
         scripts.status,
         scripts.poster_url,
+        scripts.work_type,
+        scripts.media_links,
+        scripts.role_data,
         scripts.created_at,
-        users.name AS author_name
+        users.name AS author_name,
+        users.screen_name,
+        users.display_preference
        FROM scripts
        LEFT JOIN users ON users.id = scripts.user_id
        WHERE scripts.id = ?

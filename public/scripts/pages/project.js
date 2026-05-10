@@ -8,56 +8,187 @@ function filterCards(genre, btn) {
   loadLiveScripts();
 }
 
-/* ── UPLOAD SCRIPT ── */
-function uploadScript() {
-  const titleEl  = document.getElementById('scriptTitle');
-  const genreEl  = document.getElementById('scriptTheme');
-  const descEl   = document.getElementById('scriptDesc');
-  const posterEl = document.getElementById('posterInput');
+/* ── ROLE-BASED DYNAMIC FORMS CONFIG ── */
+const ROLE_FORMS = {
+    "Director": [
+        { id: 'workTitle', label: 'Film Title', type: 'text', placeholder: 'e.g. Moonlight Sonata', required: true },
+        { id: 'workGenre', label: 'Genre', type: 'select', options: ['Drama', 'Horror', 'Romance', 'Action', 'Thriller', 'Sci-Fi', 'Comedy'], required: true },
+        { id: 'workSynopsis', label: 'Director Vision / Synopsis', type: 'textarea', placeholder: 'Describe your visual style and story...', full: true, required: true },
+        { id: 'workTeam', label: 'Team Needed', type: 'text', placeholder: 'DP, Sound, Editor, Actors...' },
+        { id: 'workPoster', label: 'Poster / Moodboard', type: 'file', accept: 'image/*' },
+        { id: 'workLink', label: 'Drive / Pitch Deck Link', type: 'url', placeholder: 'https://drive.google.com/...' }
+    ],
+    "Writer": [
+        { id: 'workTitle', label: 'Script Title', type: 'text', placeholder: 'e.g. The Last Train', required: true },
+        { id: 'workGenre', label: 'Genre', type: 'select', options: ['Drama', 'Horror', 'Romance', 'Action', 'Thriller', 'Sci-Fi', 'Comedy'], required: true },
+        { id: 'workSynopsis', label: 'Story Synopsis', type: 'textarea', placeholder: 'What is your story about?', full: true, required: true },
+        { id: 'workTeam', label: 'Looking For', type: 'text', placeholder: 'Director, Producer...' },
+        { id: 'workPoster', label: 'Script Cover', type: 'file', accept: 'image/*' },
+        { id: 'workLink', label: 'Script PDF / Drive Link', type: 'url', placeholder: 'https://drive.google.com/...' }
+    ],
+    "Cinematographer / DP": [
+        { id: 'workTitle', label: 'Project Name', type: 'text', required: true },
+        { id: 'workCamera', label: 'Camera Used', type: 'text', placeholder: 'e.g. Alexa Mini, Red Komodo' },
+        { id: 'workStyle', label: 'Visual Style', type: 'text', placeholder: 'e.g. High Contrast, Naturalistic' },
+        { id: 'workSynopsis', label: 'Experience Description', type: 'textarea', placeholder: 'Describe your role and challenges...', full: true },
+        { id: 'workPoster', label: 'Still / Frame', type: 'file', accept: 'image/*' },
+        { id: 'workLink', label: 'Showreel / Video Link', type: 'url', placeholder: 'https://youtube.com/...' }
+    ],
+    "Editor": [
+        { id: 'workTitle', label: 'Project Name', type: 'text', required: true },
+        { id: 'workSoftware', label: 'Software Used', type: 'text', placeholder: 'e.g. Premiere Pro, DaVinci Resolve' },
+        { id: 'workSynopsis', label: 'Before/After Description', type: 'textarea', placeholder: 'How did you transform the raw footage?', full: true },
+        { id: 'workPoster', label: 'Timeline Screenshot', type: 'file', accept: 'image/*' },
+        { id: 'workLink', label: 'Video Link', type: 'url', placeholder: 'https://vimeo.com/...' }
+    ],
+    "Designer": [
+        { id: 'workTitle', label: 'Project Name', type: 'text', required: true },
+        { id: 'workType', label: 'Design Type', type: 'text', placeholder: 'e.g. Poster, UI, Motion' },
+        { id: 'workTools', label: 'Tools Used', type: 'text', placeholder: 'e.g. Photoshop, Figma, AE' },
+        { id: 'workSynopsis', label: 'Design Concept', type: 'textarea', placeholder: 'Describe the design thinking...', full: true },
+        { id: 'workPoster', label: 'Design File / Cover', type: 'file', accept: 'image/*' },
+        { id: 'workLink', label: 'Portfolio Link', type: 'url', placeholder: 'https://behance.net/...' }
+    ],
+    "Actor": [
+        { id: 'workTitle', label: 'Role Name', type: 'text', required: true },
+        { id: 'workProject', label: 'Project Name', type: 'text' },
+        { id: 'workSynopsis', label: 'Experience Description', type: 'textarea', placeholder: 'Describe your character and performance...', full: true },
+        { id: 'workPoster', label: 'Headshot / Frame', type: 'file', accept: 'image/*' },
+        { id: 'workLink', label: 'Showreel Link', type: 'url', placeholder: 'https://youtube.com/...' }
+    ],
+    "Sound Designer": [
+        { id: 'workTitle', label: 'Project Name', type: 'text', required: true },
+        { id: 'workAudioType', label: 'Audio Type', type: 'text', placeholder: 'e.g. Sound Design, Mix, Score' },
+        { id: 'workSoftware', label: 'DAW Used', type: 'text', placeholder: 'e.g. Pro Tools, Ableton' },
+        { id: 'workSynopsis', label: 'Audio Breakdown', type: 'textarea', placeholder: 'Describe the soundscape...', full: true },
+        { id: 'workLink', label: 'Audio / Video Link', type: 'url', placeholder: 'https://soundcloud.com/...' }
+    ],
+    "Other": [
+        { id: 'workTitle', label: 'Project Name', type: 'text', required: true },
+        { id: 'workRole', label: 'Role Played', type: 'text' },
+        { id: 'workSynopsis', label: 'Work Description', type: 'textarea', placeholder: 'Describe your contribution...', full: true },
+        { id: 'workPoster', label: 'Cover Image', type: 'file', accept: 'image/*' },
+        { id: 'workLink', label: 'Link', type: 'url' }
+    ]
+};
 
-  const title = titleEl.value.trim();
-  const genre = genreEl.value;
-  const file  = posterEl.files[0];
+function renderDynamicUploadForm(user) {
+    const container = document.getElementById('dynamicFormFields');
+    if (!container) return;
+    
+    const role = user?.role || "Director";
+    const fields = ROLE_FORMS[role] || ROLE_FORMS["Other"];
+    
+    container.innerHTML = fields.map((field, index) => {
+        const num = String(index + 1).padStart(2, '0');
+        const fullClass = field.full ? 'upload-full' : '';
+        
+        let inputHtml = '';
+        if (field.type === 'select') {
+            inputHtml = `<select id="${field.id}">
+                ${field.options.map(opt => `<option value="${opt.toLowerCase()}">${opt}</option>`).join('')}
+            </select>`;
+        } else if (field.type === 'textarea') {
+            inputHtml = `<textarea id="${field.id}" placeholder="${field.placeholder || ''}"></textarea>`;
+        } else if (field.type === 'file') {
+            inputHtml = `<input type="file" id="${field.id}" accept="${field.accept || '*'}">`;
+        } else {
+            inputHtml = `<input type="${field.type}" id="${field.id}" placeholder="${field.placeholder || ''}">`;
+        }
+        
+        return `
+            <div class="upload-panel ${fullClass}">
+                <div class="data-num">${num}</div>
+                <label for="${field.id}">${field.label}${field.required ? ' *' : ''}</label>
+                ${inputHtml}
+            </div>
+        `;
+    }).join('');
+}
 
-  if (!title) {
-    showToast('Please enter a title ✦');
-    return;
-  }
-
-  /* Build card */
-  const card = document.createElement('div');
-  card.className = 'movie-card';
-  card.setAttribute('data-genre', genre);
-  card.style.cssText = 'background: linear-gradient(160deg, #1a1108 0%, #06080A 100%);';
-
-  const num = (document.querySelectorAll('.movie-card').length + 1)
-    .toString().padStart(3, '0');
-
-  /* Load poster image if provided */
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      card.style.backgroundImage    = `url(${e.target.result})`;
-      card.style.backgroundSize     = 'cover';
-      card.style.backgroundPosition = 'center';
+async function uploadWork() {
+    const user = API.auth.getUser();
+    if (!user) {
+        showToast('Please login to upload work ✦');
+        return;
+    }
+    
+    const role = user.role || "Director";
+    const fields = ROLE_FORMS[role] || ROLE_FORMS["Other"];
+    
+    const payload = {
+        work_type: role,
+        role_data: {}
     };
-    reader.readAsDataURL(file);
-  }
-
-  card.innerHTML = `
-    <div class="data-num">${num}</div>
-    <div class="card-genre">${genre}</div>
-    <div class="card-title">${title}</div>
-    <div class="card-tag">Just Added</div>
-  `;
-
-  document.getElementById('cardRow').prepend(card);
-  showToast('Script submitted ✦');
-
-  /* Reset form fields */
-  titleEl.value  = '';
-  descEl.value   = '';
-  posterEl.value = '';
+    
+    // Collect data
+    for (const field of fields) {
+        const el = document.getElementById(field.id);
+        if (!el) continue;
+        
+        if (field.type === 'file') {
+            // In this MVP, we don't handle real file uploads to S3, 
+            // but we can simulate the "Just Added" card behavior with local preview
+            if (el.files && el.files[0]) {
+                payload.localFile = el.files[0];
+            }
+        } else {
+            const val = el.value.trim();
+            if (field.required && !val) {
+                showToast(`Please enter ${field.label} ✦`);
+                return;
+            }
+            
+            // Map to standard fields where possible
+            if (field.id === 'workTitle') payload.title = val;
+            else if (field.id === 'workGenre') payload.genre = val;
+            else if (field.id === 'workSynopsis') payload.synopsis = val;
+            else if (field.id === 'workTeam') payload.roles_needed = val;
+            else if (field.id === 'workLink') payload.media_links = val;
+            else {
+                payload.role_data[field.id] = val;
+            }
+        }
+    }
+    
+    const submitBtn = document.getElementById('uploadActionButton');
+    const originalText = submitBtn.textContent;
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Transmitting...';
+        
+        // Convert role_data to string for DB
+        const finalPayload = {
+            ...payload,
+            role_data: JSON.stringify(payload.role_data)
+        };
+        
+        const response = await API.scripts.create(finalPayload);
+        
+        if (response.success) {
+            showToast('Work uploaded to Showcase ✦');
+            
+            // Simulate UI update (add to row)
+            const card = document.createElement('div');
+            card.className = 'movie-card';
+            card.innerHTML = `
+                <div class="data-num">NEW</div>
+                <div class="card-genre">${payload.genre || role}</div>
+                <div class="card-title">${payload.title}</div>
+                <div class="card-tag">Just Added</div>
+            `;
+            document.getElementById('cardRow')?.prepend(card);
+            
+            // Reset form
+            renderDynamicUploadForm(user);
+        }
+    } catch (err) {
+        showToast(`❌ Upload failed: ${err.message}`);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
 }
 
 /* Utility functions moved to /scripts/utils/helpers.js and /scripts/components/ui.js */
@@ -326,7 +457,7 @@ function getRoleTools(role) {
     writer: [
       ['Story Desk', 'Publish scripts and story ideas for directors to discover.'],
       ['Collab Needs', 'Mention if you need a director, producer, actors, or editor.'],
-      ['Script Signal', 'Your newest story appears in the live script showcase.']
+      ['Work Signal', 'Your newest work appears in the live work showcase.']
     ],
     producer: [
       ['Production Call', 'Post a production brief and assemble the departments needed.'],
@@ -717,7 +848,7 @@ function activateFeatureSection() {
       if (action === 'scripts') {
         scrollToSection('#explore');
         setTimeout(() => document.getElementById('liveSearchInput')?.focus(), 500);
-        showToast('Live script showcase opened ✦');
+        showToast('Live work showcase opened ✦');
         return;
       }
 
@@ -748,7 +879,7 @@ function activateFeatureSection() {
 
 const STAGE_COPY = {
   script: {
-    title: 'Script Showcase',
+    title: 'Work Showcase',
     text: 'Browse live scripts, search by genre, and open script previews before requesting to join.'
   },
   crew: {
@@ -1085,7 +1216,10 @@ registerForm?.addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Generating Crew Card...';
     
-    const payload = { name, email, password, role, gender, college, city };
+    const screen_name = document.getElementById('registerScreenName')?.value || '';
+    const display_preference = document.getElementById('registerDisplayPreference')?.value || 'Show Real Name Only';
+    
+    const payload = { name, email, password, role, gender, college, city, screen_name, display_preference };
     const response = await API.users.register(payload);
     
     if (response.success) {
@@ -1129,6 +1263,7 @@ function updateUIAfterLogin(user) {
   }
 
   applyRoleBasedUI(user);
+  renderDynamicUploadForm(user);
 }
 
 function applyRoleBasedUI(user) {
@@ -1144,6 +1279,11 @@ function applyRoleBasedUI(user) {
   const workspace = getWorkspaceForRole(user?.role);
 
   if (!creatorUploadZone || !crewModePanel) return;
+
+  // Setup upload action
+  if (uploadActionButton) {
+    uploadActionButton.onclick = uploadWork;
+  }
 
   if (!user) {
     if (typeof Navbar !== 'undefined') {

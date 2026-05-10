@@ -37,7 +37,7 @@ function createToken(user) {
 
 async function getProfileData(userId) {
   const [userRows] = await pool.query(
-    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, created_at
+    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -65,7 +65,7 @@ async function getProfileData(userId) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role, college, city, gender } = req.body;
+    const { name, email, password, role, college, city, gender, screen_name, display_preference } = req.body;
     
     // Basic validation
     if (!name || !email || !password) {
@@ -113,8 +113,8 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await pool.query(
-      `INSERT INTO users (name, email, password, role, college, city, gender)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         normalizedEmail,
@@ -122,7 +122,9 @@ router.post('/register', async (req, res) => {
         role || null,
         college || null,
         city || null,
-        gender || 'Prefer not to say'
+        gender || 'Prefer not to say',
+        screen_name || null,
+        display_preference || 'Show Real Name Only'
       ]
     );
 
@@ -155,6 +157,8 @@ router.post('/register', async (req, res) => {
         college: user.college,
         city: user.city,
         gender: user.gender,
+        screen_name: screen_name || null,
+        display_preference: display_preference || 'Show Real Name Only',
         credits: 0
       },
       token: token
@@ -363,7 +367,7 @@ router.get('/search', async (req, res) => {
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, role, college, city, bio, skills, avatar_url, gender, credits
+      SELECT id, name, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links
       FROM users
       WHERE 1 = 1
     `;
@@ -414,7 +418,10 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
       skills,
       portfolio,
       avatar_url,
-      gender
+      gender,
+      screen_name,
+      display_preference,
+      social_links
     } = req.body;
 
     if (name && typeof name === 'string' && !name.trim()) {
@@ -436,6 +443,9 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
         portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
         avatar_url: typeof avatar_url === 'string' ? avatar_url.trim() : undefined,
         gender: typeof gender === 'string' ? gender.trim() : undefined,
+        screen_name: typeof screen_name === 'string' ? screen_name.trim() : undefined,
+        display_preference: typeof display_preference === 'string' ? display_preference.trim() : undefined,
+        social_links: typeof social_links === 'string' ? social_links.trim() : undefined,
       },
       include: {
         scripts: {

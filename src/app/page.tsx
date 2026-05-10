@@ -202,7 +202,7 @@ export default function HomePage() {
           <div className="feat reveal" data-feature-card="scripts">
             <div className="feat-num">01</div>
             <div className="feat-icon">✍</div>
-            <div className="feat-title">Script Showcase</div>
+            <div className="feat-title">Work Showcase</div>
             <p className="feat-desc">
               Upload your screenplay with poster art, synopsis, and role
               requirements. Get discovered by directors and producers across campuses.
@@ -272,8 +272,8 @@ export default function HomePage() {
         </div>
         <div className="deck-preview" id="deckPreview">
           <div className="deck-preview-label">Active Stage</div>
-          <h3 id="deckPreviewTitle">Script Showcase</h3>
-          <p id="deckPreviewText">Browse live scripts, search by genre, and open script previews before requesting to join.</p>
+          <h3 id="deckPreviewTitle">Work Showcase</h3>
+          <p id="deckPreviewText">Browse live projects across all roles, search by type, and open portfolio previews before requesting to collaborate.</p>
         </div>
       </section>
 
