@@ -5,7 +5,7 @@
 ![TAKE ONE Nexus](https://img.shields.io/badge/PRODUCTION-READY-FF4D1A?style=for-the-badge&logo=vercel)
 ![Tech Stack](https://img.shields.io/badge/STACK-NEXT.JS%20|%20EXPRESS%20|%20PRISMA-00D4FF?style=for-the-badge)
 
-TAKE ONE Nexus is the definitive collaborative platform for the next generation of filmmakers, screenwriters, and creative technocrats. Built with a cinematic "Director-style" aesthetic, it bridges the gap between raw scripts and full-scale production crews.
+TAKE ONE Nexus is the definitive collaborative platform for the next generation of filmmakers, screenwriters, and creative technocrats. Built with a cinematic "Director-style" aesthetic, it bridges the gap between raw scripts and full-scale production crews
 
 ---
 
