@@ -198,7 +198,12 @@ const API = (() => {
       isLoggedIn() {
         return Boolean(localStorage.getItem(TOKEN_KEY));
       },
-      logout() {
+      async logout() {
+        try {
+          await request('/api/users/logout', { method: 'POST' });
+        } catch (e) {
+          console.warn('Backend logout failed:', e);
+        }
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
         localStorage.removeItem('take_one_session_start');

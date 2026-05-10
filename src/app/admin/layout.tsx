@@ -11,7 +11,28 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [time, setTime] = useState('');
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem('take_one_user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          const role = String(user.role || '').toLowerCase();
+          if (['admin', 'developer', 'moderator'].includes(role)) {
+            setIsAuthorized(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Admin layout auth check failed:', err);
+      }
+      window.location.href = '/?auth=login';
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -27,6 +48,14 @@ export default function AdminLayout({
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  if (!isAuthorized) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#06080A', color: 'var(--neon)', fontFamily: 'Bebas Neue' }}>
+        <h2>Authenticating Signal...</h2>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-container">

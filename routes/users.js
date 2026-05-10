@@ -139,11 +139,15 @@ router.post('/register', async (req, res) => {
     };
 
     const token = createToken(user);
-    res.cookie('token', token, { 
-      httpOnly: false, // Set to false so client can read if needed, or true for better security
+    const cookieOptions = {
+      httpOnly: true, // Secure: cannot be accessed via JS
       secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
       maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
-    });
+    };
+
+    res.cookie('token', token, cookieOptions);
 
     res.status(201).json({
       success: true,
@@ -314,6 +318,19 @@ router.post('/login', async (req, res) => {
       message: `Login failed: ${error.message || 'Internal Server Error'}`
     });
   }
+});
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
+  res.json({
+    success: true,
+    message: 'Logged out successfully'
+  });
 });
 
 
