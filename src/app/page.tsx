@@ -125,8 +125,8 @@ export default function HomePage() {
             script to final cut.
           </span>
           <div className="hero-actions">
-            <a href="#explore" className="btn-primary" id="heroPrimaryAction">Browse Scripts →</a>
-            <a href="#upload" className="btn-secondary" id="heroSecondaryAction">Upload Your Script</a>
+            <a href="#explore" className="btn-primary" id="heroPrimaryAction">Browse Work →</a>
+            <a href="#upload" className="btn-secondary" id="heroSecondaryAction">Upload Your Work</a>
           </div>
           <div className="hero-stats">
             <div>
@@ -207,14 +207,14 @@ export default function HomePage() {
             <div className="feat-icon">✍</div>
             <div className="feat-title">Work Showcase</div>
             <p className="feat-desc">
-              Upload your screenplay with poster art, synopsis, and role
+              Upload your creative work with posters, showreels, and role
               requirements. Get discovered by directors and producers across campuses.
             </p>
             <div className="feat-live">
               <span id="featureScriptCount">0</span>
-              <small>Live scripts on TAKE ONE</small>
+              <small>Live projects on TAKE ONE</small>
             </div>
-            <button className="feat-action" type="button" data-feature-action="scripts">Browse Scripts →</button>
+            <button className="feat-action" type="button" data-feature-action="scripts">Browse Work →</button>
           </div>
           <div className="feat reveal reveal-d1" data-feature-card="team">
             <div className="feat-num">02</div>
@@ -317,47 +317,100 @@ export default function HomePage() {
         </p>
 
         <div className="upload-zone reveal reveal-d3" id="creatorUploadZone">
-          <div className="upload-panel">
-            <div className="data-num">01</div>
-            <label htmlFor="scriptTitle">Script Title</label>
-            <input type="text" id="scriptTitle" placeholder="Enter your script's title…" />
-          </div>
-
-          <div className="upload-panel">
-            <div className="data-num">02</div>
-            <label htmlFor="scriptTheme">Genre</label>
-            <select id="scriptTheme">
-              <option value="horror">Horror</option>
-              <option value="romance">Romance</option>
-              <option value="action">Action</option>
-              <option value="comedy">Comedy</option>
-              <option value="drama">Drama</option>
-              <option value="thriller">Thriller</option>
-              <option value="sci-fi">Sci-Fi</option>
-            </select>
-          </div>
-
-          <div className="upload-panel upload-full">
-            <div className="data-num">03</div>
-            <label htmlFor="scriptDesc">Synopsis</label>
-            <textarea id="scriptDesc" placeholder="Describe your script — the story, tone, characters, roles you need…"></textarea>
-          </div>
-
-          <div className="upload-panel">
-            <div className="data-num">04</div>
-            <label htmlFor="posterInput">Poster / Cover Image</label>
-            <input type="file" id="posterInput" accept="image/*" />
-          </div>
-
-          <div className="upload-panel">
-            <div className="data-num">05</div>
-            <label htmlFor="authorName">Your Name / Alias</label>
-            <input type="text" id="authorName" placeholder="Director · Writer · etc." />
+          <div id="dynamicFormFields" className="dynamic-form-grid">
+            {/* Inject fields here via project.js */}
           </div>
 
           <div className="upload-actions">
             <p id="liveCommunityText">Reviewed within 24 hrs. Join 0 creators across 0 colleges.</p>
-            <button className="btn-upload" id="uploadActionButton">Submit Script →</button>
+            <button className="btn-upload" id="uploadActionButton">Submit Work →</button>
+          </div>
+        </div>
+
+        <div className="crew-mode-panel reveal reveal-d3" id="crewModePanel" hidden>
+          <div className="crew-mode-card">
+            <div className="data-num">01</div>
+            <div className="crew-mode-kicker">Crew Mode</div>
+            <h3 id="crewModeHeading">Join The Right Set</h3>
+            <p id="crewModeDescription">
+              Browse scripts that need camera, lights, sound, actors, and post crew. Your job here is to get discovered and join strong projects.
+            </p>
+          </div>
+          <div className="crew-mode-card">
+            <div className="data-num">02</div>
+            <div className="crew-mode-kicker">What You Can Do</div>
+            <ul className="crew-mode-list" id="crewModeList">
+              <li>Browse open scripts and production needs</li>
+              <li>Show your role, city, and skills on your profile</li>
+              <li>Use your profile as your crew card</li>
+            </ul>
+          </div>
+          <div className="crew-mode-actions">
+            <a href="#explore" className="btn-primary" id="crewBrowseAction">Browse Open Scripts →</a>
+            <a href="/profile" className="btn-secondary" id="crewProfileAction">Build Your Crew Profile</a>
+          </div>
+        </div>
+
+        <div className="role-toolkit reveal reveal-d3" id="roleToolkit" hidden>
+          <div className="role-toolkit-head">
+            <div>
+              <div className="role-tool-kicker" id="roleToolkitKicker">Role Interface</div>
+              <h3 id="roleToolkitTitle">Your Film Desk</h3>
+            </div>
+            <span id="roleToolkitSignal">LIVE</span>
+          </div>
+          <div className="role-tool-grid" id="roleToolGrid"></div>
+          <div className="director-desk-panel" id="directorDeskPanel" hidden>
+            <div className="director-desk-head">
+              <div>
+                <div className="role-tool-kicker">Director Control Room</div>
+                <h4>Build A Production Call</h4>
+              </div>
+              <div className="director-desk-state" id="directorDeskState">Draft</div>
+            </div>
+            <div className="director-desk-grid">
+              <div className="director-control-card">
+                <label htmlFor="directorSceneMood">Scene Mood</label>
+                <select id="directorSceneMood">
+                  <option value="Gritty realistic">Gritty realistic</option>
+                  <option value="Dreamy romance">Dreamy romance</option>
+                  <option value="Fast action">Fast action</option>
+                  <option value="Quiet drama">Quiet drama</option>
+                  <option value="Dark thriller">Dark thriller</option>
+                </select>
+                <label htmlFor="directorLocation">Location Idea</label>
+                <input type="text" id="directorLocation" placeholder="Rooftop, hostel corridor, cafe..." />
+                <label htmlFor="directorShootDate">Shoot Window</label>
+                <input type="date" id="directorShootDate" />
+              </div>
+              <div className="director-control-card">
+                <div className="director-mini-title">Crew Checklist</div>
+                <div className="director-chip-grid" id="directorCrewChips">
+                  <button type="button" className="director-chip active" data-director-role="DP">DP</button>
+                  <button type="button" className="director-chip active" data-director-role="Gaffer">Gaffer</button>
+                  <button type="button" className="director-chip" data-director-role="Sound">Sound</button>
+                  <button type="button" className="director-chip" data-director-role="Actors">Actors</button>
+                  <button type="button" className="director-chip" data-director-role="Editor">Editor</button>
+                  <button type="button" className="director-chip" data-director-role="Art">Art</button>
+                </div>
+                <div className="director-readiness">
+                  <div>
+                    <span>Call Readiness</span>
+                    <strong id="directorReadinessValue">40%</strong>
+                  </div>
+                  <div className="director-meter"><i id="directorReadinessBar"></i></div>
+                </div>
+              </div>
+              <div className="director-output-card">
+                <div className="director-mini-title">Live Pitch Preview</div>
+                <p id="directorDeskPreview">Add a title, mood, location, and crew needs to generate a clean director call.</p>
+                <div className="director-desk-actions">
+                  <button type="button" id="directorBuildCallBtn">Use In Upload Form</button>
+                  <button type="button" id="directorCrewFinderBtn">Find Crew</button>
+                  <button type="button" id="directorInboxBtn">Request Inbox</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -1,9 +1,15 @@
 'use client';
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import IssueReportModal from './IssueReportModal';
 
 export default function GlobalIssueReporter() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  if (pathname === '/' || pathname === '/project') {
+    return null;
+  }
 
   return (
     <>
