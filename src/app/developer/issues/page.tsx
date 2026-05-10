@@ -21,10 +21,6 @@ export default function DeveloperIssuesPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  useEffect(() => {
-    fetchIssues();
-  }, []);
-
   const fetchIssues = async () => {
     try {
       const res = await fetch('/api/issues', {
@@ -46,6 +42,11 @@ export default function DeveloperIssuesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchIssues();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateStatus = async (id: number, status: string) => {
     try {

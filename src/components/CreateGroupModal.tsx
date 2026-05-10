@@ -15,15 +15,6 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      setName('');
-      setSearch('');
-      setSelectedIds([]);
-      fetchUsers('');
-    }
-  }, [isOpen]);
-
   const fetchUsers = async (q: string) => {
     setLoading(true);
     try {
@@ -40,11 +31,23 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
   };
 
   useEffect(() => {
+    if (isOpen) {
+      setName('');
+      setSearch('');
+      setSelectedIds([]);
+      fetchUsers('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (isOpen) fetchUsers(search);
     }, 300);
     return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, isOpen]);
+
 
   if (!isOpen) return null;
 
