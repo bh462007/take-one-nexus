@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const { authenticateUser, requireSameUser } = require('../middleware/auth');
 const { PrismaClient } = require('@prisma/client');
-const { formatDisplayName } = require('../utils/formatting');
+const { formatDisplayName, getCanonicalDisplayName } = require('../utils/formatting');
 const Pusher = require('pusher');
 
 const prisma = new PrismaClient();
@@ -575,6 +575,60 @@ router.get('/:id', authenticateUser, requireSameUser, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Could not load profile'
+    });
+  }
+});
+
+/**
+ * GET /api/users/public/:id
+ * Get public profile data for any user
+ */
+router.get('/public/:id', async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid user id is required'
+      });
+    }
+
+    const [userRows] = await pool.query(
+      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const [scriptRows] = await pool.query(
+      `SELECT id, title, genre, synopsis, status, roles_needed, poster_url, work_type, media_links, role_data, created_at
+       FROM scripts
+       WHERE user_id = ?
+       ORDER BY created_at DESC, id DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        ...userRows[0],
+        name: getCanonicalDisplayName(userRows[0]),
+        scripts: scriptRows
+      }
+    });
+  } catch (error) {
+    console.error('Public profile fetch error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Could not load public profile'
     });
   }
 });

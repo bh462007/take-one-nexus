@@ -1133,3 +1133,156 @@ nav a:hover {
         opacity: 0.3;
     }
 }
+/* ── MODALS ── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 8, 10, 0.92);
+    backdrop-filter: blur(12px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background: var(--machine);
+    border: 1px solid var(--border);
+    width: min(600px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+    transform: translateY(30px) scale(0.98);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0) scale(1);
+}
+
+.modal-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 77, 26, 0.03);
+}
+
+.modal-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 0.08em;
+    color: var(--cream);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--silver);
+    font-size: 28px;
+    cursor: none;
+    line-height: 1;
+    transition: color 0.3s;
+}
+
+.modal-close:hover {
+    color: var(--neon);
+}
+
+.modal-body {
+    padding: 32px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--neon);
+    margin-bottom: 10px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    background: rgba(6, 8, 10, 0.4);
+    border: 1px solid var(--border);
+    color: var(--cream);
+    padding: 12px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--neon);
+    background: rgba(255, 77, 26, 0.05);
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* ── PORTFOLIO OWNER ACTIONS ── */
+.pi-owner-actions {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.pi-btn {
+    background: none;
+    border: none;
+    color: var(--silver);
+    font-size: 14px;
+    cursor: none;
+    opacity: 0.6;
+    transition: all 0.3s;
+}
+
+.pi-btn:hover {
+    color: var(--neon);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.pc-actions button:hover {
+    opacity: 1 !important;
+    transform: scale(1.2);
+}
+
+@keyframes slowSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}

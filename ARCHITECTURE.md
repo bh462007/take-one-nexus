@@ -20,6 +20,9 @@ TAKE ONE Nexus is a **hybrid architecture** — a Next.js React app and a standa
 - **Session authority model:** frontend auth now validates persisted local session state against backend `/api/users/me` (cookie + JWT middleware), preventing stale local tokens from causing auth/UI desync.
 - **Navbar interaction hardening:** shared navbar re-render flow now uses defensive event listeners (instead of inline handlers) with guarded API access to avoid broken CTA behavior when scripts hydrate in different orders.
 - **Modal/runtime safety hardening:** static landing now explicitly loads `components/modal.js`, defers dependent page scripts, and uses fallback-safe modal open handlers so auth/login UI interactions continue working even if one helper script fails.
+- **Public Profile access:** Implemented `GET /api/users/public/:id` for unauthenticated profile fetching, enabling vetting before messaging.
+- **Portfolio CRUD architecture:** Added full Create/Update/Delete endpoints for `Script` models to support user-managed portfolio entries via a shared cinematic modal.
+- **Canonical Naming Logic:** Unified display name preferences (Real Name, Screen Name, Both) via a shared utility used by both Next.js and Express services.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -167,9 +170,9 @@ The Express server is the API layer. It runs as a Vercel serverless function in 
 
 | File | Key Endpoints |
 |---|---|
-| `users.js` | `POST /register`, `POST /login`, `GET /me`, `PUT /me`, avatar upload |
-| `scripts.js` | `GET /search`, `POST /`, `PUT /:id`, `DELETE /:id` |
-| `requests.js` | `POST /`, `GET /user/:id`, `PUT /:id/status` |
+| `users.js` | `POST /register`, `POST /login`, `GET /me`, `PUT /me`, `GET /public/:id` (public), avatar upload |
+| `scripts.js` | `GET /search`, `POST /`, `PUT /:id` (edit portfolio), `DELETE /:id` (remove work) |
+| `requests.js` | `POST /`, `GET /user/:id`, `PUT /:id/status` (unified display logic) |
 | `chat.js` | `GET /conversations`, `POST /conversations`, `GET /messages/:id`, `POST /messages` |
 | `notifications.js` | `GET /`, `PUT /:id/read` |
 | `issues.js` | `POST /`, `GET /`, `PUT /:id/status` |

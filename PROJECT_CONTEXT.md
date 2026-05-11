@@ -8,10 +8,11 @@
 
 **TAKE ONE Nexus** is a role-based creative ecosystem where filmmakers can:
 - Browse and post scripts/projects looking for collaborators
-- Find crew members filtered by their creative role
-- Send and manage collaboration requests
+- Find crew members filtered by their creative role with direct "View Profile" access
+- Send and manage collaboration requests with standardized screen name logic
 - Chat in real-time (DMs and group conversations)
-- Maintain a professional cinematic profile with a work showcase
+- Maintain a professional cinematic profile with full Portfolio CRUD (Add/Edit/Delete work)
+- Public Profile access for vetting collaborators before messaging
 - Report platform issues directly from the UI
 
 The platform targets student film communities and indie filmmakers, with an aesthetic inspired by cinematic dark UI design.
@@ -35,6 +36,10 @@ The platform targets student film communities and indie filmmakers, with an aest
 - Hardened navbar CTA bindings to avoid inline logout dependency and to safely handle missing API/auth globals without freezing navigation.
 - Added additional null checks in project page auth/search interactions to prevent runtime crashes that could break navbar/login listeners.
 - Fixed landing-page auth modal bootstrap by loading `/scripts/components/modal.js` on `project.htm`, deferring page scripts consistently, and adding guarded modal open/bind logic so `Join Now` and navbar CTA clicks remain functional after navbar re-renders.
+- **Implemented Public Profile Access**: Added unauthenticated profile viewing via `/api/users/public/:id` and updated `ProfilePage` to support visitor views.
+- **Added Portfolio CRUD**: Creators can now Add, Edit, and Delete work items directly via a cinematic modal on their profile.
+- **Standardized Display Naming**: Created `getCanonicalDisplayName` utility to unify "Real Name" vs "Screen Name" preferences across Chat, Notifications, and Profiles.
+- **Unified Profile UX**: Added "View Profile" buttons to Crew Marketplace cards and Chat participant menus.
 
 ---
 
@@ -159,9 +164,16 @@ In local dev (non-Vercel), Next.js proxies `/api/*` to Express running on port `
 
 ### Profile & Work Showcase
 1. User visits `/profile` (React page)
-2. Profile data loaded from `GET /api/users/me`
+2. Authenticated user loads via `GET /api/users/me`; public visitor loads via `GET /api/users/public/:id`
 3. Work showcase (scripts) loaded from `GET /api/scripts?user_id=...`
-4. User can upload avatar, edit bio, manage social links
+4. Owner can perform Portfolio CRUD (Add/Edit/Delete work) via a cinematic modal and manage profile settings
+5. Visitors can view the creative showcase and message the creator directly from the profile
+
+### Public Discovery
+1. User searches for crew in `crew.htm`
+2. Clicks **View Profile** on a crew card
+3. Vets the creator's portfolio and scripts on their public profile
+4. Clicks **Send Message** to initiate a collaboration in the Chat system
 
 ### Real-time Chat
 1. User navigates to `/chat`
@@ -183,6 +195,7 @@ In local dev (non-Vercel), Next.js proxies `/api/*` to Express running on port `
 | **Navbar** | `public/scripts/components/navbar.js` | Shared nav logic for static pages |
 | **Database Connection** | `config/db.js` | MySQL pool + connection helper |
 | **Mailer** | `config/mailer.js` | SMTP transport via Nodemailer |
+| **Display Name Utility** | `utils/formatting.js` | Canonical display name logic for backend |
 | **Issue Reporter** | `src/components/GlobalIssueReporter.tsx` | Injected into Next.js root layout |
 
 ---

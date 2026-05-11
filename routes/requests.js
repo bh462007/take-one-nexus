@@ -3,7 +3,7 @@ const { pool } = require('../config/db');
 const { sendCollaborationRequestEmail } = require('../config/mailer');
 const { authenticateUser, requireSameUser } = require('../middleware/auth');
 const { createNotification } = require('../utils/notifications');
-
+const { getCanonicalDisplayName } = require('../utils/formatting');
 const router = express.Router();
 
 async function ensureRequestsTable() {
@@ -137,7 +137,7 @@ router.post('/', authenticateUser, async (req, res) => {
           userId: script.user_id,
           type: 'request_received',
           title: 'New crew request',
-          body: `${requester.name} wants to join "${script.title}" as ${requester.role || 'crew'}.`,
+          body: `${getCanonicalDisplayName(requester)} wants to join "${script.title}" as ${requester.role || 'crew'}.`,
           linkUrl: '/profile#collab'
         });
       } catch (notificationError) {
@@ -239,7 +239,7 @@ router.patch('/:id/status', authenticateUser, async (req, res) => {
         userId: request.requester_id,
         type: `request_${status}`,
         title: `Request ${status}`,
-        body: `${request.owner_name} ${status} your request for "${request.script_title}".`,
+        body: `${getCanonicalDisplayName(request)} ${status} your request for "${request.script_title}".`,
         linkUrl: '/profile#collab'
       });
     } catch (notificationError) {
@@ -284,11 +284,9 @@ router.get('/user/:id', authenticateUser, requireSameUser, async (req, res) => {
         collaboration_requests.created_at,
         scripts.title AS script_title,
         scripts.genre AS script_genre,
-        users.name AS requester_name,
-        users.role AS requester_role,
-        users.city AS requester_city,
-        users.gender AS requester_gender,
-        users.avatar_url AS requester_avatar_url
+        users.avatar_url AS requester_avatar_url,
+        users.screen_name AS requester_screen_name,
+        users.display_preference AS requester_display_preference
        FROM collaboration_requests
        JOIN scripts ON scripts.id = collaboration_requests.script_id
        JOIN users ON users.id = collaboration_requests.requester_id
@@ -305,9 +303,9 @@ router.get('/user/:id', authenticateUser, requireSameUser, async (req, res) => {
         collaboration_requests.created_at,
         scripts.title AS script_title,
         scripts.genre AS script_genre,
-        users.name AS owner_name,
-        users.gender AS owner_gender,
-        users.avatar_url AS owner_avatar_url
+        users.avatar_url AS owner_avatar_url,
+        users.screen_name AS owner_screen_name,
+        users.display_preference AS owner_display_preference
        FROM collaboration_requests
        JOIN scripts ON scripts.id = collaboration_requests.script_id
        JOIN users ON users.id = collaboration_requests.owner_id

@@ -181,4 +181,93 @@ router.post('/', authenticateUser, async (req, res) => {
   }
 });
 
+router.put('/:id', authenticateUser, async (req, res) => {
+  try {
+    const scriptId = Number(req.params.id);
+    const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;
+
+    if (!title) {
+      return res.status(400).json({
+        success: false,
+        message: 'Script title is required'
+      });
+    }
+
+    // Check ownership
+    const [rows] = await pool.query('SELECT user_id FROM scripts WHERE id = ? LIMIT 1', [scriptId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Script not found' });
+    }
+
+    if (rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to edit this script' });
+    }
+
+    await pool.query(
+      `UPDATE scripts SET 
+        title = ?, genre = ?, synopsis = ?, roles_needed = ?, status = ?, 
+        work_type = ?, media_links = ?, role_data = ?, poster_url = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [
+        String(title).trim(),
+        genre || null,
+        synopsis || null,
+        roles_needed || null,
+        status || 'Open for collaboration',
+        work_type || 'Script',
+        media_links || null,
+        role_data || null,
+        poster_url || null,
+        scriptId
+      ]
+    );
+
+    const [scriptRows] = await pool.query(
+      `SELECT * FROM scripts WHERE id = ? LIMIT 1`,
+      [scriptId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Script updated successfully',
+      data: scriptRows[0]
+    });
+  } catch (error) {
+    console.error('Script update error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Could not update script'
+    });
+  }
+});
+
+router.delete('/:id', authenticateUser, async (req, res) => {
+  try {
+    const scriptId = Number(req.params.id);
+
+    // Check ownership
+    const [rows] = await pool.query('SELECT user_id FROM scripts WHERE id = ? LIMIT 1', [scriptId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Script not found' });
+    }
+
+    if (rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to delete this script' });
+    }
+
+    await pool.query('DELETE FROM scripts WHERE id = ?', [scriptId]);
+
+    res.json({
+      success: true,
+      message: 'Script deleted successfully'
+    });
+  } catch (error) {
+    console.error('Script deletion error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Could not delete script'
+    });
+  }
+});
+
 module.exports = router;

@@ -36,26 +36,46 @@ export async function generateMetadata(
   }
 }
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   try {
-    const rawUser = await getCurrentUser();
+    const { id: targetId } = await searchParams;
+    const authUser = await getCurrentUser();
     
-    // Auth Gate
-    if (!rawUser) {
-      return (
-        <div className="profile-auth-gate" id="profileAuthGate">
-          <div className="auth-kicker">Profile Locked</div>
-          <h1>Login to open your creator profile</h1>
-          <p>Your scripts, requests, skills, and collaboration inbox live here after you sign in.</p>
-          <div className="auth-actions">
-            <a href="/?auth=login" className="auth-primary">Login →</a>
-            <a href="/?auth=register" className="auth-secondary">Create Account</a>
+    let rawUser;
+    let isOwner = false;
+
+    if (targetId && authUser?.id !== Number(targetId)) {
+      // Viewing someone else's public profile
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${baseUrl}/api/users/public/${targetId}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.message || 'Profile not found');
+      }
+      rawUser = json.data;
+      isOwner = false;
+    } else {
+      // Viewing own profile
+      rawUser = authUser;
+      isOwner = true;
+
+      // Auth Gate if not logged in and no targetId
+      if (!rawUser) {
+        return (
+          <div className="profile-auth-gate" id="profileAuthGate">
+            <div className="auth-kicker">Profile Locked</div>
+            <h1>Login to open your creator profile</h1>
+            <p>Your scripts, requests, skills, and collaboration inbox live here after you sign in.</p>
+            <div className="auth-actions">
+              <a href="/?auth=login" className="auth-primary">Login →</a>
+              <a href="/?auth=register" className="auth-secondary">Create Account</a>
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
     }
 
-    // ENSURE POJO SERIALIZATION (Deep clone to remove Prisma class metadata)
+    // ENSURE POJO SERIALIZATION
     const user = JSON.parse(JSON.stringify(rawUser));
 
     // STABILITY: Absolute defaults for all fields
@@ -70,11 +90,11 @@ export default async function ProfilePage() {
     
     // Display Name Logic
     const screenName = user?.screen_name || '';
-    const displayPreference = user?.display_preference || 'Show Real Name Only';
+    const displayPreference = user?.display_preference || 'Real Name Only';
     let displayName = name;
-    if (displayPreference === 'Show Screen Name Only' && screenName) {
+    if (displayPreference === 'Screen Name Only' && screenName) {
       displayName = screenName;
-    } else if (displayPreference === 'Show Both' && screenName) {
+    } else if (displayPreference === 'Both' && screenName) {
       displayName = `${name} • ${screenName}`;
     }
 
@@ -92,9 +112,9 @@ export default async function ProfilePage() {
           <nav>
             <a href="/">Home</a>
             <a href="/#explore">Explore</a>
-            <a href="/#upload">Upload</a>
+            <a href="/crew.htm">Crew</a>
             <a href="/chat" className="nav-chat-link">Messages</a>
-            <button className="profile-logout" id="profileLogoutBtn" type="button">Logout</button>
+            {isOwner && <button className="profile-logout" id="profileLogoutBtn" type="button">Logout</button>}
           </nav>
         </header>
 
@@ -102,7 +122,7 @@ export default async function ProfilePage() {
         <div className="profile-hero">
           <div className="hero-reel-deco"></div>
           <div className="hero-reel-deco2"></div>
-          <div className="profile-hero-text">TAKE ONE · LIVE CREATOR PROFILE</div>
+          <div className="profile-hero-text">TAKE ONE · {isOwner ? 'MY CREATOR PROFILE' : 'VISITING CREATOR'}</div>
           <div className="filmstrip-h"></div>
         </div>
 
@@ -116,8 +136,12 @@ export default async function ProfilePage() {
                 <div className="avatar-ring">
                   <img src={avatarUrl} id="profilePic" alt="Profile Photo" />
                 </div>
-                <button className="avatar-edit" id="avatarEditBtn" type="button">✎</button>
-                <input type="file" id="avatarInput" accept="image/*" style={{ display: 'none' }} />
+                {isOwner && (
+                  <>
+                    <button className="avatar-edit" id="avatarEditBtn" type="button">✎</button>
+                    <input type="file" id="avatarInput" accept="image/*" style={{ display: 'none' }} />
+                  </>
+                )}
               </div>
 
               <div className="credit-badge-wrap">
@@ -129,7 +153,7 @@ export default async function ProfilePage() {
               </div>
 
               <div id="profileName">{displayName}</div>
-              {screenName && displayPreference !== 'Show Screen Name Only' && (
+              {screenName && displayPreference !== 'Screen Name Only' && (
                 <div className="profile-screen-name">@{screenName}</div>
               )}
               <div className="profile-role" id="profileRole">{role}</div>
@@ -154,7 +178,11 @@ export default async function ProfilePage() {
                 </div>
               </div>
 
-              <button className="btn-edit-profile" id="sidebarEditBtn">Edit Profile →</button>
+              {isOwner ? (
+                <button className="btn-edit-profile" id="sidebarEditBtn">Edit Profile →</button>
+              ) : (
+                <a href={`/chat?userId=${user.id}`} className="btn-edit-profile" style={{ textAlign: 'center', textDecoration: 'none' }}>Send Message →</a>
+              )}
 
               <div className="skill-badges" id="skillBadges">
                 {skills.length > 0 ? (
@@ -162,7 +190,7 @@ export default async function ProfilePage() {
                     <span key={i} className="badge">{skill.trim()}</span>
                   ))
                 ) : (
-                  <span className="badge">New Creator</span>
+                  <span className="badge">Creator</span>
                 )}
               </div>
             </div>
@@ -171,19 +199,21 @@ export default async function ProfilePage() {
             <div className="profile-content">
               <div className="content-tabs" id="profileTabs">
                 <button className="ctab active" data-tab="projects">Projects</button>
-                <button className="ctab"        data-tab="about">About</button>
-                <button className="ctab"        data-tab="collab">Collaborate</button>
+                {isOwner && <button className="ctab"        data-tab="about">About</button>}
+                <button className="ctab"        data-tab="collab">{isOwner ? 'Collaborate' : 'Status'}</button>
                 <button className="ctab"        data-tab="portfolio">Portfolio</button>
-                <button className="ctab"        data-tab="notifications">
-                  Notifications <span className="tab-count" id="notificationCount">0</span>
-                </button>
+                {isOwner && (
+                  <button className="ctab"        data-tab="notifications">
+                    Notifications <span className="tab-count" id="notificationCount">0</span>
+                  </button>
+                )}
               </div>
 
               {/* ── PROJECTS TAB ── */}
               <div className="tab-pane active" id="tab-projects">
                 <div className="section-head">
-                  <h3>My Projects</h3>
-                  <a href="/#upload" className="btn-sm">+ Add Script</a>
+                  <h3>{isOwner ? 'My Projects' : 'Featured Projects'}</h3>
+                  {isOwner && <a href="/#upload" className="btn-sm">+ Add Script</a>}
                 </div>
                 <div className="project-grid" id="projectGrid">
                   {scripts.length > 0 ? (
@@ -201,18 +231,20 @@ export default async function ProfilePage() {
                     </div>
                   )}
                   
-                  <div className="project-card"
-                       style={{ 
-                          background: 'rgba(255,77,26,0.03)',
-                          border: '1px dashed rgba(255,77,26,0.2)',
-                          display: 'flex', flexDirection: 'column',
-                          alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer'
-                       }}
-                       id="addProjectAction">
-                    <div style={{ fontSize: '28px', color: 'rgba(255,77,26,0.3)', marginBottom: '8px' }}>+</div>
-                    <div style={{ fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,77,26,0.4)' }}>New Script</div>
-                  </div>
+                  {isOwner && (
+                    <div className="project-card"
+                         style={{ 
+                            background: 'rgba(255,77,26,0.03)',
+                            border: '1px dashed rgba(255,77,26,0.2)',
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer'
+                         }}
+                         id="addProjectAction">
+                      <div style={{ fontSize: '28px', color: 'rgba(255,77,26,0.3)', marginBottom: '8px' }}>+</div>
+                      <div style={{ fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,77,26,0.4)' }}>New Script</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -254,9 +286,9 @@ export default async function ProfilePage() {
                   <div className="about-item">
                     <label htmlFor="editDisplayPreference">Display Preference</label>
                     <select id="editDisplayPreference" className="profile-role-dropdown" defaultValue={displayPreference}>
-                      <option value="Show Real Name Only">Show Real Name Only</option>
-                      <option value="Show Screen Name Only">Show Screen Name Only</option>
-                      <option value="Show Both">Show Both (Name • Screen Name)</option>
+                      <option value="Real Name Only">Real Name Only</option>
+                      <option value="Screen Name Only">Screen Name Only</option>
+                      <option value="Both">Both (Name • Screen Name)</option>
                     </select>
                   </div>
                   <div className="about-item full">
@@ -334,21 +366,66 @@ export default async function ProfilePage() {
                   <h3>Notifications</h3>
                   <button className="btn-sm" type="button" id="markReadBtn">Mark All Read</button>
                 </div>
-                <div className="notification-list" id="notificationList">
+                  <div className="notification-list" id="notificationList">
                   <div className="collab-empty"><div className="collab-reel"><span>•</span></div><p>Loading notifications...</p></div>
                 </div>
-              </div>
+              </div>{/* /.tab-notifications */}
+            </div>{/* /.profile-content */}
+          </div>{/* /.profile-card */}
 
+          <div style={{ height: '60px' }}></div>
+        </div>{/* /.profile-main */}
+
+          {/* ── PORTFOLIO EDIT MODAL ── */}
+          <div className="modal-overlay" id="workModal">
+            <div className="modal-content portfolio-modal">
+              <div className="modal-header">
+                <h2 id="workModalTitle">Add Portfolio Work</h2>
+                <button className="modal-close" id="closeWorkModal">×</button>
+              </div>
+              <div className="modal-body">
+                <form id="workForm">
+                  <input type="hidden" id="workId" />
+                  <div className="form-group">
+                    <label>Title</label>
+                    <input type="text" id="workTitle" placeholder="Project Title" required />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Genre</label>
+                      <input type="text" id="workGenre" placeholder="e.g. Sci-Fi, Horror" />
+                    </div>
+                    <div className="form-group">
+                      <label>Type</label>
+                      <select id="workType">
+                        <option value="Script">Script</option>
+                        <option value="Short Film">Short Film</option>
+                        <option value="Feature Film">Feature Film</option>
+                        <option value="Music Video">Music Video</option>
+                        <option value="Reel">Reel / Montage</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Media Link (YouTube/Vimeo/Drive)</label>
+                    <input type="url" id="workLink" placeholder="https://..." />
+                  </div>
+                  <div className="form-group">
+                    <label>Synopsis / Description</label>
+                    <textarea id="workSynopsis" placeholder="Brief description of your role and the project..."></textarea>
+                  </div>
+                  <button type="submit" className="save-btn" id="saveWorkBtn">Save Work ✦</button>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* ── STATUS BAR ── */}
-        <div className="status-bar">
-          <div className="status-item"><div className="status-dot"></div>Profile Active</div>
-          <div className="status-item">TAKE ONE · Creator Mode</div>
-          <div className="status-item" id="statusTime"></div>
-        </div>
+          {/* ── STATUS BAR ── */}
+          <div className="status-bar">
+            <div className="status-item"><div className="status-dot"></div>Profile Active</div>
+            <div className="status-item">TAKE ONE · Creator Mode</div>
+            <div className="status-item" id="statusTime"></div>
+          </div>
 
         <Script src="/scripts/utils/helpers.js" strategy="afterInteractive" />
         <Script src="/scripts/components/ui.js" strategy="afterInteractive" />

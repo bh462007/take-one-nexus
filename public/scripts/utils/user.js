@@ -12,18 +12,19 @@ const UserUtils = {
     getDisplayName(user) {
         if (!user) return 'Guest';
         
-        const { name, screen_name, display_preference } = user;
-        const preference = display_preference || 'Show Real Name Only';
+        const name = user.name || 'Anonymous Creator';
+        const screen_name = user.screen_name || '';
+        const preference = user.display_preference || 'Real Name Only';
         
-        if (preference === 'Show Screen Name Only' && screen_name) {
+        if (preference === 'Screen Name Only' && screen_name) {
             return screen_name;
         }
         
-        if (preference === 'Show Both' && screen_name) {
+        if (preference === 'Both' && screen_name) {
             return `${name} • ${screen_name}`;
         }
         
-        return name || 'Anonymous Creator';
+        return name;
     },
 
     /**

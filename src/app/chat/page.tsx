@@ -83,9 +83,12 @@ export default function ChatPage() {
 
   const getDisplayName = useCallback((u: User | null) => {
     if (!u) return 'Unnamed Creator';
-    const { name, screen_name, display_preference } = u;
-    if (display_preference === 'Show Screen Name Only' && screen_name) return screen_name;
-    if (display_preference === 'Show Both' && screen_name) return `${name} • ${screen_name}`;
+    const name = u.name || 'Anonymous Creator';
+    const screenName = u.screen_name || '';
+    const preference = u.display_preference || 'Real Name Only';
+    
+    if (preference === 'Screen Name Only' && screenName) return screenName;
+    if (preference === 'Both' && screenName) return `${name} • ${screenName}`;
     return name;
   }, []);
 
@@ -753,7 +756,11 @@ export default function ChatPage() {
                       </>
                     ) : (
                       <>
-                        <button onClick={() => { setShowDetails(true); setShowMenu(false); }}>View Profile</button>
+                        <button onClick={() => { 
+                          if (activeRecipient?.id) window.location.href = `/profile?id=${activeRecipient.id}`;
+                          else setShowDetails(true); 
+                          setShowMenu(false); 
+                        }}>View Profile</button>
                         <button onClick={() => toggleMute()}>{isMuted ? 'Unmute Signal' : 'Mute Signal'}</button>
                         <button onClick={() => handleClearChat(activeConv.id)}>Clear History</button>
                         <button className="danger" onClick={() => handleDeleteConversation(activeConv.id)}>Delete Transmission</button>

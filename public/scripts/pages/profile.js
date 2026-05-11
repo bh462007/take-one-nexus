@@ -94,24 +94,23 @@ function renderProjects(scripts) {
         </div>
     `).join('');
 
-    grid.innerHTML = `
-        ${cards || `
-        <div class="project-card"
-             style="background: rgba(255,77,26,0.03); border: 1px dashed rgba(255,77,26,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center;">
-          <div style="font-size: 12px; color: rgba(255,77,26,0.5); text-transform: uppercase; letter-spacing: 0.2em;">No scripts yet</div>
-        </div>`}
+    grid.innerHTML = cards + (isOwner ? `
         <div class="project-card"
              style="background: rgba(255,77,26,0.03);
                     border: 1px dashed rgba(255,77,26,0.2);
                     display: flex; flex-direction: column;
                     align-items: center; justify-content: center;
                     cursor: pointer;"
-             id="addProjectAction">
+             onclick="openEditWorkModal()">
           <div style="font-size: 28px; color: rgba(255,77,26,0.3); margin-bottom: 8px;">+</div>
           <div style="font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase;
-                      color: rgba(255,77,26,0.4);">New Script</div>
+                      color: rgba(255,77,26,0.4);">Add Work</div>
         </div>
-    `;
+    ` : (items.length === 0 ? `
+        <div class="project-card"
+             style="background: rgba(255,77,26,0.03); border: 1px dashed rgba(255,77,26,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="font-size: 12px; color: rgba(255,77,26,0.5); text-transform: uppercase; letter-spacing: 0.2em;">No scripts yet</div>
+        </div>` : ''));
 
     if (typeof updateStat === 'function') updateStat('projCount', items.length);
 }
@@ -165,12 +164,15 @@ function renderPortfolio(profile) {
     
     detailsWrap.innerHTML = detailsHtml;
 
+    const authUser = API.auth.getUser();
+    const isOwner = authUser && profile.id === authUser.id;
+
     // 2. Render Featured Work Cards
     if (scripts.length === 0) {
         gridWrap.innerHTML = `
             <div class="collab-empty">
                 <p>No projects uploaded to showcase yet.</p>
-                <a href="/#upload" class="btn-sm">Add Work →</a>
+                ${isOwner ? '<button onclick="openEditWorkModal()" class="btn-sm">Add Work →</button>' : ''}
             </div>
         `;
     } else {
@@ -179,6 +181,12 @@ function renderPortfolio(profile) {
                 <div class="pi-header">
                     <span class="pi-type">${script.work_type || 'Project'}</span>
                     <span class="pi-num">0${i+1}</span>
+                    ${isOwner ? `
+                        <div class="pi-owner-actions">
+                            <button onclick="openEditWorkModal(${script.id})" class="pi-btn">✎</button>
+                            <button onclick="deleteWork(${script.id})" class="pi-btn">×</button>
+                        </div>
+                    ` : ''}
                 </div>
                 <div class="pi-title">${script.title}</div>
                 <div class="pi-meta">${script.genre || 'General'} · ${script.status || 'Active'}</div>
@@ -188,8 +196,11 @@ function renderPortfolio(profile) {
     }
 }
 
+let currentProfileData = null;
+
 function populateProfile(profile) {
     if (!profile) return;
+    currentProfileData = profile;
     
     const nameEl = document.getElementById('profileName');
     if (nameEl) {
@@ -243,7 +254,29 @@ function populateProfile(profile) {
 async function loadProfile() {
     if (typeof API === 'undefined' || !API.auth || !API.users) return;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetId = urlParams.get('id');
     const authUser = API.auth.getUser();
+    
+    // If we have a targetId and it's not us, fetch public profile
+    if (targetId && (!authUser || authUser.id !== parseInt(targetId))) {
+        try {
+            const res = await fetch(`/api/users/public/${targetId}`);
+            const json = await res.json();
+            if (json.success) {
+                populateProfile(json.data);
+                // Hide edit elements if not owner
+                document.querySelectorAll('.avatar-edit, .btn-edit-profile, .btn-sm, #sidebarEditBtn').forEach(el => {
+                    if (el.id !== 'messageBtn') el.style.display = 'none';
+                });
+                return;
+            }
+        } catch (err) {
+            console.error('Error loading public profile:', err);
+        }
+    }
+
+    // Default to own profile
     if (!authUser || !authUser.id) {
         setProfileGate(true);
         return;
@@ -581,13 +614,28 @@ function initProfile() {
         markReadBtn.addEventListener('click', markAllNotificationsRead);
     }
 
-    /* Project Add */
+    /* Project Add -> Now opens modal */
     const addProj = document.getElementById('addProjectAction');
     if (addProj) {
         addProj.addEventListener('click', () => {
-            window.location.href = '/#upload';
+            openEditWorkModal();
         });
     }
+
+    /* Modal Close */
+    const closeBtn = document.getElementById('closeWorkModal');
+    if (closeBtn) closeBtn.onclick = closeWorkModal;
+    
+    const modal = document.getElementById('workModal');
+    if (modal) {
+        modal.onclick = (e) => {
+            if (e.target === modal) closeWorkModal();
+        };
+    }
+    
+    /* Form Submit */
+    const workForm = document.getElementById('workForm');
+    if (workForm) workForm.onsubmit = handleWorkSubmit;
 
     /* Logout */
     const logoutBtn = document.getElementById('profileLogoutBtn');
@@ -612,3 +660,108 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 }
 
 window.addEventListener('hashchange', activateHashTab);
+
+// ── PORTFOLIO CRUD FUNCTIONS ──
+window.openEditWorkModal = function(scriptId = null) {
+    const modal = document.getElementById('workModal');
+    const form = document.getElementById('workForm');
+    const title = document.getElementById('workModalTitle');
+    
+    if (!modal || !form) return;
+    
+    form.reset();
+    document.getElementById('workId').value = scriptId || '';
+    
+    if (scriptId) {
+        title.textContent = 'Edit Portfolio Work';
+        const script = currentProfileData?.scripts?.find(s => s.id === scriptId);
+        if (script) {
+            document.getElementById('workTitle').value = script.title || '';
+            document.getElementById('workGenre').value = script.genre || '';
+            document.getElementById('workType').value = script.work_type || 'Script';
+            document.getElementById('workLink').value = script.media_links || '';
+            document.getElementById('workSynopsis').value = script.synopsis || '';
+        }
+    } else {
+        title.textContent = 'Add Portfolio Work';
+    }
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeWorkModal = function() {
+    const modal = document.getElementById('workModal');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+};
+
+window.deleteWork = async function(scriptId) {
+    if (!confirm('Are you sure you want to remove this project from your portfolio?')) return;
+    
+    try {
+        const res = await fetch(`/api/scripts/${scriptId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            if (typeof showToast === 'function') showToast('Project removed ✦');
+            loadProfile(); 
+        } else {
+            if (typeof showToast === 'function') showToast(json.message || 'Error deleting project');
+        }
+    } catch (err) {
+        console.error('Delete error:', err);
+        if (typeof showToast === 'function') showToast('Connection error');
+    }
+};
+
+async function handleWorkSubmit(e) {
+    e.preventDefault();
+    const scriptId = document.getElementById('workId').value;
+    const saveBtn = document.getElementById('saveWorkBtn');
+    
+    const data = {
+        title: document.getElementById('workTitle').value,
+        genre: document.getElementById('workGenre').value,
+        work_type: document.getElementById('workType').value,
+        media_links: document.getElementById('workLink').value,
+        synopsis: document.getElementById('workSynopsis').value,
+        status: 'Portfolio Item'
+    };
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+
+    try {
+        const url = scriptId ? `/api/scripts/${scriptId}` : '/api/scripts';
+        const method = scriptId ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            if (typeof showToast === 'function') showToast(scriptId ? 'Project updated ✦' : 'Project added ✦');
+            closeWorkModal();
+            loadProfile();
+        } else {
+            if (typeof showToast === 'function') showToast(json.message || 'Error saving project');
+        }
+    } catch (err) {
+        console.error('Save error:', err);
+        if (typeof showToast === 'function') showToast('Connection error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Work ✦';
+        }
+    }
+}

@@ -61,6 +61,7 @@ function personCard(person) {
       <div class="crew-skills">${skills}</div>
       <div class="crew-actions">
         <a class="crew-contact" href="/chat?${chatParams.toString()}">Message</a>
+        <a class="crew-contact view-profile" href="/profile?id=${person.id}">View Profile</a>
       </div>
     </article>
   `;
