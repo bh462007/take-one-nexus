@@ -386,35 +386,46 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               <div className="modal-body">
                 <form id="workForm">
                   <input type="hidden" id="workId" />
+                  
+                  {/* Base Fields */}
                   <div className="form-group">
-                    <label>Title</label>
+                    <label>Project Title</label>
                     <input type="text" id="workTitle" placeholder="Project Title" required />
                   </div>
+                  
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Genre</label>
+                      <label>Primary Genre</label>
                       <input type="text" id="workGenre" placeholder="e.g. Sci-Fi, Horror" />
                     </div>
                     <div className="form-group">
-                      <label>Type</label>
+                      <label>Project Type</label>
                       <select id="workType">
                         <option value="Script">Script</option>
                         <option value="Short Film">Short Film</option>
                         <option value="Feature Film">Feature Film</option>
                         <option value="Music Video">Music Video</option>
                         <option value="Reel">Reel / Montage</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
                   </div>
+
+                  {/* Dynamic Role-Based Fields Container */}
+                  <div id="roleDynamicFields"></div>
+
                   <div className="form-group">
-                    <label>Media Link (YouTube/Vimeo/Drive)</label>
+                    <label>Media Link (YouTube/Vimeo/Drive/Behance)</label>
                     <input type="url" id="workLink" placeholder="https://..." />
                   </div>
+
                   <div className="form-group">
-                    <label>Synopsis / Description</label>
-                    <textarea id="workSynopsis" placeholder="Brief description of your role and the project..."></textarea>
+                    <label>Description / Synopsis</label>
+                    <textarea id="workSynopsis" placeholder="Brief description of your project and your contribution..."></textarea>
                   </div>
-                  <button type="submit" className="save-btn" id="saveWorkBtn">Save Work ✦</button>
+
+                  <button type="submit" className="save-btn" id="saveWorkBtn" style={{ width: '100%' }}>Save Work ✦</button>
                 </form>
               </div>
             </div>

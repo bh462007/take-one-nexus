@@ -176,23 +176,37 @@ function renderPortfolio(profile) {
             </div>
         `;
     } else {
-        gridWrap.innerHTML = scripts.map((script, i) => `
-            <div class="portfolio-item-card">
-                <div class="pi-header">
-                    <span class="pi-type">${script.work_type || 'Project'}</span>
-                    <span class="pi-num">0${i+1}</span>
-                    ${isOwner ? `
-                        <div class="pi-owner-actions">
-                            <button onclick="openEditWorkModal(${script.id})" class="pi-btn">✎</button>
-                            <button onclick="deleteWork(${script.id})" class="pi-btn">×</button>
-                        </div>
-                    ` : ''}
+        gridWrap.innerHTML = scripts.map((script, i) => {
+            let roleInfo = '';
+            if (script.role_data) {
+                try {
+                    const rData = JSON.parse(script.role_data);
+                    roleInfo = Object.entries(rData)
+                        .filter(([k, v]) => v)
+                        .map(([k, v]) => `<div class="pi-role-tag"><strong>${k}:</strong> ${v}</div>`)
+                        .join('');
+                } catch(e) {}
+            }
+
+            return `
+                <div class="portfolio-item-card">
+                    <div class="pi-header">
+                        <span class="pi-type">${script.work_type || 'Project'}</span>
+                        <span class="pi-num">0${i+1}</span>
+                        ${isOwner ? `
+                            <div class="pi-owner-actions">
+                                <button onclick="openEditWorkModal(${script.id})" class="pi-btn">✎</button>
+                                <button onclick="deleteWork(${script.id})" class="pi-btn">×</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="pi-title">${script.title}</div>
+                    <div class="pi-meta">${script.genre || 'General'} · ${script.status || 'Active'}</div>
+                    <div class="pi-role-data">${roleInfo}</div>
+                    ${script.media_links ? `<a href="${script.media_links}" target="_blank" class="pi-link">View Project →</a>` : ''}
                 </div>
-                <div class="pi-title">${script.title}</div>
-                <div class="pi-meta">${script.genre || 'General'} · ${script.status || 'Active'}</div>
-                ${script.media_links ? `<a href="${script.media_links}" target="_blank" class="pi-link">View Media →</a>` : ''}
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 }
 
@@ -661,6 +675,75 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 
 window.addEventListener('hashchange', activateHashTab);
 
+// ── ROLE-BASED FIELDS CONFIGURATION ──
+const ROLE_FIELDS = {
+    'DIRECTOR': [
+        { id: 'teamNeeded', label: 'Team Needed', type: 'text', placeholder: 'e.g. Editor, DP, 2 Actors' },
+    ],
+    'EDITOR': [
+        { id: 'software', label: 'Editing Software', type: 'text', placeholder: 'e.g. Premiere Pro, DaVinci Resolve' },
+        { id: 'editType', label: 'Edit Description', type: 'textarea', placeholder: 'Briefly describe the edit style...' }
+    ],
+    'ACTOR': [
+        { id: 'characterRole', label: 'Role Played', type: 'text', placeholder: 'e.g. Lead, Antagonist' },
+    ],
+    'DESIGNER': [
+        { id: 'designTools', label: 'Tools Used', type: 'text', placeholder: 'e.g. Photoshop, Illustrator, Blender' },
+        { id: 'designType', label: 'Design Specialization', type: 'text', placeholder: 'e.g. Poster Design, UI/UX' }
+    ],
+    'CINEMATOGRAPHER': [
+        { id: 'cameraUsed', label: 'Camera Gear', type: 'text', placeholder: 'e.g. RED Komodo, Sony A7SIII' },
+        { id: 'visualStyle', label: 'Visual Style', type: 'text', placeholder: 'e.g. High Contrast, Anamorphic' }
+    ],
+    'DP': [
+        { id: 'cameraUsed', label: 'Camera Gear', type: 'text', placeholder: 'e.g. RED Komodo, Sony A7SIII' },
+        { id: 'visualStyle', label: 'Visual Style', type: 'text', placeholder: 'e.g. High Contrast, Anamorphic' }
+    ]
+};
+
+function injectRoleFields(role, existingData = {}) {
+    const container = document.getElementById('roleDynamicFields');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Normalize role name
+    let normalizedRole = 'OTHER';
+    for (const r in ROLE_FIELDS) {
+        if (role.toUpperCase().includes(r)) {
+            normalizedRole = r;
+            break;
+        }
+    }
+    
+    const fields = ROLE_FIELDS[normalizedRole] || [];
+    
+    fields.forEach(field => {
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        
+        const label = document.createElement('label');
+        label.textContent = field.label;
+        
+        let input;
+        if (field.type === 'textarea') {
+            input = document.createElement('textarea');
+        } else {
+            input = document.createElement('input');
+            input.type = field.type;
+        }
+        
+        input.id = 'dynamic_' + field.id;
+        input.placeholder = field.placeholder;
+        input.className = 'dynamic-field';
+        input.value = existingData[field.id] || '';
+        
+        group.appendChild(label);
+        group.appendChild(input);
+        container.appendChild(group);
+    });
+}
+
 // ── PORTFOLIO CRUD FUNCTIONS ──
 window.openEditWorkModal = function(scriptId = null) {
     const modal = document.getElementById('workModal');
@@ -672,6 +755,9 @@ window.openEditWorkModal = function(scriptId = null) {
     form.reset();
     document.getElementById('workId').value = scriptId || '';
     
+    let role = currentProfileData?.role || 'Other';
+    let roleData = {};
+
     if (scriptId) {
         title.textContent = 'Edit Portfolio Work';
         const script = currentProfileData?.scripts?.find(s => s.id === scriptId);
@@ -681,10 +767,18 @@ window.openEditWorkModal = function(scriptId = null) {
             document.getElementById('workType').value = script.work_type || 'Script';
             document.getElementById('workLink').value = script.media_links || '';
             document.getElementById('workSynopsis').value = script.synopsis || '';
+            
+            if (script.role_data) {
+                try {
+                    roleData = JSON.parse(script.role_data);
+                } catch(e) { console.error('Failed to parse role_data', e); }
+            }
         }
     } else {
         title.textContent = 'Add Portfolio Work';
     }
+    
+    injectRoleFields(role, roleData);
     
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -723,14 +817,26 @@ async function handleWorkSubmit(e) {
     const scriptId = document.getElementById('workId').value;
     const saveBtn = document.getElementById('saveWorkBtn');
     
+    const dynamicData = {};
+    document.querySelectorAll('.dynamic-field').forEach(field => {
+        const key = field.id.replace('dynamic_', '');
+        dynamicData[key] = field.value.trim();
+    });
+
     const data = {
-        title: document.getElementById('workTitle').value,
-        genre: document.getElementById('workGenre').value,
+        title: document.getElementById('workTitle').value.trim(),
+        genre: document.getElementById('workGenre').value.trim(),
         work_type: document.getElementById('workType').value,
-        media_links: document.getElementById('workLink').value,
-        synopsis: document.getElementById('workSynopsis').value,
+        media_links: document.getElementById('workLink').value.trim(),
+        synopsis: document.getElementById('workSynopsis').value.trim(),
+        role_data: JSON.stringify(dynamicData),
         status: 'Portfolio Item'
     };
+
+    if (!data.title) {
+        if (typeof showToast === 'function') showToast('Project title is required ✦');
+        return;
+    }
 
     if (saveBtn) {
         saveBtn.disabled = true;
