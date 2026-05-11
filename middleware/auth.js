@@ -22,7 +22,8 @@ function authenticateUser(req, res, next) {
   }
 
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
+    req.user = jwt.verify(token, secret);
     return next();
   } catch (error) {
     return res.status(401).json({

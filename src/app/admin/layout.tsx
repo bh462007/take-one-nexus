@@ -17,11 +17,22 @@ export default function AdminLayout({
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const meRes = await fetch('/api/users/me', {
+          credentials: 'include',
+          cache: 'no-store'
+        });
+        const mePayload = await meRes.json();
+        const role = String(mePayload?.user?.role || '').toLowerCase();
+        if (meRes.ok && mePayload?.success && ['admin', 'developer', 'moderator'].includes(role)) {
+          setIsAuthorized(true);
+          return;
+        }
+
         const storedUser = localStorage.getItem('take_one_user');
         if (storedUser) {
           const user = JSON.parse(storedUser);
-          const role = String(user.role || '').toLowerCase();
-          if (['admin', 'developer', 'moderator'].includes(role)) {
+          const fallbackRole = String(user.role || '').toLowerCase();
+          if (['admin', 'developer', 'moderator'].includes(fallbackRole)) {
             setIsAuthorized(true);
             return;
           }
@@ -74,7 +85,7 @@ export default function AdminLayout({
           <Link href="/admin" className={pathname === '/admin' ? 'active' : ''}>Dashboard</Link>
           <Link href="/admin/users" className={pathname.startsWith('/admin/users') ? 'active' : ''}>Users</Link>
           <Link href="/admin/issues" className={pathname.startsWith('/admin/issues') ? 'active' : ''}>Issues</Link>
-          <Link href="/crew.htm">Crew</Link>
+          <Link href="/crew">Crew</Link>
           <Link href="/">Exit Terminal</Link>
         </nav>
       </header>

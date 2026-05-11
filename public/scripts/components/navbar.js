@@ -6,7 +6,7 @@
 const Navbar = {
     config: [
         { label: 'Explore', href: '/#explore' },
-        { label: 'Crew', href: '/crew.htm', id: 'navCrewLink' },
+        { label: 'Crew', href: '/crew', id: 'navCrewLink' },
         { label: 'Upload', href: '/#upload', id: 'navUploadLink' },
         { label: 'Profile', href: '/profile' }
     ],
@@ -43,7 +43,7 @@ const Navbar = {
             // Standardize Crew Link
             if (item.id === 'navCrewLink') {
                 label = 'Crew';
-                href = '/crew.htm';
+                href = '/crew';
             }
 
             // Avoid duplication (e.g. if a role is named 'Crew')
@@ -64,7 +64,7 @@ const Navbar = {
         // Add Login/Logout button
         if (user) {
             html += `
-                <button id="loginBtn" class="nav-cta" onclick="API.auth.logout()" style="background: var(--neon); border: none; padding: 9px 20px; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;">
+                <button id="loginBtn" class="nav-cta" style="background: var(--neon); border: none; padding: 9px 20px; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;">
                     Logout
                 </button>
             `;
@@ -78,13 +78,27 @@ const Navbar = {
 
         nav.innerHTML = html;
 
-        // Re-attach login modal listener if guest
-        if (!user) {
-            const btn = document.getElementById('loginBtn');
-            const modal = document.getElementById('loginModal');
-            if (btn && typeof openModal === 'function' && modal) {
-                btn.addEventListener('click', () => openModal(modal));
-            }
+        const btn = document.getElementById('loginBtn');
+        const modal = document.getElementById('loginModal');
+        if (!btn) return;
+
+        if (user) {
+            btn.addEventListener('click', async () => {
+                try {
+                    if (typeof API !== 'undefined' && API.auth) {
+                        await API.auth.logout();
+                    } else {
+                        console.error('Logout requested but API.auth is unavailable');
+                    }
+                } catch (error) {
+                    console.error('Navbar logout failed:', error);
+                }
+            });
+            return;
+        }
+
+        if (typeof openModal === 'function' && modal) {
+            btn.addEventListener('click', () => openModal(modal));
         }
     }
 };

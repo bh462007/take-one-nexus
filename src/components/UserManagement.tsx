@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { deleteUser } from '@/app/admin/users/actions';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface User {
   id: number;
@@ -19,15 +20,56 @@ interface Props {
 }
 
 export default function UserManagement({ initialUsers }: Props) {
+  const [users, setUsers] = useState<User[]>(initialUsers || []);
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const router = useRouter();
 
-  const filteredUsers = initialUsers.filter(user => 
+  const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(search.toLowerCase()) ||
     user.email.toLowerCase().includes(search.toLowerCase()) ||
     (user.role?.toLowerCase() || '').includes(search.toLowerCase())
   );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadLatestUsers() {
+      setLoading(true);
+      setLoadError(null);
+
+      try {
+        const response = await fetch('/api/users/admin/list', {
+          credentials: 'include',
+          cache: 'no-store'
+        });
+        const payload = await response.json();
+
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Failed to load latest users');
+        }
+
+        if (active && Array.isArray(payload.data)) {
+          setUsers(payload.data);
+        }
+      } catch (error: any) {
+        if (active) {
+          setLoadError(error?.message || 'Failed to load latest users');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadLatestUsers();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
@@ -38,11 +80,12 @@ export default function UserManagement({ initialUsers }: Props) {
     try {
       const result = await deleteUser(id);
       if (result.success) {
+        setUsers(prev => prev.filter(user => user.id !== id));
         router.refresh();
       } else {
         alert(result.error || 'Failed to delete user');
       }
-    } catch (error) {
+    } catch {
       alert('An error occurred while deleting the user');
     } finally {
       setDeletingId(null);
@@ -63,6 +106,17 @@ export default function UserManagement({ initialUsers }: Props) {
           <span>+ NEW CREW SIGNAL</span>
         </button>
       </div>
+
+      {loading && (
+        <div style={{ color: 'var(--silver)', fontSize: '10px', marginBottom: '10px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          Syncing latest users...
+        </div>
+      )}
+      {loadError && (
+        <div style={{ color: 'var(--neon)', fontSize: '10px', marginBottom: '10px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          {loadError}
+        </div>
+      )}
 
       <div className="admin-table-container">
         <table>

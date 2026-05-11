@@ -135,8 +135,10 @@ document.getElementById('roleFilterList')?.addEventListener('click', (event) => 
 
 document.getElementById('clearCrewFilters')?.addEventListener('click', () => {
   activeRole = '';
-  document.getElementById('crewSearchInput').value = '';
-  document.getElementById('citySearchInput').value = '';
+  const crewInput = document.getElementById('crewSearchInput');
+  const cityInput = document.getElementById('citySearchInput');
+  if (crewInput) crewInput.value = '';
+  if (cityInput) cityInput.value = '';
   renderRoleFilters();
   loadPeople();
 });

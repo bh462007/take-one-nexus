@@ -95,12 +95,13 @@ router.post('/email/test', authenticateUser, async (req, res) => {
 
 router.get('/analytics', authenticateUser, async (req, res) => {
   try {
-    const role = req.user.role;
+    const role = String(req.user.role || '').toLowerCase();
     const email = (req.user.email || '').toLowerCase();
     
     const isAuthorized = 
-      role === 'Developer' || 
-      role === 'Admin' || 
+      role === 'developer' || 
+      role === 'admin' || 
+      role === 'moderator' ||
       email === 'aarushgupta289@gmail.com' ||
       email === 'alok.r25012@csds.rishihood.edu.in';
 
@@ -145,12 +146,13 @@ router.get('/analytics', authenticateUser, async (req, res) => {
 
 router.get('/stats', authenticateUser, async (req, res) => {
   try {
-    const role = req.user.role;
+    const role = String(req.user.role || '').toLowerCase();
     const email = (req.user.email || '').toLowerCase();
     
     const isAuthorized = 
-      role === 'Developer' || 
-      role === 'Admin' || 
+      role === 'developer' || 
+      role === 'admin' || 
+      role === 'moderator' ||
       email === 'aarushgupta289@gmail.com' ||
       email === 'alok.r25012@csds.rishihood.edu.in';
 

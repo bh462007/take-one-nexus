@@ -238,7 +238,7 @@ router.post('/login', async (req, res) => {
     let rows;
     try {
       [rows] = await pool.query(
-        `SELECT id, name, email, password, role, college, city, credits
+        `SELECT id, name, email, password, role, college, city, gender, screen_name, display_preference, social_links, credits
          FROM users
          WHERE email = ?
          LIMIT 1`,
@@ -289,6 +289,9 @@ router.post('/login', async (req, res) => {
         college: user.college || '',
         city: user.city || '',
         gender: user.gender || 'Prefer not to say',
+        screen_name: user.screen_name || null,
+        display_preference: user.display_preference || 'Show Real Name Only',
+        social_links: user.social_links || null,
         credits: user.credits || 0
       },
       token: token
@@ -384,7 +387,7 @@ router.get('/search', async (req, res) => {
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links
+      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at
       FROM users
       WHERE 1 = 1
     `;
@@ -419,6 +422,47 @@ router.get('/search', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Could not load crew members'
+    });
+  }
+});
+
+router.get('/admin/list', authenticateUser, async (req, res) => {
+  try {
+    const role = String(req.user.role || '').toLowerCase();
+    const email = String(req.user.email || '').toLowerCase();
+    const isAuthorized =
+      role === 'developer' ||
+      role === 'admin' ||
+      role === 'moderator' ||
+      email === 'aarushgupta289@gmail.com' ||
+      email === 'alok.r25012@csds.rishihood.edu.in';
+
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    const rows = await safeQuery(
+      `SELECT id, name, email, role, college, city, created_at
+       FROM users
+       ORDER BY created_at DESC, id DESC
+       LIMIT 500`
+    );
+
+    return res.json({
+      success: true,
+      data: rows.map((row) => ({
+        ...row,
+        name: formatDisplayName(row.name)
+      }))
+    });
+  } catch (error) {
+    console.error('Admin user list error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not load users'
     });
   }
 });

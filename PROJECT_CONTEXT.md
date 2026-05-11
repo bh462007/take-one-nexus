@@ -21,6 +21,22 @@ The platform targets student film communities and indie filmmakers, with an aest
 
 ---
 
+## Latest Stability Fixes (May 2026)
+
+- Fixed JWT verification instability by aligning middleware token verification fallback with token creation fallback secret.
+- Hardened admin authorization checks in system APIs to support normalized role casing (`admin`, `developer`, `moderator`) and avoid false 403s.
+- Added `/api/users/admin/list` (authorized) to serve latest users directly from MySQL for admin user management.
+- Updated admin users UI to fetch live user data from backend API with explicit loading/error states and no stale-only dependency on server-rendered data.
+- Added explicit `credentials: 'include'` and request failure logging in the shared frontend API wrapper to prevent silent auth/session failures.
+- Standardized crew navigation paths to `/crew` across shared navbar, homepage, and admin layout to avoid route drift.
+- Removed duplicate React landing implementation at `/` by converting `src/app/page.tsx` to a hard redirect to `/project.htm`, keeping `project.htm` as the only landing page surface.
+- Synced static `project.htm` navigation links to `/crew` so root rewrite and asset loading remain stable with a single route pattern.
+- Added server-backed session validation in the frontend auth layer (`/api/users/me`) so localStorage auth state cannot drift from cookie/session state.
+- Hardened navbar CTA bindings to avoid inline logout dependency and to safely handle missing API/auth globals without freezing navigation.
+- Added additional null checks in project page auth/search interactions to prevent runtime crashes that could break navbar/login listeners.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |

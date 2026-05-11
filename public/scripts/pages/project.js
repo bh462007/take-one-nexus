@@ -203,7 +203,7 @@ function scrollToSection(selector) {
 
 function openCrewFinderPage(role = '') {
   const query = role ? `?role=${encodeURIComponent(role)}` : '';
-  window.location.href = `/crew.htm${query}`;
+  window.location.href = `/crew${query}`;
 }
 
 /* Role helpers moved to /scripts/utils/helpers.js */
@@ -985,7 +985,7 @@ searchInput?.addEventListener('input', (e) => {
   activeSearchQuery = e.target.value.trim();
   clearTimeout(searchTimeout);
   if (!activeSearchQuery) {
-    searchResults.style.display = 'none';
+    if (searchResults) searchResults.style.display = 'none';
     searchTimeout = setTimeout(() => {
       loadLiveScripts();
     }, 200);
@@ -1063,14 +1063,16 @@ async function performSearch(query) {
     renderSearchResults(scripts, query);
   } catch (err) {
     console.error('Search error:', err);
-    searchResults.innerHTML = '<div class="search-no-results">Error loading results</div>';
-    searchResults.style.display = 'block';
+    if (searchResults) {
+      searchResults.innerHTML = '<div class="search-no-results">Error loading results</div>';
+      searchResults.style.display = 'block';
+    }
   }
 }
 
 document.addEventListener('click', (e) => {
   if (!(e.target instanceof Element)) return;
-  if (!e.target.closest('.search-bar-wrapper')) {
+  if (!e.target.closest('.search-bar-wrapper') && searchResults) {
     searchResults.style.display = 'none';
   }
 });
@@ -1117,6 +1119,10 @@ function closeTakeOneModal(modal) {
 }
 
 loginBtn?.addEventListener('click', () => {
+  if (typeof API === 'undefined' || !API.auth) {
+    console.error('API auth module unavailable during login button click');
+    return;
+  }
   if (API.auth.isLoggedIn()) {
     API.auth.logout();
   } else {
@@ -1157,8 +1163,15 @@ const loginForm = document.getElementById('loginForm');
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
+  const emailInput = document.getElementById('loginEmail');
+  const passwordInput = document.getElementById('loginPassword');
+  if (!emailInput || !passwordInput) {
+    console.error('Login form inputs not found in DOM');
+    showToast('❌ Login form is unavailable');
+    return;
+  }
+  const email = emailInput.value;
+  const password = passwordInput.value;
   
   const submitBtn = loginForm.querySelector('.form-submit');
   const originalText = submitBtn.textContent;
@@ -1197,14 +1210,29 @@ const registerForm = document.getElementById('registerForm');
 registerForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   
-  const name = document.getElementById('registerName').value;
-  const email = document.getElementById('registerEmail').value;
-  const password = document.getElementById('registerPassword').value;
-  const confirmPassword = document.getElementById('registerConfirmPassword').value;
-  const role = document.getElementById('registerRole').value;
-  const college = document.getElementById('registerCollege').value;
-  const city = document.getElementById('registerCity').value;
-  const gender = document.getElementById('registerGender').value;
+  const nameInput = document.getElementById('registerName');
+  const emailInput = document.getElementById('registerEmail');
+  const passwordInput = document.getElementById('registerPassword');
+  const confirmPasswordInput = document.getElementById('registerConfirmPassword');
+  const roleInput = document.getElementById('registerRole');
+  const collegeInput = document.getElementById('registerCollege');
+  const cityInput = document.getElementById('registerCity');
+  const genderInput = document.getElementById('registerGender');
+
+  if (!nameInput || !emailInput || !passwordInput || !confirmPasswordInput || !roleInput || !collegeInput || !cityInput || !genderInput) {
+    console.error('Register form inputs not found in DOM');
+    showToast('❌ Registration form is unavailable');
+    return;
+  }
+
+  const name = nameInput.value;
+  const email = emailInput.value;
+  const password = passwordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
+  const role = roleInput.value;
+  const college = collegeInput.value;
+  const city = cityInput.value;
+  const gender = genderInput.value;
   
   if (password !== confirmPassword) {
     showToast('❌ Passwords do not match');
@@ -1275,7 +1303,7 @@ function updateUIAfterLogin(user) {
     }
     const navCrewLink = document.getElementById('navCrewLink');
     if (navCrewLink) {
-      navCrewLink.href = '/crew.htm';
+      navCrewLink.href = '/crew';
       navCrewLink.textContent = 'Crew';
     }
   }
@@ -1405,12 +1433,17 @@ function applyRoleBasedUI(user) {
   loadLiveScripts();
 }
 
-function checkAuthState() {
+async function checkAuthState() {
   if (typeof API === 'undefined' || !API.auth) return;
-  const user = API.auth.getUser();
-  if (user) {
-    updateUIAfterLogin(user);
-  } else {
+  try {
+    const validation = await API.auth.validateSession();
+    if (validation.valid && validation.user) {
+      updateUIAfterLogin(validation.user);
+      return;
+    }
+    applyRoleBasedUI(null);
+  } catch (error) {
+    console.error('Auth state validation failed:', error);
     applyRoleBasedUI(null);
   }
 }

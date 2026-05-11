@@ -8,6 +8,18 @@
 
 TAKE ONE Nexus is a **hybrid architecture** — a Next.js React app and a standalone Express.js server running side-by-side on Vercel, with static `.htm` pages served directly from `public/`.
 
+### Recent Production Stability Updates
+
+- **Auth consistency:** `middleware/auth.js` now uses the same JWT fallback strategy as `routes/users.js` token creation, preventing login sessions from failing when `JWT_SECRET` is missing in non-prod environments.
+- **Admin data source hardening:** Added `GET /api/users/admin/list` in `routes/users.js` so admin user tables can always pull latest user rows from MySQL through a single authorized API boundary.
+- **Admin frontend resilience:** `UserManagement` now loads users via API with loading/error states and avoids silent empty-table failures.
+- **Authorization normalization:** `/api/system/stats` and `/api/system/analytics` now normalize role checks to lowercase and include moderator access.
+- **Client API robustness:** shared browser API layer now forces cookie credentials and logs failed requests to avoid silent fetch failures.
+- **Single landing source:** `src/app/page.tsx` no longer contains a separate homepage implementation and now redirects to `/project.htm`, ensuring one canonical landing page.
+- **Routing consistency:** `public/project.htm` and shared navigation now point crew access to `/crew` while `vercel.json` continues rewriting `/` to `/project.htm`.
+- **Session authority model:** frontend auth now validates persisted local session state against backend `/api/users/me` (cookie + JWT middleware), preventing stale local tokens from causing auth/UI desync.
+- **Navbar interaction hardening:** shared navbar re-render flow now uses defensive event listeners (instead of inline handlers) with guarded API access to avoid broken CTA behavior when scripts hydrate in different orders.
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   Vercel Edge / CDN                     │

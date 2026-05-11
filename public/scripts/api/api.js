@@ -32,6 +32,7 @@ const API = (() => {
       const response = await fetch(`${BASE_URL}${path}`, {
         ...options,
         headers,
+        credentials: 'include',
         signal: controller.signal
       });
 
@@ -53,12 +54,14 @@ const API = (() => {
           window.location.reload();
         }
         
+        console.error(`[API] ${options.method || 'GET'} ${path} failed with status ${response.status}`, data);
         throw new Error(data.message || `Request failed with status ${response.status}`);
       }
 
       return data;
     } catch (err) {
       clearTimeout(timeoutId);
+      console.error(`[API] ${options.method || 'GET'} ${path} request error:`, err);
       if (err.name === 'AbortError') {
         throw new Error('The request timed out. Please check your internet connection or try again later.');
       }
@@ -180,6 +183,9 @@ const API = (() => {
           method: 'PUT',
           body: JSON.stringify(payload)
         });
+      },
+      me() {
+        return request('/api/users/me');
       }
     },
     auth: {
@@ -207,6 +213,33 @@ const API = (() => {
       },
       isLoggedIn() {
         return Boolean(localStorage.getItem(TOKEN_KEY));
+      },
+      async validateSession() {
+        const token = localStorage.getItem(TOKEN_KEY);
+        const user = this.getUser();
+        if (!token || !user) {
+          return { valid: false, user: null };
+        }
+
+        try {
+          const response = await request('/api/users/me', { method: 'GET' });
+          if (!response?.success || !response?.user) {
+            throw new Error(response?.message || 'Session validation failed');
+          }
+
+          const mergedUser = {
+            ...user,
+            ...response.user
+          };
+          localStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
+          return { valid: true, user: mergedUser };
+        } catch (error) {
+          console.warn('[AUTH] Session validation failed. Clearing local session.', error);
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          localStorage.removeItem('take_one_session_start');
+          return { valid: false, user: null };
+        }
       },
       async logout() {
         try {
