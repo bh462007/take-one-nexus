@@ -46,7 +46,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
     if (targetId) {
       if (isNaN(Number(targetId))) {
-        console.warn(`[PROFILE_NAVIGATION_WARNING]: Invalid targetId detected: "${targetId}". Redirecting to own profile.`);
+        // Invalid targetId detected, will fallback to own profile
       }
     }
 
@@ -56,7 +56,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       const res = await fetch(`${baseUrl}/api/users/public/${targetId}`, { cache: 'no-store' });
       const json = await res.json();
       if (!json.success) {
-        console.error(`[PROFILE_FETCH_FAILURE]: Failed to load public profile for ID ${targetId}. Error: ${json.message}`);
         throw new Error(json.message || 'Profile not found');
       }
       rawUser = json.data;
@@ -452,13 +451,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       </>
     );
   } catch (criticalError: any) {
-    console.error('[CRITICAL_PROFILE_RENDER_FAILURE]:', criticalError);
+    console.error('[CRITICAL_PROFILE_RENDER_FAILURE]:', criticalError?.message);
     
     // Attempt to extract helpful details for debugging
     const errorMsg = criticalError?.message || 'Unknown render failure';
     const errorStack = criticalError?.stack || '';
-    
-    console.log(`[RECOVERY_LOG]: Attempting signal recovery for error: ${errorMsg}`);
 
     return (
       <div className="profile-error-fallback" style={{ background: '#06080A', color: '#E8DFC8', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center', position: 'relative' }}>

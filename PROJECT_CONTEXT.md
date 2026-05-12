@@ -24,6 +24,9 @@ The platform targets student film communities and indie filmmakers, with an aest
 
 ## Latest Stability Fixes (May 2026)
 
+- [x] **Codebase Audit & Cleanup**: Removed 10+ redundant files and empty directories (May 2026).
+- [x] **Performance Optimization**: Implemented Prisma query caching (`React.cache`) and optimized vanilla JS loading (May 2026).
+- [x] **Stability Phase**: Disabled aggressive auto-reloads and silenced production console spam (May 2026).
 - Fixed JWT verification instability by aligning middleware token verification fallback with token creation fallback secret.
 - Hardened admin authorization checks in system APIs to support normalized role casing (`admin`, `developer`, `moderator`) and avoid false 403s.
 - Added `/api/users/admin/list` (authorized) to serve latest users directly from MySQL for admin user management.

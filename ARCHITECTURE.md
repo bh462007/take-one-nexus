@@ -92,9 +92,7 @@ src/
 ├── config/                        # Shared config accessible to src/
 ├── database/                      # Database utilities for Next.js context
 ├── lib/                           # Shared utilities (helpers, formatting)
-├── middleware/                    # (currently empty — middleware at root level)
 ├── proxy.ts                       # API proxy configuration for local dev
-├── routes/                        # (route-level utilities if needed)
 ├── styles/                        # Next.js shared styles
 └── utils/                         # Shared utility functions
 ```
@@ -106,11 +104,7 @@ The static `.htm` pages are the **primary user-facing interface**. They are plai
 ```
 public/
 ├── project.htm         # Main landing page (scripts feed, modals, auth)
-├── profile.htm         # Static profile page (fallback)
 ├── crew.htm            # Crew directory (static)
-├── legal.htm           # Legal / terms
-├── moderation.htm      # Moderation panel
-├── designer.html       # Designer role landing page
 ├── assets/
 │   ├── fonts/          # Local font files
 │   ├── icons/          # SVG / PNG icons
@@ -133,8 +127,7 @@ public/
 │   │   ├── crew.js             # Crew directory logic
 │   │   └── moderation.js       # Moderation page logic
 │   ├── utils/                  # Shared utility functions
-│   ├── animations/             # Animation helpers
-│   └── init-tidb.js            # TiDB/MySQL initialization script
+│   └── animations/             # Animation helpers
 └── styles/
     ├── components/             # Component-level CSS (e.g., global-chat-fab.css)
     ├── pages/                  # Page-level CSS

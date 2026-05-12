@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import * as jose from 'jose';
 import prisma from '@/lib/prisma';
 
@@ -6,7 +7,7 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long'
 );
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
@@ -48,4 +49,4 @@ export async function getCurrentUser() {
     // 3. For generic Auth errors (expired token, etc.), return null to force login
     return null;
   }
-}
+});

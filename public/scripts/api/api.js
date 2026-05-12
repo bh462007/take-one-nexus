@@ -54,14 +54,12 @@ const API = (() => {
           window.location.reload();
         }
         
-        console.error(`[API] ${options.method || 'GET'} ${path} failed with status ${response.status}`, data);
-        throw new Error(data.message || `Request failed with status ${response.status}`);
+        return throwError(path, options, response.status, data);
       }
 
       return data;
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error(`[API] ${options.method || 'GET'} ${path} request error:`, err);
       if (err.name === 'AbortError') {
         throw new Error('The request timed out. Please check your internet connection or try again later.');
       }
@@ -69,6 +67,12 @@ const API = (() => {
     } finally {
       activeRequests--;
     }
+  }
+
+  function throwError(path, options, status, data) {
+    const error = new Error(data.message || `Request failed with status ${status}`);
+    error.status = status;
+    throw error;
   }
 
 
@@ -204,7 +208,6 @@ const API = (() => {
         try {
           return JSON.parse(raw);
         } catch (error) {
-          console.warn('Stored TAKE ONE user session was invalid. Clearing local session.', error);
           localStorage.removeItem(USER_KEY);
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem('take_one_session_start');
@@ -234,7 +237,6 @@ const API = (() => {
           localStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
           return { valid: true, user: mergedUser };
         } catch (error) {
-          console.warn('[AUTH] Session validation failed. Clearing local session.', error);
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
           localStorage.removeItem('take_one_session_start');
@@ -245,7 +247,7 @@ const API = (() => {
         try {
           await request('/api/users/logout', { method: 'POST' });
         } catch (e) {
-          console.warn('Backend logout failed:', e);
+          // Silent fail on backend logout
         }
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
@@ -257,21 +259,16 @@ const API = (() => {
 })();
 
 /**
- * SESSION & RELOAD MANAGEMENT
- * Implements: 
- * 1. 30-minute auto-reload (Safe, Visibility-aware)
- * 2. 10-day auto sign-out
+ * SESSION MANAGEMENT
+ * Optimized for performance: Removed 30-minute auto-reload.
  */
 (() => {
-  const RELOAD_INTERVAL = 30 * 60 * 1000; // 30 minutes
   const SESSION_MAX_AGE = 10 * 24 * 60 * 60 * 1000; // 10 days
-  let reloadTimer = null;
 
   function checkSessionExpiry() {
     const sessionStart = localStorage.getItem('take_one_session_start');
     if (sessionStart) {
       if (Date.now() - parseInt(sessionStart, 10) > SESSION_MAX_AGE) {
-        console.log('Session expired (10 days). Logging out...');
         if (typeof API !== 'undefined' && API.auth) {
           API.auth.logout();
         } else {
@@ -284,57 +281,10 @@ const API = (() => {
     return false;
   }
 
-  function setupAutoReload() {
-    if (reloadTimer) clearTimeout(reloadTimer);
-
-    reloadTimer = setTimeout(() => {
-      // 1. Check session expiry first
-      if (checkSessionExpiry()) return;
-
-      // 2. Safe reload logic
-      if (document.visibilityState === 'visible') {
-        const activeElement = document.activeElement;
-        const isTyping = activeElement && (
-          activeElement.tagName === 'INPUT' || 
-          activeElement.tagName === 'TEXTAREA' || 
-          activeElement.contentEditable === 'true'
-        );
-        
-        // Check for active uploads or forms (heuristics)
-        const isUploading = !!document.querySelector('.is-uploading, [data-uploading="true"]');
-        const isSubmitting = !!document.querySelector('.is-submitting, [data-submitting="true"]');
-        
-        if (!isTyping && !isUploading && !isSubmitting && API.getActiveRequests() === 0) {
-          console.log('Performing scheduled 30-minute reload...');
-          window.location.reload();
-        } else {
-          // Retry in 5 minutes if user is busy
-          console.log('User busy, delaying reload by 5 minutes...');
-          reloadTimer = setTimeout(setupAutoReload, 5 * 60 * 1000);
-        }
-      } else {
-        // Tab hidden, wait for it to become visible
-        console.log('Tab hidden, waiting for visibility to reload...');
-        const handleVisibilityChange = () => {
-          if (document.visibilityState === 'visible') {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            setupAutoReload();
-          }
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-      }
-    }, RELOAD_INTERVAL);
-  }
-
   // Initialize
   if (typeof window !== 'undefined') {
-    // Check expiry immediately on load
     checkSessionExpiry();
     
-    // Set up the periodic reload
-    setupAutoReload();
-    
-    // Also check expiry when tab becomes visible after being away
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         checkSessionExpiry();
