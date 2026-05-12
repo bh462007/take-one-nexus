@@ -949,6 +949,47 @@ async function loadHomepageData() {
       'liveCommunityText',
       `Reviewed within 24 hrs. Join ${stats.creators || 0} creators across ${stats.colleges || 0} colleges.`
     );
+
+    try {
+      const lbRes = await fetch('/api/users/leaderboard');
+      const lbJson = await lbRes.json();
+      if (lbJson.success && lbJson.data) {
+        const topUsers = lbJson.data.slice(0, 3);
+        const row = document.getElementById('homeLeaderboardRow');
+        if (row) {
+          if (topUsers.length === 0) {
+            row.innerHTML = `<div class="live-empty-card" style="width: 100%;">No rankings available yet.</div>`;
+          } else {
+            row.innerHTML = topUsers.map((user, i) => {
+              const displayName = user.displayName || 'Anonymous Creator';
+              const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+              const avatarHtml = user.avatar_url 
+                ? `<img src="${user.avatar_url}" style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover; border: 1px solid rgba(255, 77, 26, 0.3);">`
+                : `<div style="width: 48px; height: 48px; border-radius: 4px; background: rgba(255, 77, 26, 0.1); color: #ff4d1a; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 20px; border: 1px solid rgba(255, 77, 26, 0.3);">${initials}</div>`;
+              
+              return `
+                <div class="movie-card" style="min-width: 280px; flex: 1;">
+                  <div class="data-num" style="color: #ff4d1a;">#${i + 1}</div>
+                  <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                    ${avatarHtml}
+                    <div>
+                      <div style="font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: #f4eee0; letter-spacing: 0.05em; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${displayName}</div>
+                      <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${user.college || 'Nexus Creator'}</div>
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px; margin-top: auto;">
+                    <div style="font-size: 10px; color: rgba(255, 255, 255, 0.4); text-transform: uppercase; letter-spacing: 0.2em;">${user.role || 'Crew'}</div>
+                    <div style="color: #ff4d1a; font-family: 'Space Mono', monospace; font-size: 12px; font-weight: bold;">${(user.credits || 0).toLocaleString()} PTS</div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Leaderboard preview error:', err);
+    }
     updateText('statusCreators', `${stats.creators || 0} Creators Active`);
 
     allLiveScripts = response.scripts || [];

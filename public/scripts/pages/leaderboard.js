@@ -30,12 +30,15 @@ async function initLeaderboard() {
         tableBody.innerHTML = users.map((user, index) => {
             const rank = index + 1;
             const rankClass = rank <= 3 ? `top-rank-${rank}` : '';
-            const initials = user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            const displayName = user.displayName || 'Anonymous Creator';
+            const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             
             // Reuse avatar logic if available, else initials
             const avatarHtml = user.avatar_url 
                 ? `<img src="${user.avatar_url}" alt="" class="user-avatar">`
                 : `<div class="user-avatar">${initials}</div>`;
+
+            const credits = user.credits || 0;
 
             return `
                 <tr class="leaderboard-row ${rankClass}">
@@ -44,13 +47,13 @@ async function initLeaderboard() {
                         <div class="user-cell">
                             ${avatarHtml}
                             <div class="user-info">
-                                <span class="user-name">${user.displayName}</span>
+                                <span class="user-name">${displayName}</span>
                                 <span class="user-role">${user.college || 'Nexus Creator'}</span>
                             </div>
                         </div>
                     </td>
                     <td>${user.role || 'Crew'}</td>
-                    <td class="credits-cell">${user.credits.toLocaleString()} pts</td>
+                    <td class="credits-cell">${credits.toLocaleString()} pts</td>
                 </tr>
             `;
         }).join('');

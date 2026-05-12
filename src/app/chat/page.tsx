@@ -951,24 +951,9 @@ export default function ChatPage() {
                     {Object.entries(groupMessagesByDate(
                       messages.filter(msg => (msg.content || '').toLowerCase().includes(chatSearchQuery.toLowerCase()))
                     )).map(([dateStr, dateMsgs]) => (
-                      <div key={dateStr}>
-                        <div style={{
-                          textAlign: 'center',
-                          padding: '16px 0 8px',
-                          position: 'sticky',
-                          top: 0,
-                          zIndex: 2
-                        }}>
-                          <span style={{
-                            background: 'rgba(10,10,10,0.85)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '2px',
-                            color: 'rgba(255,255,255,0.35)',
-                            fontFamily: "'Bebas Neue', sans-serif",
-                            fontSize: '10px',
-                            letterSpacing: '0.25em',
-                            padding: '4px 14px',
-                          }}>
+                      <div key={dateStr} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div className="date-separator-wrap">
+                          <span>
                             {getFriendlyDate(dateStr)}
                           </span>
                         </div>
