@@ -36,8 +36,10 @@ The platform targets student film communities and indie filmmakers, with an aest
 - Hardened navbar CTA bindings to avoid inline logout dependency and to safely handle missing API/auth globals without freezing navigation.
 - Added additional null checks in project page auth/search interactions to prevent runtime crashes that could break navbar/login listeners.
 - Fixed landing-page auth modal bootstrap by loading `/scripts/components/modal.js` on `project.htm`, deferring page scripts consistently, and adding guarded modal open/bind logic so `Join Now` and navbar CTA clicks remain functional after navbar re-renders.
-- **Implemented Public Profile Access**: Added unauthenticated profile viewing via `/api/users/public/:id` and updated `ProfilePage` to support visitor views.
-- **Added Portfolio CRUD**: Creators can now Add, Edit, and Delete work items directly via a cinematic modal on their profile.
+- **Stabilized Chat & Auth for Production**: Fixed a critical "Channel Unavailable" error in the Chat system by implementing null safety for message senders (handling deleted users/system messages).
+- **Hardened Chat API Routes**: Added `userId` validation and descriptive error logging to `routes/chat.js` to prevent database query crashes.
+- **Enhanced Auth Diagnostics**: Added specialized logging in `middleware/auth.js` to capture authentication failures specifically for real-time chat requests.
+- **Improved Chat Frontend**: Updated `src/app/chat/page.tsx` with more robust fetch error handling and descriptive status updates during synchronization.
 - **Standardized Display Naming**: Created `getCanonicalDisplayName` utility to unify "Real Name" vs "Screen Name" preferences across Chat, Notifications, and Profiles.
 - **Unified Profile UX**: Added "View Profile" buttons to Crew Marketplace cards and Chat participant menus.
 

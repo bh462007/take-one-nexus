@@ -132,47 +132,52 @@ export default function ChatPage() {
 
       if (!res.ok || !json.success) {
         setState(res.status === 403 || res.status === 404 ? 'not-found' : 'error');
-        setStatusText(json.message || 'Conversation could not be loaded.');
+        setStatusText(json.message || 'Signal lost. Could not load message history.');
         return;
       }
 
       setMessages(json.data || []);
       setState('ready');
-      requestAnimationFrame(() => inputRef.current?.focus());
-    } catch (err) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err: any) {
       console.error('Failed to fetch messages', err);
       setState('error');
-      setStatusText('Conversation could not be loaded.');
+      setStatusText(err.message || 'The Nexus connection was interrupted.');
     } finally {
       setMessageLoading(false);
     }
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-    const res = await fetch('/api/chat/conversations', {
-      credentials: 'include',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    });
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/chat/conversations', {
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
 
-    if (res.status === 401) {
-      window.location.href = '/?auth=login';
-      return [];
+      if (res.status === 401) {
+        window.location.href = '/?auth=login';
+        return [];
+      }
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Could not load conversations');
+      }
+
+      if (json.pusherKey && json.pusherCluster) {
+        pusherConfigRef.current = { key: json.pusherKey, cluster: json.pusherCluster };
+      }
+
+      const loaded = json.data || [];
+      setConversations(loaded);
+      return loaded as Conversation[];
+    } catch (err: any) {
+      console.error('Fetch conversations failed:', err);
+      throw new Error(err.message || 'The Nexus frequency is unstable. Please retry.');
     }
-
-    const json = await res.json();
-
-    if (!res.ok || !json.success) {
-      throw new Error(json.message || 'Could not load conversations');
-    }
-
-    if (json.pusherKey && json.pusherCluster) {
-      pusherConfigRef.current = { key: json.pusherKey, cluster: json.pusherCluster };
-    }
-
-    const loaded = json.data || [];
-    setConversations(loaded);
-    return loaded as Conversation[];
   }, []);
 
   const openDirectConversation = useCallback(async (recipientId: number) => {
@@ -292,16 +297,27 @@ export default function ChatPage() {
     }).catch(() => {});
   };
 
+  const isTypingRef = useRef<{[key: number]: boolean}>({});
+
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
-    handleTyping(true);
     
-    if (typingTimeoutRef.current[activeConv?.id || 0]) {
-      clearTimeout(typingTimeoutRef.current[activeConv?.id || 0]);
+    if (!activeConv) return;
+    const convId = activeConv.id;
+
+    // Throttle typing events: only send 'true' if we weren't already typing
+    if (!isTypingRef.current[convId]) {
+      isTypingRef.current[convId] = true;
+      handleTyping(true);
     }
     
-    typingTimeoutRef.current[activeConv?.id || 0] = setTimeout(() => {
+    if (typingTimeoutRef.current[convId]) {
+      clearTimeout(typingTimeoutRef.current[convId]);
+    }
+    
+    typingTimeoutRef.current[convId] = setTimeout(() => {
       handleTyping(false);
+      isTypingRef.current[convId] = false;
     }, 2000);
   };
 
@@ -405,10 +421,10 @@ export default function ChatPage() {
         }
 
         setState('ready');
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to initialize chat', err);
         setState('error');
-        setStatusText('Could not load conversations.');
+        setStatusText(err.message || 'Signal Error: Could not synchronize with Nexus.');
       }
     };
 
@@ -533,7 +549,11 @@ export default function ChatPage() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      // Clean up all typing timeouts
+      Object.values(typingTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
+    };
   }, []);
 
   useEffect(() => {
@@ -588,15 +608,18 @@ export default function ChatPage() {
       }
 
       setMessages((prev) => {
-        if (prev.find((message) => message.id === json.data.id)) return prev;
+        if (!json.data || prev.find((message) => message.id === json.data.id)) return prev;
         return [...prev, json.data];
       });
-      setConversations((current) => current.map((conversation) => (
-        conversation.id === json.data.conversation_id
-          ? { ...conversation, messages: [json.data] }
-          : conversation
-      )));
-      requestAnimationFrame(() => inputRef.current?.focus());
+      setConversations((current) => {
+        const index = current.findIndex(c => c.id === json.data.conversation_id);
+        if (index === -1) return current;
+        const updated = { ...current[index], messages: [json.data] };
+        const next = [...current];
+        next.splice(index, 1);
+        return [updated, ...next];
+      });
+      setTimeout(() => inputRef.current?.focus(), 100);
     } catch (err) {
       console.error('Failed to send message', err);
       setStatusText('Message could not be sent.');
@@ -857,7 +880,7 @@ export default function ChatPage() {
                   <div className="message-state">No messages yet. Start the conversation.</div>
                 ) : (
                   messages
-                    .filter(msg => msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                    .filter(msg => (msg.content || '').toLowerCase().includes(chatSearchQuery.toLowerCase()))
                     .map((msg) => (
                       <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'}`}>
                         {activeConv?.is_group && msg.sender_id !== user?.id && <div className="msg-sender-name">{getDisplayName(msg.sender)}</div>}
@@ -874,7 +897,7 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {showDetails && (
+              {showDetails && activeConv && (
                 <div className="chat-details-panel">
                   <header className="details-header">
                     <h3>{activeConv.is_group ? 'Group Details' : 'Crew Member'}</h3>
@@ -937,7 +960,7 @@ export default function ChatPage() {
                           <div className="intel-skills">
                             <label>Skills</label>
                             <div className="skills-wrap">
-                              {activeRecipient.skills.split(',').map(s => <span key={s} className="skill-tag">{s.trim()}</span>)}
+                              {(activeRecipient.skills || '').split(',').map((s: string) => <span key={s} className="skill-tag">{s.trim()}</span>)}
                             </div>
                           </div>
                         )}

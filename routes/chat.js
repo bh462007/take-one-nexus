@@ -57,7 +57,12 @@ function getConversationInclude() {
  */
 router.get('/conversations', authenticateUser, async (req, res) => {
   try {
-    const userId = Number(req.user.id);
+    const userId = Number(req.user?.id);
+    
+    if (!userId || isNaN(userId)) {
+      console.warn('[CHAT_API] Invalid user ID in request:', req.user);
+      return res.status(401).json({ success: false, message: 'Invalid session' });
+    }
 
     const conversations = await prisma.conversation.findMany({
       where: {
@@ -73,18 +78,28 @@ router.get('/conversations', authenticateUser, async (req, res) => {
       success: true,
       data: conversations.map(c => ({
         ...c,
-        users: c.users.map(u => ({ ...u, name: formatDisplayName(u.name) })),
-        messages: c.messages.map(m => ({
+        users: (c.users || []).map(u => ({ ...u, name: formatDisplayName(u.name) })),
+        messages: (c.messages || []).map(m => ({
           ...m,
-          sender: { ...m.sender, name: formatDisplayName(m.sender.name) }
+          sender: m.sender ? { 
+            ...m.sender, 
+            name: formatDisplayName(m.sender.name) 
+          } : {
+            id: m.sender_id || 0,
+            name: 'Deleted User',
+            role: 'Unknown'
+          }
         }))
       })),
       pusherKey: process.env.NEXT_PUBLIC_PUSHER_KEY || process.env.PUSHER_KEY || '',
       pusherCluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || process.env.PUSHER_CLUSTER || ''
     });
   } catch (error) {
-    console.error('Fetch conversations error:', error.message);
-    res.status(500).json({ success: false, message: 'Could not load conversations' });
+    console.error('[CHAT_API] Fetch conversations error:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Could not load conversations. Please check your signal connection.' 
+    });
   }
 });
 
@@ -233,7 +248,15 @@ router.post('/conversations/group', authenticateUser, async (req, res) => {
 router.get('/messages/:conversationId', authenticateUser, async (req, res) => {
   try {
     const conversationId = Number(req.params.conversationId);
-    const userId = Number(req.user.id);
+    const userId = Number(req.user?.id);
+
+    if (!userId || isNaN(userId)) {
+      return res.status(401).json({ success: false, message: 'Invalid session' });
+    }
+
+    if (!conversationId || isNaN(conversationId)) {
+      return res.status(400).json({ success: false, message: 'Invalid conversation ID' });
+    }
 
     // Check if user is part of the conversation
     const conversation = await prisma.conversation.findFirst({
@@ -246,6 +269,7 @@ router.get('/messages/:conversationId', authenticateUser, async (req, res) => {
     });
 
     if (!conversation) {
+      console.warn(`[CHAT_API] Access denied for user ${userId} to conversation ${conversationId}`);
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -282,12 +306,19 @@ router.get('/messages/:conversationId', authenticateUser, async (req, res) => {
       success: true,
       data: messages.map(m => ({
         ...m,
-        sender: { ...m.sender, name: formatDisplayName(m.sender.name) }
+        sender: m.sender ? { 
+          ...m.sender, 
+          name: formatDisplayName(m.sender.name) 
+        } : {
+          id: m.sender_id || 0,
+          name: 'Deleted User',
+          role: 'Unknown'
+        }
       }))
     });
   } catch (error) {
-    console.error('Fetch messages error:', error.message);
-    res.status(500).json({ success: false, message: 'Could not load messages' });
+    console.error('[CHAT_API] Fetch messages error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not load messages history' });
   }
 });
 
@@ -298,7 +329,11 @@ router.get('/messages/:conversationId', authenticateUser, async (req, res) => {
 router.post('/messages', authenticateUser, async (req, res) => {
   try {
     const { conversationId, content, recipientId } = req.body;
-    const senderId = Number(req.user.id);
+    const senderId = Number(req.user?.id);
+
+    if (!senderId || isNaN(senderId)) {
+      return res.status(401).json({ success: false, message: 'Invalid session' });
+    }
 
     if (!content || (!conversationId && !recipientId)) {
       return res.status(400).json({ success: false, message: 'Invalid request' });
@@ -435,8 +470,12 @@ router.post('/messages', authenticateUser, async (req, res) => {
 router.post('/typing', authenticateUser, async (req, res) => {
   try {
     const { conversationId, isTyping } = req.body;
-    const userId = Number(req.user.id);
-    const userName = formatDisplayName(req.user.name);
+    const userId = Number(req.user?.id);
+    const userName = formatDisplayName(req.user?.name || 'User');
+
+    if (!userId || isNaN(userId)) {
+      return res.status(401).json({ success: true }); // Silent fail for typing
+    }
 
     if (process.env.PUSHER_APP_ID) {
       pusher.trigger(`conversation-${conversationId}`, 'user-typing', {

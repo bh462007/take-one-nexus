@@ -20,9 +20,12 @@ TAKE ONE Nexus is a **hybrid architecture** — a Next.js React app and a standa
 - **Session authority model:** frontend auth now validates persisted local session state against backend `/api/users/me` (cookie + JWT middleware), preventing stale local tokens from causing auth/UI desync.
 - **Navbar interaction hardening:** shared navbar re-render flow now uses defensive event listeners (instead of inline handlers) with guarded API access to avoid broken CTA behavior when scripts hydrate in different orders.
 - **Modal/runtime safety hardening:** static landing now explicitly loads `components/modal.js`, defers dependent page scripts, and uses fallback-safe modal open handlers so auth/login UI interactions continue working even if one helper script fails.
+- **Chat Null Safety Architecture**: Hardened `routes/chat.js` to handle `null` message senders (deleted users/system messages) and added explicit `userId` validation to prevent database query crashes.
+- **Specialized Auth Diagnostics**: Enhanced `middleware/auth.js` with targeted logging for `/api/chat` requests to identify session/cookie drift on the custom domain.
+- **Frontend Sync Hardening**: Improved `src/app/chat/page.tsx` fetch logic with descriptive synchronization states and robust error recovery patterns.
 - **Public Profile access:** Implemented `GET /api/users/public/:id` for unauthenticated profile fetching, enabling vetting before messaging.
 - **Portfolio CRUD architecture:** Added full Create/Update/Delete endpoints for `Script` models to support user-managed portfolio entries via a shared cinematic modal.
-- **Canonical Naming Logic:** Unified display name preferences (Real Name, Screen Name, Both) via a shared utility used by both Next.js and Express services.
+- **Canonical Naming Logic**: Unified display name preferences (Real Name, Screen Name, Both) via a shared utility used by both Next.js and Express services.
 
 ```
 ┌─────────────────────────────────────────────────────────┐

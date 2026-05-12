@@ -15,7 +15,16 @@ function authenticateUser(req, res, next) {
   }
 
   if (!token) {
+    const isChatRequest = req.originalUrl.includes('/api/chat');
     console.warn(`[AUTH_FAILURE] No token provided for ${req.method} ${req.originalUrl}`);
+    if (isChatRequest) {
+      console.warn(`[CHAT_AUTH_DEBUG] Headers:`, JSON.stringify({
+        host: req.headers.host,
+        origin: req.headers.origin,
+        'user-agent': req.headers['user-agent'],
+        cookie: req.headers.cookie ? 'present' : 'missing'
+      }));
+    }
     return res.status(401).json({
       success: false,
       message: 'Login required'
