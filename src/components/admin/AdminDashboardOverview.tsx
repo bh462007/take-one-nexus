@@ -33,7 +33,17 @@ export default function AdminDashboardOverview() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/system/stats');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/system/stats', {
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      
+      if (res.status === 401) {
+        window.location.href = '/?auth=login';
+        return;
+      }
+
       const json = await res.json();
       if (json.success) {
         setData(json.data);

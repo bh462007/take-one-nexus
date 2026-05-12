@@ -117,7 +117,17 @@ export default function ChatPage() {
   const fetchMessages = useCallback(async (convId: number) => {
     setMessageLoading(true);
     try {
-      const res = await fetch(`/api/chat/messages/${convId}`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/chat/messages/${convId}`, {
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      
+      if (res.status === 401) {
+        window.location.href = '/?auth=login';
+        return;
+      }
+
       const json = await res.json();
 
       if (!res.ok || !json.success) {
@@ -139,7 +149,17 @@ export default function ChatPage() {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    const res = await fetch('/api/chat/conversations');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+    const res = await fetch('/api/chat/conversations', {
+      credentials: 'include',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+
+    if (res.status === 401) {
+      window.location.href = '/?auth=login';
+      return [];
+    }
+
     const json = await res.json();
 
     if (!res.ok || !json.success) {
@@ -159,11 +179,22 @@ export default function ChatPage() {
     setState('loading');
     setStatusText('Opening direct transmission...');
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
     const res = await fetch('/api/chat/conversations/direct', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({ recipientId })
     });
+
+    if (res.status === 401) {
+      window.location.href = '/?auth=login';
+      return;
+    }
+
     const json = await res.json();
 
     if (!res.ok || !json.success) {
@@ -184,7 +215,13 @@ export default function ChatPage() {
   const handleDeleteConversation = async (id: number) => {
     if (!confirm('Are you sure you want to delete this conversation? This will remove it from your signal desk.')) return;
     try {
-      const res = await fetch(`/api/chat/conversations/${id}`, { method: 'DELETE' });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/chat/conversations/${id}`, { 
+        method: 'DELETE',
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (res.status === 401) { window.location.href = '/?auth=login'; return; }
       if (res.ok) {
         setConversations(prev => prev.filter(c => c.id !== id));
         if (activeConv?.id === id) setActiveConv(null);
@@ -197,7 +234,13 @@ export default function ChatPage() {
   const handleLeaveGroup = async (id: number) => {
     if (!confirm('Are you sure you want to leave this group?')) return;
     try {
-      const res = await fetch(`/api/chat/conversations/${id}/leave`, { method: 'POST' });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/chat/conversations/${id}/leave`, { 
+        method: 'POST',
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (res.status === 401) { window.location.href = '/?auth=login'; return; }
       if (res.ok) {
         setConversations(prev => prev.filter(c => c.id !== id));
         if (activeConv?.id === id) setActiveConv(null);
@@ -212,7 +255,13 @@ export default function ChatPage() {
   const handleClearChat = async (id: number) => {
     if (!confirm('Are you sure you want to clear all messages in this conversation? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/chat/conversations/${id}/clear`, { method: 'POST' });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/chat/conversations/${id}/clear`, { 
+        method: 'POST',
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (res.status === 401) { window.location.href = '/?auth=login'; return; }
       if (res.ok) {
         setMessages([]);
         setShowMenu(false);
@@ -231,9 +280,14 @@ export default function ChatPage() {
 
   const handleTyping = (isTyping: boolean) => {
     if (!activeConv) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
     fetch('/api/chat/typing', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({ conversationId: activeConv.id, isTyping })
     }).catch(() => {});
   };
@@ -255,11 +309,18 @@ export default function ChatPage() {
     setState('loading');
     setStatusText('Creating group transmission...');
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
     const res = await fetch('/api/chat/conversations/group', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({ name, userIds })
     });
+    
+    if (res.status === 401) { window.location.href = '/?auth=login'; return; }
     const json = await res.json();
 
     if (!res.ok || !json.success) {
@@ -290,7 +351,11 @@ export default function ChatPage() {
 
       if (!currentUser) {
         try {
-          const res = await fetch('/api/users/me');
+          const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+          const res = await fetch('/api/users/me', { 
+            credentials: 'include',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
           const json = await res.json();
 
           if (json.success && json.user) {
@@ -495,14 +560,24 @@ export default function ChatPage() {
     setSending(true);
 
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
       const res = await fetch('/api/chat/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           conversationId: activeConv.id,
           content
         })
       });
+
+      if (res.status === 401) {
+        window.location.href = '/?auth=login';
+        return;
+      }
 
       const json = await res.json();
 

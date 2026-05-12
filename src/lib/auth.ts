@@ -3,7 +3,7 @@ import * as jose from 'jose';
 import prisma from '@/lib/prisma';
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback_secret_do_not_use_in_prod'
+  process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long'
 );
 
 export async function getCurrentUser() {

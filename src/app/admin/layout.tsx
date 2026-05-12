@@ -17,8 +17,10 @@ export default function AdminLayout({
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
         const meRes = await fetch('/api/users/me', {
           credentials: 'include',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           cache: 'no-store'
         });
         const mePayload = await meRes.json();

@@ -15,6 +15,7 @@ function authenticateUser(req, res, next) {
   }
 
   if (!token) {
+    console.warn(`[AUTH_FAILURE] No token provided for ${req.method} ${req.originalUrl}`);
     return res.status(401).json({
       success: false,
       message: 'Login required'
@@ -26,6 +27,7 @@ function authenticateUser(req, res, next) {
     req.user = jwt.verify(token, secret);
     return next();
   } catch (error) {
+    console.error(`[AUTH_FAILURE] Token verification failed for ${req.method} ${req.originalUrl}:`, error.message);
     return res.status(401).json({
       success: false,
       message: 'Session expired. Please login again.'

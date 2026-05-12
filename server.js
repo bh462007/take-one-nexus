@@ -98,9 +98,21 @@ app.get('/api/health', async (req, res) => {
   }
 
 
+  let prismaStatus = 'unknown';
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1`;
+    prismaStatus = 'connected';
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error('Prisma health check failed:', err.message);
+    prismaStatus = 'error: ' + err.message;
+  }
+
   res.json({
     success: true,
-    status: dbStatus === 'connected' ? 'ok' : 'degraded',
+    status: (dbStatus === 'connected' && prismaStatus === 'connected') ? 'ok' : 'degraded',
     message: 'TAKE ONE API is running',
     version: '2.2.0',
     timestamp: new Date().toISOString(),
@@ -109,7 +121,10 @@ app.get('/api/health', async (req, res) => {
       jwt_secret_set: Boolean(process.env.JWT_SECRET),
       db_configured: Boolean(process.env.DB_HOST || process.env.DATABASE_URL)
     },
-    database: dbDetails,
+    database: {
+        ...dbDetails,
+        prisma: prismaStatus
+    },
     system: {
       memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
       uptime: Math.round(process.uptime()) + 's'
