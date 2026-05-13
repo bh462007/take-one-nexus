@@ -658,10 +658,30 @@ router.get('/leaderboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Leaderboard fetch error:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Could not load leaderboard signal'
+    res.status(500).json({ success: false, message: 'Could not load leaderboard signal' });
+  }
+});
+
+/**
+ * GET /api/users/transactions
+ * Get credit transaction history for the authenticated user
+ */
+router.get('/transactions', authenticateUser, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const transactions = await prisma.creditTransaction.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      take: 50
     });
+
+    res.json({
+      success: true,
+      data: transactions
+    });
+  } catch (error) {
+    console.error('Transactions fetch error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not load transaction history' });
   }
 });
 

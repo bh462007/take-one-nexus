@@ -33,6 +33,7 @@ model User {
   notifications       notifications[]
   scripts             Script[]
   memberships         ConversationMember[]
+  transactions        CreditTransaction[]
 
   @@map("users")
 }
@@ -115,11 +116,27 @@ model Task {
   status          String       @default("Pending") @db.VarChar(50)
   priority        String       @default("Medium") @db.VarChar(50)
   due_date        DateTime?    @db.Timestamp(0)
+  reward_credits  Int          @default(0) @db.UnsignedInt
+  approval_status String       @default("Pending") @db.VarChar(50)
+  completed_at    DateTime?    @db.Timestamp(0)
+  approved_at     DateTime?    @db.Timestamp(0)
   created_at      DateTime     @default(now()) @db.Timestamp(0)
   updated_at      DateTime     @default(now()) @updatedAt @db.Timestamp(0)
   conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
 
   @@map("tasks")
+}
+
+model CreditTransaction {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  user_id     Int      @db.UnsignedInt
+  amount      Int      @db.Int
+  reason      String   @db.VarChar(255)
+  type        String   @db.VarChar(20) // 'CREDIT' or 'DEBIT'
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("credit_transactions")
 }
 
 model Issue {

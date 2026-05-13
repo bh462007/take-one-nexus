@@ -1,107 +1,99 @@
-# Contributing to TAKE ONE Nexus
+# Contributing to TAKE ONE Nexus 🎬
 
-First off, thank you for considering contributing to TAKE ONE Nexus! It's people like you that make TAKE ONE Nexus a great platform for the creative community. We especially welcome participants from **SSOC** and **GSSoC**.
+First off, thank you for considering contributing to TAKE ONE Nexus! It's people like you that make this platform a powerful ecosystem for creators.
 
-This document provides guidelines and instructions for contributing to this project.
+This project is a participant in **Social Summer of Code (SSOC)** and **GirlScript Summer of Code (GSSoC)**. We welcome contributors of all skill levels!
 
-## 🤝 Code of Conduct
+---
 
-By participating in this project, you are expected to uphold our [Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to the repository maintainers.
+## 📑 Table of Contents
+
+- [Code of Conduct](#-code-of-conduct)
+- [Getting Started](#-getting-started)
+- [How Can I Contribute?](#-how-can-i-contribute)
+- [Style Guides](#-style-guides)
+- [Pull Request Process](#-pull-request-process)
+- [Community](#-community)
+
+---
+
+## 📜 Code of Conduct
+
+By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). We are committed to providing a friendly, safe, and welcoming environment for all.
+
+---
 
 ## 🚀 Getting Started
 
-### 1. Fork and Clone
+1.  **Fork** the repository on GitHub.
+2.  **Clone** your fork locally:
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/take-one-nexus.git
+    cd take-one-nexus
+    ```
+3.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+4.  **Set up your environment**:
+    Copy `.env.example` to `.env` and fill in the required variables (Database, Pusher, JWT Secret).
+5.  **Initialize Database**:
+    ```bash
+    npx prisma generate
+    npx prisma db push
+    ```
+6.  **Run the development servers**:
+    You need two terminals:
+    - Terminal 1: `npm run dev` (Next.js)
+    - Terminal 2: `npm run legacy:dev` (Express Backend)
 
-1. Fork the repository to your own GitHub account.
-2. Clone the project to your local machine:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/take-one-nexus.git
-   cd take-one-nexus
-   ```
-3. Add the original repository as the "upstream" remote:
-   ```bash
-   git remote add upstream https://github.com/alokr25012-lab/take-one-nexus.git
-   ```
+---
 
-### 2. Local Setup
+## 🛠 How Can I Contribute?
 
-Follow the detailed installation instructions in our [README.md](README.md). Make sure you have your `.env` configured and your database initialized via Prisma.
+### Reporting Bugs 🐛
+Before creating a bug report, please check the [Issue Tracker](https://github.com/alokr25012-lab/take-one-nexus/issues) to see if the problem has already been reported.
 
-### 3. Creating a Branch
+### Suggesting Enhancements ✨
+We love new ideas! If you have a suggestion, please open an issue with the "enhancement" label.
 
-Before you start coding, create a new branch from `main`. We use the following branching conventions:
+### Code Contributions 💻
+1.  Find an issue you'd like to work on. If it's not assigned, comment on it to express interest.
+2.  Create a new branch for your work: `git checkout -b feat/your-feature-name` or `fix/your-bug-fix`.
+3.  Write your code, following our [Style Guides](#-style-guides).
+4.  Test your changes thoroughly.
 
-- `feature/short-description` (for new features)
-- `fix/issue-description` (for bug fixes)
-- `docs/short-description` (for documentation changes)
-- `refactor/short-description` (for refactoring code)
+---
 
-```bash
-git checkout -b feature/awesome-new-feature
-```
+## 🎨 Style Guides
 
-## 🛠️ Contribution Workflow
-
-### Finding an Issue
-- Look for issues labeled `good first issue` or `help wanted`.
-- If you want to work on an issue, please comment on it asking to be assigned.
-- If you have a new feature idea, please open a feature request issue first to discuss it with the maintainers.
+### Git Commit Messages
+- Use the present tense ("Add feature" not "Added feature").
+- Use the imperative mood ("Move cursor to..." not "Moves cursor to...").
+- Reference issues and pull requests liberally after the first line.
+- Example: `feat: add real-time credit updates to chat #123`
 
 ### Coding Standards
-Before you write any code, please review our comprehensive engineering standards in [CODING_RULES.md](CODING_RULES.md). Some key points:
-- Maintain the cinematic "Director-style" UI aesthetic.
-- Adhere to the file naming and folder structure rules.
-- Run the linter before committing: `npm run lint`.
-- Make sure there are no TypeScript errors.
+- **Next.js**: Use functional components and hooks. Follow the App Router conventions.
+- **Express**: Maintain modularity in `routes/`. Use the `authenticateUser` middleware for protected routes.
+- **CSS**: We use a "Cinematic UI" design system. Stick to the CSS variables defined in `index.css` (e.g., `--neon`, `--void`, `--silver`).
+- **Aesthetics**: Every UI change should feel "premium". Use smooth transitions, subtle glows, and monospace fonts for data.
 
-### Testing Expectations
-- Test your changes manually across different viewports (Desktop, Tablet, Mobile).
-- If you modify an API route, test it using a tool like Postman or via the frontend implementation.
-- Include a brief description of how you tested your changes in your Pull Request.
+---
 
-## 📝 Commit Conventions
+## 📥 Pull Request Process
 
-We follow a structured commit message format to maintain a readable history.
+1.  Ensure your code is well-formatted and documented.
+2.  Update the `README.md` or `ARCHITECTURE.md` if your changes introduce new concepts or configurations.
+3.  Provide a clear description of the changes in your PR.
+4.  Link the PR to the relevant issue (e.g., `Closes #123`).
+5.  Wait for a maintainer to review your PR. Be prepared to make changes based on feedback.
 
-**Format:** `[Type] Short description in imperative mood`
+---
 
-**Types:**
-- `feat`: A new feature
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc.)
-- `refactor`: A code change that neither fixes a bug nor adds a feature
-- `perf`: A code change that improves performance
-- `test`: Adding missing tests or correcting existing tests
-- `chore`: Changes to the build process or auxiliary tools
+## 💬 Community
 
-**Example:**
-`feat: Add role filter to crew search page`
+- **Discord**: [Join our Discord Server](https://discord.gg/yourlink)
+- **Twitter**: [@TakeOneNexus](https://twitter.com/yourhandle)
 
-## 🔄 Pull Request Process
-
-1. Ensure your fork is up-to-date with the upstream `main` branch.
-   ```bash
-   git fetch upstream
-   git merge upstream/main
-   ```
-2. Push your branch to your fork.
-   ```bash
-   git push origin feature/awesome-new-feature
-   ```
-3. Open a Pull Request against the `main` branch of the original repository.
-4. Fill out the Pull Request template completely.
-5. Link any relevant issues using closing keywords (e.g., `Closes #123`).
-6. Wait for a maintainer to review your code. We may request changes before merging.
-
-## 🎨 UI Contribution Rules
-
-- If you are adding a new UI component, ensure it matches the dark cinematic aesthetic.
-- Verify that color contrast meets accessibility standards.
-- Ensure buttons and interactive elements have appropriate touch target sizes (`44x44px` minimum).
-
-## ❓ Need Help?
-
-If you're stuck, feel free to ask questions on the specific issue thread or in your pull request. We're here to help you learn and contribute!
-
-Thank you for helping build TAKE ONE Nexus! 🎬
+Thank you for building the cinematic future with us! 🚀

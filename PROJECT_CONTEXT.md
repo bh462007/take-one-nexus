@@ -50,9 +50,9 @@ Secure transmission for project collaboration.
 
 ### 4. Creator Credits & Leaderboard
 The heartbeat of the Nexus economy.
-- **Earning**: Users earn credits for actions like uploading work or completing collaborations.
-- **Ranking**: A real-time Top-100 Leaderboard (`/leaderboard.htm`) ranks users globally.
-- **Future Use**: Credits will tie into a future marketplace for platform perks or production bounties.
+- **Earning**: Users earn credits for completing missions. Missions are assigned in chat, completed by the operative, and approved by a Director/Admin.
+- **Credit Transaction Engine**: Every credit earned is recorded in an immutable `CreditTransaction` audit log, ensuring transparency and security.
+- **Real-Time Leaderboard**: A dynamic Next.js page (`/leaderboard`) ranks the top 50 creators globally, updating instantly via Pusher events (`leaderboard-update`) whenever credits are granted.
 
 ---
 

@@ -22,6 +22,7 @@ export default function TaskModal({ isOpen, onClose, conversationId, members, on
   const [priority, setPriority] = useState('Medium');
   const [assigneeId, setAssigneeId] = useState<number | ''>('');
   const [dueDate, setDueDate] = useState('');
+  const [rewardCredits, setRewardCredits] = useState<number>(0);
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -38,13 +39,15 @@ export default function TaskModal({ isOpen, onClose, conversationId, members, on
         description: description.trim(),
         priority,
         assigneeId: assigneeId === '' ? null : assigneeId,
-        dueDate: dueDate || null
+        dueDate: dueDate || null,
+        rewardCredits
       });
       setTitle('');
       setDescription('');
       setPriority('Medium');
       setAssigneeId('');
       setDueDate('');
+      setRewardCredits(0);
       onClose();
     } catch (err) {
       console.error('Failed to create task:', err);
@@ -115,6 +118,21 @@ export default function TaskModal({ isOpen, onClose, conversationId, members, on
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Mission Reward (Credits)</label>
+            <input 
+              type="number" 
+              min="0"
+              max="500"
+              value={rewardCredits}
+              onChange={(e) => setRewardCredits(Number(e.target.value))}
+              placeholder="0"
+            />
+            <small style={{ opacity: 0.5, fontSize: '0.7rem', marginTop: '4px', display: 'block' }}>
+              Credits awarded after mission completion and approval.
+            </small>
           </div>
 
           <div className="modal-actions">

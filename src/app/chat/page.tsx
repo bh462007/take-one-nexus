@@ -61,6 +61,10 @@ interface Task {
   assignee_id?: number;
   creator_id: number;
   due_date?: string;
+  reward_credits: number;
+  approval_status: 'Pending' | 'Approved';
+  completed_at?: string;
+  approved_at?: string;
   created_at: string;
 }
 
@@ -277,6 +281,23 @@ export default function ChatPage() {
       });
     } catch (err) {
       console.error('Failed to delete task', err);
+    }
+  }, []);
+
+  const approveTask = useCallback(async (taskId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/tasks/${taskId}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const json = await res.json();
+      if (!json.success) {
+        alert(json.message || 'Mission failed: Could not approve task.');
+      }
+    } catch (err) {
+      console.error('Failed to approve task', err);
     }
   }, []);
 
@@ -589,6 +610,11 @@ export default function ChatPage() {
     const userChannelName = `user-${user.id}`;
     const userChannel = pusherRef.current.subscribe(userChannelName);
 
+    userChannel.bind('credit-update', (data: { credits: number, change: number, reason: string }) => {
+      setUser(prev => prev ? { ...prev, credits: data.credits } : null);
+      console.log(`Credits updated: +${data.change} for ${data.reason}`);
+    });
+
     userChannel.bind('message-notification', (data: { conversationId: number, message: ChatMessage }) => {
       setConversations((current) => {
         const convIndex = current.findIndex((c) => c.id === data.conversationId);
@@ -672,7 +698,7 @@ export default function ChatPage() {
     channel.bind('task-update', (data: { type: string, task: Task, taskId?: number }) => {
       if (data.type === 'TASK_CREATED') {
         setTasks(prev => [data.task, ...prev]);
-      } else if (data.type === 'TASK_UPDATED') {
+      } else if (data.type === 'TASK_UPDATED' || data.type === 'TASK_APPROVED') {
         setTasks(prev => prev.map(t => t.id === data.task.id ? data.task : t));
       } else if (data.type === 'TASK_DELETED') {
         setTasks(prev => prev.filter(t => t.id !== data.taskId));
@@ -1115,13 +1141,14 @@ export default function ChatPage() {
                                   </div>
                                 </div>
 
-                                <div className="task-meta">
+                                <div className="task-footer">
                                   <div className="task-status-wrap">
                                     {isLead || isAssignee ? (
                                       <select 
                                         value={task.status} 
                                         onChange={(e) => updateTaskStatus(task.id, e.target.value)}
                                         className={`status-select status-${task.status.toLowerCase().replace(' ', '')}`}
+                                        disabled={task.approval_status === 'Approved'}
                                       >
                                         <option value="Todo">Todo</option>
                                         <option value="In Progress">In Progress</option>
@@ -1131,10 +1158,35 @@ export default function ChatPage() {
                                     ) : (
                                       <span className={`task-status status-${task.status.toLowerCase().replace(' ', '')}`}>{task.status}</span>
                                     )}
+
+                                    {task.status === 'Done' && (
+                                      <div className="approval-status">
+                                        {task.approval_status === 'Approved' ? (
+                                          <span className="badge approved">✓ Approved</span>
+                                        ) : (
+                                          <span className="badge pending">⌛ Pending Approval</span>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="task-priority-tag">{task.priority}</span>
-                                  {task.due_date && <span className="task-due-tag">Deadline: {new Date(task.due_date).toLocaleDateString()}</span>}
+
+                                  <div className="task-tags">
+                                    {task.reward_credits > 0 && (
+                                      <span className="task-reward-tag">✦ {task.reward_credits} Credits</span>
+                                    )}
+                                    <span className="task-priority-tag">{task.priority}</span>
+                                    {task.due_date && <span className="task-due-tag">Deadline: {new Date(task.due_date).toLocaleDateString()}</span>}
+                                  </div>
                                 </div>
+
+                                {task.status === 'Done' && task.approval_status !== 'Approved' && isLead && (
+                                  <button 
+                                    className="task-approve-btn"
+                                    onClick={() => approveTask(task.id)}
+                                  >
+                                    Grant Rewards & Close Mission
+                                  </button>
+                                )}
                               </div>
                             </div>
                           );

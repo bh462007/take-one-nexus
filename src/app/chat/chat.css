@@ -1547,3 +1547,80 @@ nav a:hover::after { width: 100%; }
   color: #ff5555;
   margin-left: auto;
 }
+
+/* ── NEW TASK REWARD & APPROVAL STYLES ── */
+.task-reward-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--neon);
+  background: rgba(255, 77, 26, 0.1);
+  border: 1px solid rgba(255, 77, 26, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.approval-status {
+  margin-top: 8px;
+}
+
+.badge {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.badge.approved {
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.badge.pending {
+  background: rgba(255, 204, 0, 0.1);
+  color: #ffcc00;
+  border: 1px solid rgba(255, 204, 0, 0.3);
+}
+
+.task-approve-btn {
+  width: 100%;
+  margin-top: 15px;
+  background: var(--neon);
+  color: var(--void);
+  border: none;
+  padding: 10px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s;
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+}
+
+.task-approve-btn:hover {
+  background: var(--amber);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 77, 26, 0.3);
+}
+
+.task-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
