@@ -1107,7 +1107,12 @@ export default function ChatPage() {
                             </div>
                             {dateMsgs.map((msg) => (
                               <div key={msg.id} className={`message-bubble ${msg.sender_id === user?.id ? 'sent' : 'received'} ${msg.status || ''}`}>
-                                {activeConv?.is_group && msg.sender_id !== user?.id && <div className="msg-sender-name">{getDisplayName(msg.sender)}</div>}
+                                {activeConv?.is_group && msg.sender_id !== user?.id && (
+                                  <div className="msg-sender-row">
+                                    <span className="msg-sender-name">{getDisplayName(msg.sender)}</span>
+                                    {msg.sender?.role && <span className="msg-role-badge">{msg.sender.role}</span>}
+                                  </div>
+                                )}
                                 <div className="msg-content">
                                   {msg.content}
                                   {msg.status === 'sending' && <span className="msg-status-icon sending">...</span>}
@@ -1130,7 +1135,13 @@ export default function ChatPage() {
                   <div className="tasks-area">
                     <div className="tasks-header">
                       <h3>Active Missions</h3>
-                      <button onClick={() => setIsTaskModalOpen(true)} className="add-task-btn">Assign Task +</button>
+                      {activeConv && (
+                        (!activeConv.is_group || 
+                        ['admin', 'developer'].includes(user?.role?.toLowerCase() || '') || 
+                        ['Director', 'Admin'].includes(activeConv.my_role || '')) && (
+                          <button onClick={() => setIsTaskModalOpen(true)} className="add-task-btn">Assign Task +</button>
+                        )
+                      )}
                     </div>
                     {tasksLoading ? (
                       <div className="message-state">Accessing mission records...</div>
@@ -1140,7 +1151,11 @@ export default function ChatPage() {
                       <div className="tasks-list">
                         {tasks.map(task => {
                           const assignee = activeConv?.users.find(u => u.id === task.assignee_id);
-                          const isLead = activeConv?.my_role === 'Director' || activeConv?.my_role === 'Admin';
+                          const isLead = activeConv && (
+                            !activeConv.is_group || 
+                            ['admin', 'developer'].includes(user?.role?.toLowerCase() || '') || 
+                            ['Director', 'Admin'].includes(activeConv.my_role || '')
+                          );
                           const isAssignee = task.assignee_id === user?.id;
 
                           return (
@@ -1359,6 +1374,9 @@ export default function ChatPage() {
         conversationId={activeConv?.id || 0} 
         members={activeConv?.users || []} 
         onCreate={createTask} 
+        myRole={activeConv?.my_role || 'Member'}
+        isGroup={activeConv?.is_group || false}
+        globalRole={user?.role || 'Member'}
       />
     </div>
   );

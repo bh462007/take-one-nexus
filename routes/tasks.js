@@ -59,18 +59,34 @@ router.post('/', authenticateUser, async (req, res) => {
     const { conversationId, title, description, priority, assigneeId, dueDate, rewardCredits } = req.body;
     const userId = Number(req.user.id);
 
-    // Check if user is Director or Admin
-    const member = await prisma.conversationMember.findUnique({
-      where: {
-        conversation_id_user_id: {
-          conversation_id: Number(conversationId),
-          user_id: userId
+    // Fetch conversation and member info
+    const [conversation, member] = await Promise.all([
+      prisma.conversation.findUnique({
+        where: { id: Number(conversationId) }
+      }),
+      prisma.conversationMember.findUnique({
+        where: {
+          conversation_id_user_id: {
+            conversation_id: Number(conversationId),
+            user_id: userId
+          }
         }
-      }
-    });
+      })
+    ]);
 
-    if (!member || !['Director', 'Admin'].includes(member.role)) {
-      return res.status(403).json({ success: false, message: 'Only Directors and Admins can assign tasks.' });
+    if (!conversation || !member) {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    // Permission Check: 
+    // - Always allowed in DMs
+    // - In Groups: Only Admin, Director, or Developer (Global or Member role)
+    const isLead = !conversation.is_group || 
+                   ['Admin', 'Developer'].includes(req.user.role) || 
+                   ['Director', 'Admin'].includes(member.role);
+
+    if (!isLead) {
+      return res.status(403).json({ success: false, message: 'Unauthorized. Only leaders can assign missions in group chats.' });
     }
 
     const task = await prisma.task.create({
@@ -112,7 +128,8 @@ router.patch('/:id', authenticateUser, async (req, res) => {
     const { status, priority, title, description, assigneeId, dueDate } = req.body;
 
     const task = await prisma.task.findUnique({
-      where: { id: taskId }
+      where: { id: taskId },
+      include: { conversation: true }
     });
 
     if (!task) {
@@ -133,17 +150,21 @@ router.patch('/:id', authenticateUser, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Only Director/Admin can change priority, title, etc.
-    // Assignee or Director/Admin can change status.
-    const isLead = ['Director', 'Admin'].includes(member.role);
+    // Permission Check:
+    // - In DMs, both users are leaders.
+    // - In Groups, leaders are Admin, Director, Developer.
+    const isLead = !task.conversation.is_group || 
+                   ['Admin', 'Developer'].includes(req.user.role) || 
+                   ['Director', 'Admin'].includes(member.role);
+    
     const isAssignee = task.assignee_id === userId;
 
     if (!isLead && !isAssignee && status) {
-       return res.status(403).json({ success: false, message: 'You are not assigned to this task.' });
+       return res.status(403).json({ success: false, message: 'You are not authorized to update this task status.' });
     }
 
     if (!isLead && (priority || title || description || assigneeId || dueDate)) {
-      return res.status(403).json({ success: false, message: 'Only Directors and Admins can modify task details.' });
+      return res.status(403).json({ success: false, message: 'Only leaders can modify mission details.' });
     }
 
     const updatedTask = await prisma.task.update({
@@ -184,14 +205,15 @@ router.delete('/:id', authenticateUser, async (req, res) => {
     const userId = Number(req.user.id);
 
     const task = await prisma.task.findUnique({
-      where: { id: taskId }
+      where: { id: taskId },
+      include: { conversation: true }
     });
 
     if (!task) {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
-    // Check if user is Director or Admin
+    // Check if user is member of conversation
     const member = await prisma.conversationMember.findUnique({
       where: {
         conversation_id_user_id: {
@@ -201,8 +223,16 @@ router.delete('/:id', authenticateUser, async (req, res) => {
       }
     });
 
-    if (!member || !['Director', 'Admin'].includes(member.role)) {
-      return res.status(403).json({ success: false, message: 'Only Directors and Admins can delete tasks.' });
+    if (!member) {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    const isLead = !task.conversation.is_group || 
+                   ['Admin', 'Developer'].includes(req.user.role) || 
+                   ['Director', 'Admin'].includes(member.role);
+
+    if (!isLead) {
+      return res.status(403).json({ success: false, message: 'Unauthorized. Only leaders can delete missions.' });
     }
 
     await prisma.task.delete({
@@ -250,18 +280,13 @@ router.post('/:id/approve', authenticateUser, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Task is already approved.' });
     }
 
-    // Check if user is Director or Admin in the conversation
-    const member = await prisma.conversationMember.findUnique({
-      where: {
-        conversation_id_user_id: {
-          conversation_id: task.conversation_id,
-          user_id: userId
-        }
-      }
-    });
+    // Check if user is authorized to approve
+    const isLead = !task.conversation.is_group || 
+                   ['Admin', 'Developer'].includes(req.user.role) || 
+                   ['Director', 'Admin'].includes(member.role);
 
-    if (!member || !['Director', 'Admin'].includes(member.role)) {
-      return res.status(403).json({ success: false, message: 'Only Directors and Admins can approve tasks.' });
+    if (!isLead) {
+      return res.status(403).json({ success: false, message: 'Unauthorized. Only leaders can approve missions and grant rewards.' });
     }
 
     // Update task and award credits in a transaction

@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const { authenticateUser, requireSameUser } = require('../middleware/auth');
+const { sendWelcomeEmail } = require('../utils/email');
 const { PrismaClient } = require('@prisma/client');
 const { formatDisplayName, getCanonicalDisplayName } = require('../utils/formatting');
 const Pusher = require('pusher');
@@ -188,6 +189,11 @@ router.post('/register', async (req, res) => {
         credits: 0
       },
       token: token
+    });
+
+    // Send welcome email asynchronously (non-blocking)
+    sendWelcomeEmail(user.email, user.name).catch(err => {
+      console.error('[Registration] Background email task failed:', err.message);
     });
 
     // Trigger Pusher update for admin dashboard

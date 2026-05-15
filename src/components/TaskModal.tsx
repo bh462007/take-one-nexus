@@ -14,9 +14,21 @@ interface TaskModalProps {
   conversationId: number;
   members: User[];
   onCreate: (taskData: any) => Promise<void>;
+  myRole: string;
+  isGroup: boolean;
+  globalRole: string;
 }
 
-export default function TaskModal({ isOpen, onClose, conversationId, members, onCreate }: TaskModalProps) {
+export default function TaskModal({ 
+  isOpen, 
+  onClose, 
+  conversationId, 
+  members, 
+  onCreate,
+  myRole,
+  isGroup,
+  globalRole
+}: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('Medium');
