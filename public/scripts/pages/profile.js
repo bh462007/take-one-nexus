@@ -585,7 +585,7 @@ async function saveProfile() {
 
 /* Initialization */
 function initProfile() {
-    console.log('[TAKE ONE] Initializing Profile Interactivity...');
+
 
     /* Avatar Edit */
     const avatarBtn = document.getElementById('avatarEditBtn');

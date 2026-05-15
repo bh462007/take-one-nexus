@@ -115,7 +115,7 @@ async function sendWelcomeEmail(to, name) {
       return;
     }
 
-    console.log('[Email] Welcome email sent successfully:', data.id);
+
   } catch (err) {
     console.error('[Email] Unexpected error sending welcome email:', err.message);
   }

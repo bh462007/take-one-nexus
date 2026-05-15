@@ -169,7 +169,7 @@ router.post('/register', async (req, res) => {
       maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
     };
 
-    console.log(`[AUTH] Setting cookie for user ${user.id} on domain: ${req.headers.host}`);
+
     res.cookie('token', token, cookieOptions);
 
     res.status(201).json({
@@ -305,7 +305,7 @@ router.post('/login', async (req, res) => {
       maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
     };
 
-    console.log(`[AUTH] User ${user.id} logged in from ${req.headers.host}`);
+
     res.cookie('token', token, cookieOptions);
 
     res.json({

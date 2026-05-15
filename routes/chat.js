@@ -467,7 +467,7 @@ router.post('/messages', authenticateUser, async (req, res) => {
 
     // Trigger Pusher event
     if (process.env.PUSHER_APP_ID) {
-      console.log(`[CHAT_API] Triggering Pusher event for conversation-${targetConversationId}`);
+
       pusher.trigger(`conversation-${targetConversationId}`, 'new-message', {
         ...message,
         sender: {

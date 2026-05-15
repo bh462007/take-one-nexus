@@ -1,91 +1,66 @@
-# Technical Architecture 🏗️
+# 🏛️ TAKE ONE Nexus Architecture
 
-TAKE ONE Nexus is built as a high-performance, cinematic creative ecosystem. It employs a **Hybrid Architecture** that bridges modern dynamic React interfaces with robust, scalable legacy backend services.
-
----
-
-## 🛰️ System Overview
-
-The system is composed of three primary layers:
-
-### 1. Dynamic Frontend (Next.js 14+)
-- **Location**: `src/app/`
-- **Core Role**: Handles authenticated user experiences, real-time dashboards, and cinematic profiles.
-- **Key Technologies**: React Server Components, Client Components, Framer Motion (for animations).
-- **Communication**: Communicates with the Backend layer via standard REST APIs.
-- **Optimistic UI**: Employs client-side optimistic updates for real-time messaging, ensuring instantaneous feedback.
-
-### 2. API & Legacy Layer (Express.js)
-- **Location**: `server.js` and `routes/`
-- **Core Role**: Manages business logic, database orchestration, and authentication.
-- **Key Technologies**: Node.js, Express, JWT, Pusher.
-- **Static Pages**: Serves high-speed static HTML files located in `public/` (e.g., `crew.htm`).
-
-### 3. Data Infrastructure (Prisma & MySQL)
-- **Location**: `prisma/`
-- **Core Role**: Persistent storage and schema management.
-- **Database**: MySQL (optimized for TiDB Cloud).
-- **Audit Logs**: Includes a `CreditTransaction` system for immutable tracking of user rewards.
+TAKE ONE Nexus uses a highly optimized, hybrid architecture designed to balance SEO, rapid client-side interactivity, and robust real-time communication. This document outlines the core components of our system.
 
 ---
 
-## 🔄 Data Flow
+## 1. The Dual-Server Model
 
-### Authentication Flow
-1. User logs in via `/api/users/login`.
-2. Express server validates credentials and issues a **JWT**.
-3. JWT is stored in a **Secure, HTTP-Only Cookie**.
-4. Both Next.js and the Express backend can verify this cookie for subsequent requests.
+Due to the transition from a purely static/Express application to a modern Next.js ecosystem, the platform currently employs a **Dual-Server Model** hosted on Vercel:
 
-### Real-Time Synchronization (Pusher)
-The platform uses **Pusher** for event-driven updates:
-- `conversation-{id}`: New messages, typing indicators, and task updates.
-- `user-{id}`: Credit notifications and private system alerts.
-- `global-leaderboard`: Real-time ranking updates.
+### A. Next.js App Router (`src/app`)
+- **Purpose**: Handles modern, highly interactive UI components (Admin Dashboards, Chat interfaces, dynamic profiles).
+- **Execution**: Server-Side Rendering (SSR) and Client Components.
+- **Routing**: `/*` (except specific API and legacy routes).
 
----
+### B. Legacy Express Server (`server.js`)
+- **Purpose**: Acts as the core REST API for data mutations and serves legacy static `.htm` pages (`/public`).
+- **Execution**: Runs as a Serverless Function on Vercel (`api/index.js` or via `vercel.json` rewrites).
+- **Routing**: `/api/*` handles data logic.
 
-## 🛠 Project Structure
-
-```text
-/
-├── prisma/             # Database Models & Migrations
-├── routes/             # Backend API Domain Logic
-│   ├── users.js        # Auth & Profile Management
-│   ├── chat.js         # Conversation & Message Logic
-│   └── tasks.js        # Mission Control & Reward System
-├── src/
-│   ├── app/            # Next.js Pages (Leaderboard, Chat, Profile)
-│   ├── components/     # Shared React Components
-│   └── lib/            # Shared Utilities (Auth, Database, Avatars)
-├── public/             # Static Assets & Vanilla JS
-├── middleware/         # Auth Guard & Security Layers
-├── server.js           # Hybrid Server Entry Point
-└── vercel.json         # Unified Routing (Next.js + Express Proxy)
-```
+> **Routing Magic**: Vercel's `vercel.json` rewrite rules automatically map incoming `/api/*` requests to the Express serverless function, while allowing Next.js to handle the rest of the application seamlessly.
 
 ---
 
-## 💎 Reward System Design
+## 2. Database & ORM Layer
 
-The **Nexus Credits** system is architected for transparency and security:
-- **Task Creation**: Mission assigners specify `reward_credits`.
-- **Task Completion**: Assignees mark tasks as `Done`.
-- **Approval Flow**: Directors/Admins must approve the task.
-- **Transaction**: Upon approval, a database transaction:
-  1. Updates user credit balance.
-  2. Creates a `CreditTransaction` record.
-  3. Triggers a Pusher `credit-update` event.
+### TiDB Cloud (MySQL Compatible)
+We use TiDB Cloud, a distributed SQL database, to ensure horizontal scalability. 
 
----
-
-## 🔒 Security Posture
-
-- **Session**: JWT with expiration and rotation.
-- **Data**: Input sanitization via Express middleware.
-- **ORMs**: Prisma prevents SQL injection.
-- **API**: Role-based access control (RBAC) enforced on sensitive routes (e.g., `POST /approve`).
+### Prisma ORM (`/prisma/schema.prisma`)
+Prisma serves as the single source of truth for the database schema.
+- **Connection Pooling**: Due to the serverless nature of our Express and Next.js APIs, Prisma is instantiated globally (`global.prisma`) to prevent connection exhaustion.
+- **Type Safety**: Prisma generates strict TypeScript types used across the Next.js frontend.
 
 ---
 
-Designed for Scalability. Built for the Future of Film.
+## 3. Real-Time Telemetry (Pusher)
+
+To give TAKE ONE Nexus its signature "live mission control" feel, we utilize Pusher WebSockets.
+- **Global Chat**: Direct peer-to-peer messaging (`chat.js`).
+- **Admin Dashboard**: Live metrics pushing (e.g., when a user registers, the admin graph pulses and increments).
+- **Task Updates**: Live credits awarding and issue tracking.
+
+---
+
+## 4. Authentication Flow
+
+Currently transitioning to **Clerk** from a custom JWT solution:
+1. **Legacy JWT**: Express API issues an HTTP-only cookie (`token`) containing a signed payload of the user's ID and Role.
+2. **Next.js Middleware**: Validates the cookie or Clerk session before allowing access to protected routes like `/admin`.
+3. **Database Sync**: The `/api/webhooks/clerk` endpoint ensures TiDB stays perfectly synced with Clerk's identity state.
+
+---
+
+## 5. File & Media Storage (Planned)
+
+Currently, assets are served statically from `/public`. Future architecture will utilize:
+- **AWS S3 / Vercel Blob**: For user avatar uploads and PDF script storage.
+- **Resend**: For automated transactional emails (Welcome, Reset Password).
+
+---
+
+## Architectural Decision Records (ADR)
+
+*   **ADR 001 - Using IST globally for Admin**: To ensure analytics reset predictably for the core demographic, all `GROUP BY DATE` SQL calls and frontend charting components use `CONVERT_TZ` and `Intl.DateTimeFormat` mapped to `Asia/Kolkata`.
+*   **ADR 002 - Preserving HTML Pages**: Moving perfectly functioning HTML pages to Next.js components would break existing cinematic animations. They are kept as static files until a 1:1 React conversion is feasible.

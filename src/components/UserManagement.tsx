@@ -94,7 +94,7 @@ export default function UserManagement({ initialUsers }: Props) {
 
   const downloadCSV = () => {
     try {
-      console.log('Initiating Crew Database Export...');
+
       
       const headers = ['Name', 'Email', 'Role/Designation', 'College', 'City', 'Account Creation Date'];
       const rows = filteredUsers.map(user => [
@@ -103,7 +103,7 @@ export default function UserManagement({ initialUsers }: Props) {
         user.role || 'GHOST',
         user.college || '—',
         user.city || '—',
-        new Date(user.created_at).toLocaleDateString()
+        new Date(user.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
       ]);
 
       const csvContent = [
@@ -123,7 +123,7 @@ export default function UserManagement({ initialUsers }: Props) {
       link.click();
       document.body.removeChild(link);
       
-      console.log('Crew Database Export Successful.');
+
     } catch (error) {
       console.error('Crew Database Export Failed:', error);
       alert('Failed to generate CSV export. Check console for details.');
@@ -190,7 +190,7 @@ export default function UserManagement({ initialUsers }: Props) {
                   </td>
                   <td data-label="BASE / COLLEGE" style={{ color: 'var(--silver)' }}>{user.college || '—'}</td>
                   <td data-label="LOCATION" style={{ color: 'var(--silver)' }}>{user.city || '—'}</td>
-                  <td data-label="SYNC DATE" style={{ color: 'var(--silver)', fontSize: '10px' }}>{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td data-label="SYNC DATE" style={{ color: 'var(--silver)', fontSize: '10px' }}>{new Date(user.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
                   <td data-label="OPERATIONS">
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button 

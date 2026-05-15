@@ -30,9 +30,11 @@
 
 > **Nexus [nɛksəs]:** A connection or series of connections linking two or more things.
 
-TAKE ONE Nexus is the definitive digital ecosystem for the next generation of filmmakers, screenwriters, and creative technocrats. We noticed a major **Problem**: student filmmakers and independent creatives often struggle to find dedicated, skilled crew members for their passion projects. 
+TAKE ONE Nexus is the definitive digital ecosystem for the next generation of filmmakers, screenwriters, and creative technocrats. 
 
-**Our Solution**: A platform designed with a cinematic "Director-style" aesthetic that acts as a secure, real-time hub for showcasing portfolios, discovering talent based on creative roles, and forming production crews.
+**The Problem**: Student filmmakers and independent creatives often struggle to find dedicated, skilled crew members for their passion projects. Traditional networking is fragmented.
+
+**The Solution**: A platform designed with a cinematic "Director-style" aesthetic that acts as a secure, real-time hub for showcasing portfolios, discovering talent based on creative roles, and forming production crews. 
 
 ---
 
@@ -42,7 +44,8 @@ TAKE ONE Nexus is the definitive digital ecosystem for the next generation of fi
 - **🛰️ Secure Transmission (Chat):** Real-time communication suite powered by Pusher. Direct messaging, group chats, live sync, and intelligent unread tracking.
 - **🏆 Live Leaderboard:** Real-time community ranking system powered by our internal Credits engine to reward platform engagement.
 - **💎 Creator Credits:** The heartbeat of the Nexus economy. Earn credits for collaborations and active participation.
-- **🛡️ Developer & Platform Security:** Integrated global bug reporting, role-based admin dashboard, and robust JWT-based session security.
+- **🛡️ Developer & Platform Security:** Integrated global bug reporting, role-based admin dashboard, and robust session security.
+- **📊 Live Production Telemetry:** Admin dashboards reporting real-time, IST-synced metrics of user onboarding, scripting activity, and platform usage.
 
 ---
 
@@ -56,7 +59,7 @@ TAKE ONE Nexus is the definitive digital ecosystem for the next generation of fi
 | :---: | :---: |
 | <img src="https://via.placeholder.com/500x300/111/eee?text=Real-Time+Chat" alt="Chat" /> | <img src="https://via.placeholder.com/500x300/111/eee?text=Global+Leaderboard" alt="Leaderboard" /> |
 
-*(Note: Replace placeholders with actual product screenshots)*
+*(Note: Replace placeholders with actual product screenshots prior to launch)*
 
 ---
 
@@ -71,7 +74,7 @@ This project is built using a modern, scalable hybrid architecture.
 | **Database** | MySQL (optimized for TiDB Cloud) |
 | **ORM** | Prisma |
 | **Real-time** | Pusher |
-| **Authentication** | JWT stored in secure HTTP-only cookies |
+| **Authentication** | JWT stored in secure HTTP-only cookies (Clerk integration ready) |
 | **Deployment** | Vercel (Hybrid Serverless & Static) |
 
 ---
@@ -110,10 +113,10 @@ Follow these instructions to set up the project locally.
 
 ### Prerequisites
 
-- Node.js 18+
-- MySQL / TiDB Database
-- Pusher Account (for Real-time Chat)
-- Git
+- **Node.js**: v18+
+- **Database**: MySQL / TiDB instance
+- **Pusher**: Account for real-time WebSockets
+- **Git**: For version control
 
 ### 1. Clone the repository
 
@@ -130,7 +133,7 @@ npm install
 
 ### 3. Environment Variables Setup
 
-Create a `.env` file in the root directory based on the `.env.example`:
+Create a `.env` file in the root directory based on `.env.example`:
 
 ```env
 # Database
@@ -183,7 +186,7 @@ TAKE ONE Nexus is optimized for deployment on **Vercel**.
 1. Connect your GitHub repository to Vercel.
 2. Configure the environment variables in the Vercel Dashboard.
 3. Vercel will use the `vercel.json` file to handle complex routing between Next.js and the Express backend automatically.
-4. The build command is pre-configured to `prisma generate && next build`.
+4. The build command is pre-configured to `npm run build` which runs `prisma generate && next build`.
 
 ---
 
@@ -207,26 +210,26 @@ We actively welcome contributions from the community, especially participants of
 ## 🗺️ Roadmap
 
 We have ambitious plans for the future of TAKE ONE Nexus. See our detailed [ROADMAP.md](ROADMAP.md) for upcoming phases, including:
-- AI Crew Matching
-- Realtime Production Boards
-- Mobile App Development
+- AI Crew Matching Engine
+- Realtime Production Storyboards
+- Native Mobile App Development
 
 ---
 
 ## 🐛 Known Issues
 
-- Chat FAB occasionally overlaps UI on admin pages.
-- Client-side file type validation for avatar uploads is pending.
+- Chat FAB occasionally overlaps UI on certain admin pages.
+- Client-side file type validation for avatar uploads needs hardening.
 - See the [Issue Tracker](https://github.com/alokr25012-lab/take-one-nexus/issues) for an up-to-date list.
 
-If you find a bug, please report it using the in-app Issue Reporter or via our GitHub Issues.
+If you find a bug, please report it using the in-app Global Issue Reporter or via our GitHub Issues.
 
 ---
 
 ## 🛡️ Security & Conduct
 
-- Please read our [SECURITY.md](SECURITY.md) for responsible disclosure policies.
-- This project enforces a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+- Please read our [SECURITY.md](SECURITY.md) for responsible disclosure policies and supported versions.
+- This project enforces a strict [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code to foster an inclusive environment.
 
 ---
 

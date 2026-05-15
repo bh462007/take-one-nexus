@@ -1,45 +1,34 @@
-# Security Policy
+# 🛡️ Security Policy
 
-At TAKE ONE Nexus, we take the security of our platform and user data seriously. This document outlines our security practices and how to report potential vulnerabilities.
+At TAKE ONE Nexus, the security of our filmmakers' intellectual property (scripts) and personal data is our highest priority. We take security vulnerabilities very seriously and appreciate the efforts of security researchers and our community in keeping our platform safe.
 
-## Supported Versions
+## 🟢 Supported Versions
 
-We currently support the following branches for security updates:
+We currently provide security updates and patches for the following versions of our platform:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| `main`  | :white_check_mark: |
-| `< 1.0` | :x:                |
+| v1.0.x  | :white_check_mark: |
+| v0.x.x  | :x:                |
 
-## Reporting a Vulnerability
+*(Note: Since we operate as a live SaaS platform, users always interact with the latest production version).*
 
-If you discover a security vulnerability within TAKE ONE Nexus, please **do not** report it by creating a public GitHub issue. 
+## 🛑 Reporting a Vulnerability
 
-Instead, please send an email to the core maintainers:
-**[Maintainer Email / Security Contact]** *(Replace with actual email)*
+If you discover a security vulnerability, we kindly ask that you do **not** report it via public GitHub issues or public forums. Instead, please follow our responsible disclosure process:
 
-### What to include in your report:
-- A clear description of the vulnerability.
-- Steps to reproduce the issue.
-- Potential impact of the vulnerability.
-- Any proposed mitigation or fix (if applicable).
+1. **Email the core team** at: `alok.r25012@csds.rishihood.edu.in` or `aarushgupta289@gmail.com`.
+2. **Include detailed information**: Provide a thorough description of the vulnerability, the environment where it was discovered, and steps to reproduce it. 
+3. **Wait for confirmation**: We will acknowledge receipt of your vulnerability report within 48 hours.
 
-We will acknowledge receipt of your vulnerability report within 48 hours and strive to resolve critical issues as quickly as possible.
+We will work diligently to validate and fix the vulnerability. Once resolved, we will notify you and may publicly acknowledge your contribution (with your permission).
 
-## Responsible Disclosure
+## 🔒 Security Best Practices
 
-We ask that you follow the principles of responsible disclosure:
-1. Give us a reasonable amount of time to investigate and patch the vulnerability before making any information public.
-2. Avoid accessing or modifying user data that does not belong to you during your testing.
-3. Do not perform any testing that could degrade the performance of the live platform (e.g., DoS attacks).
+To maintain a secure ecosystem, we adhere to the following practices:
+- **Authentication**: JWT tokens stored securely via HTTP-only, secure cookies. Migration to Clerk identity services is actively maintained.
+- **Database**: Parameterized queries using Prisma and prepared SQL statements to prevent SQL Injection.
+- **Data Privacy**: Passwords are cryptographically hashed using bcrypt. Sensitive user data is never exposed to the frontend.
+- **XSS Prevention**: React/Next.js automatically sanitizes inputs, and we strictly validate HTML rendered on static routes.
 
-## Security Best Practices in our Codebase
-
-Contributors should adhere to the following when writing code:
-- **Authentication:** All protected API routes must be gated using our JWT middleware.
-- **Authorization:** Ensure role-based access control (RBAC) is enforced at the API level, not just the UI level.
-- **Input Validation:** All user inputs must be validated using Zod before interacting with the database.
-- **Data Privacy:** Never log sensitive information (e.g., passwords, full JWT tokens, PII) to the console.
-- **Dependencies:** Regularly audit `package.json` for vulnerable dependencies (`npm audit`).
-
-Thank you for helping keep TAKE ONE Nexus secure!
+Thank you for helping us keep TAKE ONE Nexus secure!

@@ -1,49 +1,35 @@
-# 🗺️ Roadmap — TAKE ONE Nexus
+# 🗺️ Feature Roadmap
 
-This document outlines the strategic vision and upcoming phases for the TAKE ONE Nexus platform. Our roadmap is designed to steadily expand our collaborative features while maintaining the cinematic aesthetic and platform stability.
-
----
-
-## 🟢 Phase 1: Foundation & Stability (Current)
-*Status: Completed / In Maintenance*
-
-- [x] **Cinematic Profiles:** Robust portfolio and skill showcasing.
-- [x] **Secure Transmission:** Real-time messaging and group chats using Pusher.
-- [x] **Live Leaderboard:** Real-time community ranking based on a dynamic credits engine.
-- [x] **Open Source Prep:** Comprehensive documentation overhaul (SSOC/GSSoC ready).
-- [x] **Performance Optimization:** Prisma query caching and static asset optimization.
+Welcome to the TAKE ONE Nexus Roadmap! This document outlines our strategic vision for the future of the platform. We are building a cinematic ecosystem, and these features represent the next leap in connecting filmmakers, crew members, and screenwriters.
 
 ---
 
-## 🟡 Phase 2: Enhanced Collaboration & Analytics
-*Status: In Development*
+## 🟢 Phase 1: Foundation (Completed)
+- [x] Basic user registration and profile creation
+- [x] Script uploading and showcase repository
+- [x] Direct peer-to-peer chat system
+- [x] Real-time global issue reporting
+- [x] Core cinematic UI framework and design language
 
-- [ ] **AI Crew Matching:** Implement a recommendation engine suggesting crew members based on script requirements, past collaborations, and skill synergies.
-- [ ] **Realtime Collaboration:** Collaborative script reading and annotation within the platform.
-- [ ] **Production Analytics:** Dashboards for producers to track project engagement, crew response rates, and platform reach.
-- [ ] **Advanced Portfolios:** Support for rich media embeds (Vimeo/YouTube integrations) and 3D asset previews for VFX artists.
+## 🟡 Phase 2: Crew & Economy (In Progress)
+- [x] **Credits Economy System**: Users earn credits for uploading scripts and engaging with the community.
+- [x] **Global Leaderboard**: Ranking users based on activity and peer reviews.
+- [x] **Real-time Synchronization**: Pusher implementation for live chat, task updates, and notifications.
+- [x] **Admin Telemetry Dashboard**: Complete command center for tracking platform metrics.
+- [ ] **Clerk Authentication Migration**: Full transition to Clerk for robust identity management.
+
+## 🔵 Phase 3: The AI Production Board (Upcoming)
+- [ ] **AI-Powered Crew Matching**: Algorithmic suggestions connecting directors with the ideal cinematographers, editors, and sound engineers based on past projects and skills.
+- [ ] **Interactive Storyboards**: Built-in collaborative storyboarding tools where multiple users can sketch and annotate frames in real time.
+- [ ] **Call Sheet Generator**: Automated dynamic call sheets synced with users' registered email addresses.
+- [ ] **Advanced Portfolio Analytics**: Creators can see exactly who viewed their scripts and profiles.
+
+## 🟣 Phase 4: Expansion & Ecosystem
+- [ ] **Native Mobile App**: Porting the Next.js/React architecture to React Native for iOS and Android.
+- [ ] **Freelance Escrow Integration**: Safe, integrated payment gateways for freelance crew members.
+- [ ] **Film Festival Integration**: Direct submission API links to global film festivals.
+- [ ] **Hardware Synchronization**: Integrating with digital clapperboards and on-set devices.
 
 ---
 
-## 🟠 Phase 3: Marketplace & Economy
-*Status: Planned*
-
-- [ ] **Credit Marketplace:** Allow users to spend earned credits on platform perks (e.g., featured scripts, highlighted profile badges).
-- [ ] **Bounty System:** Directors/Producers can attach credit bounties to specific crew roles they urgently need.
-- [ ] **Film Festival Integration:** Direct submission pipelines to partnered student film festivals via the Nexus platform.
-- [ ] **Realtime Production Boards:** Trello-like kanban boards integrated directly into group chats for shot lists and production tracking.
-
----
-
-## 🟣 Phase 4: Expansion
-*Status: Future Horizon*
-
-- [ ] **Mobile App:** A native React Native application for iOS and Android, focusing on push notifications for on-set communication.
-- [ ] **External API Versioning:** Public `/api/v1/` endpoints for developers to build third-party tools around Nexus data.
-- [ ] **Global Hubs:** Localization and dedicated hubs for different film schools and cities.
-
----
-
-### How to Contribute to the Roadmap
-
-We welcome input from the community! If you have a feature idea that aligns with our vision, please open a **Feature Request** issue and use the `enhancement` label.
+*Note: This roadmap is a living document. Features are subject to change based on community feedback and open-source contributions. Have an idea? Open an issue on GitHub!*

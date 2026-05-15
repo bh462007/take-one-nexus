@@ -157,7 +157,7 @@ export default function AdminIssuesPage() {
                   </span>
                 </td>
                 <td style={{ fontSize: '12px', color: 'var(--silver)' }}>
-                  {new Date(issue.created_at).toLocaleDateString()}
+                  {new Date(issue.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px' }}>

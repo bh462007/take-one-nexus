@@ -624,7 +624,7 @@ export default function ChatPage() {
 
     userChannel.bind('credit-update', (data: { credits: number, change: number, reason: string }) => {
       setUser(prev => prev ? { ...prev, credits: data.credits } : null);
-      console.log(`Credits updated: +${data.change} for ${data.reason}`);
+
     });
 
     userChannel.bind('message-notification', (data: { conversationId: number, message: ChatMessage }) => {
@@ -1220,7 +1220,7 @@ export default function ChatPage() {
                                       <span className="task-reward-tag">✦ {task.reward_credits} Credits</span>
                                     )}
                                     <span className="task-priority-tag">{task.priority}</span>
-                                    {task.due_date && <span className="task-due-tag">Deadline: {new Date(task.due_date).toLocaleDateString()}</span>}
+                                    {task.due_date && <span className="task-due-tag">Deadline: {new Date(task.due_date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>}
                                   </div>
                                 </div>
 
@@ -1304,7 +1304,7 @@ export default function ChatPage() {
                           </div>
                           <div className="intel-cell">
                             <label>Joined</label>
-                            <span>{activeRecipient?.created_at ? new Date(activeRecipient.created_at).toLocaleDateString() : 'Recently'}</span>
+                            <span>{activeRecipient?.created_at ? new Date(activeRecipient.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recently'}</span>
                           </div>
                         </div>
                         {activeRecipient?.skills && (

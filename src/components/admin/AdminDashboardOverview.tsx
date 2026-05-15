@@ -76,7 +76,7 @@ export default function AdminDashboardOverview() {
     const channel = pusher.subscribe('admin-dashboard');
     
     channel.bind('update', (payload: any) => {
-      console.log('Admin Dashboard Update Received:', payload);
+
       fetchStats();
       
       if (payload.type === 'USER_CREATED') {

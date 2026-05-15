@@ -110,24 +110,24 @@ router.get('/analytics', authenticateUser, async (req, res) => {
     }
 
     const [userRows] = await pool.query(`
-      SELECT DATE(created_at) as date, COUNT(*) as count 
+      SELECT DATE(CONVERT_TZ(created_at, '+00:00', '+05:30')) as date, COUNT(*) as count 
       FROM users 
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-      GROUP BY DATE(created_at)
+      GROUP BY DATE(CONVERT_TZ(created_at, '+00:00', '+05:30'))
       ORDER BY date ASC
     `);
 
     const [scriptRows] = await pool.query(`
-      SELECT DATE(created_at) as date, COUNT(*) as count 
+      SELECT DATE(CONVERT_TZ(created_at, '+00:00', '+05:30')) as date, COUNT(*) as count 
       FROM scripts 
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-      GROUP BY DATE(created_at)
+      GROUP BY DATE(CONVERT_TZ(created_at, '+00:00', '+05:30'))
       ORDER BY date ASC
     `);
 
     // Format dates to string
     const formatRows = (rows) => rows.map(r => ({
-      date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: new Date(r.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }),
       count: Number(r.count)
     }));
 
