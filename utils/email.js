@@ -26,7 +26,7 @@ async function sendWelcomeEmail(to, name) {
             @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
             body { 
               background-color: #06080a; 
-              color: #e0e0e0; 
+              color: #e0e0e0 !important; 
               font-family: 'Space Mono', monospace; 
               margin: 0; 
               padding: 0; 
@@ -35,43 +35,45 @@ async function sendWelcomeEmail(to, name) {
               max-width: 600px; 
               margin: 0 auto; 
               padding: 40px 20px; 
-              border: 1px solid #ff4d1a;
+              border: 1px solid #cc441b;
               background: linear-gradient(180deg, #0e1218 0%, #06080a 100%);
+              color: #e0e0e0;
             }
             .header { 
               text-align: center; 
               padding-bottom: 30px; 
-              border-bottom: 1px solid rgba(255, 77, 26, 0.2);
+              border-bottom: 1px solid rgba(204, 68, 27, 0.2);
             }
             .logo { 
               font-size: 32px; 
               font-weight: 700; 
               letter-spacing: 0.2em; 
-              color: #ffffff;
+              color: #ffffff !important;
             }
-            .logo span { color: #ff4d1a; }
-            .content { padding: 30px 0; line-height: 1.6; }
-            .greeting { font-size: 18px; color: #ff4d1a; margin-bottom: 20px; }
-            .message { margin-bottom: 30px; }
+            .logo span { color: #cc441b !important; }
+            .content { padding: 30px 0; line-height: 1.6; color: #e0e0e0 !important; }
+            .greeting { font-size: 18px; color: #cc441b !important; margin-bottom: 20px; }
+            .message { margin-bottom: 30px; color: #e0e0e0 !important; }
             .cta-wrap { text-align: center; margin: 40px 0; }
             .cta { 
-              background-color: #ff4d1a; 
-              color: #06080a; 
+              background-color: #cc441b; 
+              color: #ffffff !important; 
               padding: 15px 30px; 
               text-decoration: none; 
               font-weight: 700; 
               text-transform: uppercase; 
               letter-spacing: 0.1em;
               display: inline-block;
+              border-radius: 4px;
             }
             .footer { 
               font-size: 10px; 
-              color: #666; 
+              color: #888888 !important; 
               text-align: center; 
               padding-top: 30px; 
-              border-top: 1px solid rgba(255, 77, 26, 0.1);
+              border-top: 1px solid rgba(204, 68, 27, 0.1);
             }
-            .glitch-text { text-transform: uppercase; letter-spacing: 0.3em; font-size: 12px; opacity: 0.7; }
+            .glitch-text { text-transform: uppercase; letter-spacing: 0.3em; font-size: 12px; opacity: 0.7; color: #aaaaaa !important; }
           </style>
         </head>
         <body>
