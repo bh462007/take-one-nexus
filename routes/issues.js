@@ -1,53 +1,11 @@
 const express = require('express');
-const { authenticateUser } = require('../middleware/auth');
+const { authenticateUser, requireRole, requireVerified } = require('../middleware/auth');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// Helper to check if user is a developer/admin
-const ADMIN_EMAILS = [
-  'aarushgupta289@gmail.com',
-  'alok.r25012@csds.rishihood.edu.in'
-];
-
-function requireDeveloperOrAdmin(req, res, next) {
-  // Execute async wrapper to avoid uncaught promises in middleware
-  (async () => {
-    try {
-      const userId = Number(req.user.id);
-      const dbUser = await prisma.user.findUnique({ where: { id: userId } });
-      
-      if (!dbUser) {
-        return res.status(403).json({ success: false, message: 'User not found' });
-      }
-
-      const email = (dbUser.email || '').toLowerCase();
-      let role = (dbUser.role || '').toLowerCase();
-
-      // Auto-promote explicitly authorized emails to developer role if they aren't already
-      if (ADMIN_EMAILS.includes(email) && role !== 'developer' && role !== 'admin') {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { role: 'developer' }
-        });
-        role = 'developer';
-      }
-
-      if (role !== 'developer' && role !== 'admin' && !ADMIN_EMAILS.includes(email)) {
-        return res.status(403).json({ success: false, message: 'Access denied: Requires Developer role' });
-      }
-
-      // Populate user info for downstream routes
-      req.user.role = role;
-      req.user.email = email;
-      next();
-    } catch (error) {
-      console.error('Role validation error:', error.message);
-      res.status(500).json({ success: false, message: 'Server error during role validation' });
-    }
-  })();
-}
+// requireDeveloperOrAdmin replaced by requireRole(['Developer', 'Admin'])
 
 /**
  * POST /api/issues
@@ -94,7 +52,7 @@ router.post('/', async (req, res) => {
  * GET /api/issues
  * Get all issues (Developer/Admin only)
  */
-router.get('/', authenticateUser, requireDeveloperOrAdmin, async (req, res) => {
+router.get('/', authenticateUser, requireRole(['Developer', 'Admin']), async (req, res) => {
   try {
     const issues = await prisma.issue.findMany({
       orderBy: { created_at: 'desc' },
@@ -115,7 +73,7 @@ router.get('/', authenticateUser, requireDeveloperOrAdmin, async (req, res) => {
  * PUT /api/issues/:id
  * Update issue status
  */
-router.put('/:id', authenticateUser, requireDeveloperOrAdmin, async (req, res) => {
+router.put('/:id', authenticateUser, requireRole(['Developer', 'Admin']), async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { status } = req.body;
@@ -134,7 +92,7 @@ router.put('/:id', authenticateUser, requireDeveloperOrAdmin, async (req, res) =
  * DELETE /api/issues/:id
  * Delete an issue
  */
-router.delete('/:id', authenticateUser, requireDeveloperOrAdmin, async (req, res) => {
+router.delete('/:id', authenticateUser, requireRole(['Developer', 'Admin']), async (req, res) => {
   try {
     const id = Number(req.params.id);
     await prisma.issue.delete({ where: { id } });

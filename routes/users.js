@@ -10,6 +10,9 @@ const { formatDisplayName, getCanonicalDisplayName } = require('../utils/formatt
 const Pusher = require('pusher');
 const { createRateLimiter } = require('../middleware/rateLimiter');
 
+const { body } = require('express-validator');
+const { validateRequest } = require('../middleware/validator');
+
 const prisma = new PrismaClient();
 const router = express.Router();
 
@@ -79,55 +82,20 @@ async function getProfileData(userId) {
   };
 }
 
-router.post('/register', registerLimiter, async (req, res) => {
+const registerValidation = [
+  body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).withMessage('Name is too long'),
+  body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('role').notEmpty().withMessage('Role is required').not().equals('Select Role').withMessage('Please select a valid role'),
+  body('gender').notEmpty().withMessage('Gender is required').not().equals('Choose Gender').withMessage('Please select your gender'),
+  body('display_preference').notEmpty().withMessage('Display preference is required').not().equals('Select Display Preference').withMessage('Please select a display preference'),
+  validateRequest
+];
+
+router.post('/register', registerLimiter, registerValidation, async (req, res) => {
   try {
-    const { name, email, password, role, college, city, gender, screen_name, display_preference } = req.body;
+    const { name, email: normalizedEmail, password, role, college, city, gender, screen_name, display_preference } = req.body;
     
-    // Basic validation
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, email, and password are required'
-      });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a valid email address'
-      });
-    }
-
-    if (!role || role === 'Select Role') {
-      return res.status(400).json({
-        success: false,
-        message: 'Please select a valid role'
-      });
-    }
-
-    if (!gender || gender === 'Choose Gender') {
-      return res.status(400).json({
-        success: false,
-        message: 'Please select your gender'
-      });
-    }
-
-    if (!display_preference || display_preference === 'Select Display Preference') {
-      return res.status(400).json({
-        success: false,
-        message: 'Please select a display preference'
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 6 characters'
-      });
-    }
-
     // Check for existing user
     let existingUsers;
     try {
@@ -287,18 +255,16 @@ router.post('/register', registerLimiter, async (req, res) => {
 });
 
 
-router.post('/login', loginLimiter, async (req, res) => {
-  const { email, password } = req.body;
+const loginValidation = [
+  body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
+  body('password').notEmpty().withMessage('Password is required'),
+  validateRequest
+];
 
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: 'Email and password are required'
-    });
-  }
-
+router.post('/login', loginLimiter, loginValidation, async (req, res) => {
+  const { email: normalizedEmail, password } = req.body;
+  
   try {
-    const normalizedEmail = email.trim().toLowerCase();
 
     let rows;
     try {

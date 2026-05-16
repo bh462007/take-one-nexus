@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/db');
-const { authenticateUser } = require('../middleware/auth');
+const { authenticateUser, requireRole } = require('../middleware/auth');
 const {
   getEmailStatus,
   sendSmtpTestEmail,
@@ -93,22 +93,8 @@ router.post('/email/test', authenticateUser, async (req, res) => {
   }
 });
 
-router.get('/analytics', authenticateUser, async (req, res) => {
+router.get('/analytics', authenticateUser, requireRole(['Admin', 'Developer', 'Moderator']), async (req, res) => {
   try {
-    const role = String(req.user.role || '').toLowerCase();
-    const email = (req.user.email || '').toLowerCase();
-    
-    const isAuthorized = 
-      role === 'developer' || 
-      role === 'admin' || 
-      role === 'moderator' ||
-      email === 'aarushgupta289@gmail.com' ||
-      email === 'alok.r25012@csds.rishihood.edu.in';
-
-    if (!isAuthorized) {
-      return res.status(403).json({ success: false, message: 'Access denied: Requires Admin or Developer role' });
-    }
-
     const [userRows] = await pool.query(`
       SELECT DATE(CONVERT_TZ(created_at, '+00:00', '+05:30')) as date, COUNT(*) as count 
       FROM users 
@@ -144,22 +130,8 @@ router.get('/analytics', authenticateUser, async (req, res) => {
   }
 });
 
-router.get('/stats', authenticateUser, async (req, res) => {
+router.get('/stats', authenticateUser, requireRole(['Admin', 'Developer', 'Moderator']), async (req, res) => {
   try {
-    const role = String(req.user.role || '').toLowerCase();
-    const email = (req.user.email || '').toLowerCase();
-    
-    const isAuthorized = 
-      role === 'developer' || 
-      role === 'admin' || 
-      role === 'moderator' ||
-      email === 'aarushgupta289@gmail.com' ||
-      email === 'alok.r25012@csds.rishihood.edu.in';
-
-    if (!isAuthorized) {
-      return res.status(403).json({ success: false, message: 'Access denied: Requires Admin or Developer role' });
-    }
-
     const [userCount] = await pool.query('SELECT COUNT(*) as count FROM users');
     const [scriptCount] = await pool.query('SELECT COUNT(*) as count FROM scripts');
     const [requestCount] = await pool.query('SELECT COUNT(*) as count FROM collaboration_requests');

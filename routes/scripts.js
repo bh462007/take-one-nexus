@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/db');
-const { authenticateUser } = require('../middleware/auth');
+const { authenticateUser, requireVerified } = require('../middleware/auth');
 const Pusher = require('pusher');
 
 const router = express.Router();
@@ -87,7 +87,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.post('/', authenticateUser, async (req, res) => {
+router.post('/', authenticateUser, requireVerified, async (req, res) => {
   try {
     const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;
 
@@ -181,7 +181,7 @@ router.post('/', authenticateUser, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateUser, async (req, res) => {
+router.put('/:id', authenticateUser, requireVerified, async (req, res) => {
   try {
     const scriptId = Number(req.params.id);
     const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;
@@ -241,7 +241,7 @@ router.put('/:id', authenticateUser, async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticateUser, async (req, res) => {
+router.delete('/:id', authenticateUser, requireVerified, async (req, res) => {
   try {
     const scriptId = Number(req.params.id);
 

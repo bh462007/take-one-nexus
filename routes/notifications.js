@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/db');
-const { authenticateUser, requireSameUser } = require('../middleware/auth');
+const { authenticateUser, requireSameUser, requireVerified } = require('../middleware/auth');
 const {
   ensureNotificationsTable,
   listNotifications,
@@ -9,7 +9,7 @@ const {
 
 const router = express.Router();
 
-router.get('/user/:id', authenticateUser, requireSameUser, async (req, res) => {
+router.get('/user/:id', authenticateUser, requireSameUser, requireVerified, async (req, res) => {
   try {
     const userId = Number(req.params.id);
     const notifications = await listNotifications(userId);
@@ -29,7 +29,7 @@ router.get('/user/:id', authenticateUser, requireSameUser, async (req, res) => {
   }
 });
 
-router.patch('/:id/read', authenticateUser, async (req, res) => {
+router.patch('/:id/read', authenticateUser, requireVerified, async (req, res) => {
   try {
     await ensureNotificationsTable();
 
@@ -60,7 +60,7 @@ router.patch('/:id/read', authenticateUser, async (req, res) => {
   }
 });
 
-router.patch('/user/:id/read-all', authenticateUser, requireSameUser, async (req, res) => {
+router.patch('/user/:id/read-all', authenticateUser, requireSameUser, requireVerified, async (req, res) => {
   try {
     await ensureNotificationsTable();
 

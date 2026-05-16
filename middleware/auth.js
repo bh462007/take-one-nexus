@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
 
+/**
+ * Middleware to authenticate user via JWT (Cookie or Header)
+ */
 function authenticateUser(req, res, next) {
   let token = null;
 
@@ -15,40 +18,107 @@ function authenticateUser(req, res, next) {
   }
 
   if (!token) {
-    const isChatRequest = req.originalUrl.includes('/api/chat');
-    console.warn(`[AUTH_FAILURE] No token provided for ${req.method} ${req.originalUrl}`);
-    if (isChatRequest) {
-      console.warn(`[CHAT_AUTH_DEBUG] Headers:`, JSON.stringify({
-        host: req.headers.host,
-        origin: req.headers.origin,
-        'user-agent': req.headers['user-agent'],
-        cookie: req.headers.cookie ? 'present' : 'missing'
-      }));
-    }
     return res.status(401).json({
       success: false,
-      message: 'Login required'
+      message: 'Authentication required. Please login.'
     });
   }
 
   try {
     const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
-    req.user = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, secret);
+    
+    // Attach user to request
+    req.user = decoded;
+    
+    // Explicitly check for expiration if not handled by verify
+    if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please login again.'
+      });
+    }
+
     return next();
   } catch (error) {
-    console.error(`[AUTH_FAILURE] Token verification failed for ${req.method} ${req.originalUrl}:`, error.message);
+    console.error(`[AUTH_FAILURE] Token verification failed:`, error.message);
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Session expired. Please login again.'
+      });
+    }
+    
     return res.status(401).json({
       success: false,
-      message: 'Session expired. Please login again.'
+      message: 'Invalid or malformed session token.'
     });
   }
 }
 
-function requireSameUser(req, res, next) {
-  if (Number(req.params.id) !== Number(req.user?.id)) {
+/**
+ * Middleware to require specific roles
+ * @param {string[]} allowedRoles 
+ */
+function requireRole(allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const userRole = String(req.user.role || '').toLowerCase();
+    const isAuthorized = allowedRoles.some(role => role.toLowerCase() === userRole);
+
+    // Special case for lead dev email override
+    const email = String(req.user.email || '').toLowerCase();
+    const isAdminOverride = 
+      email === 'aarushgupta289@gmail.com' || 
+      email === 'alok.r25012@csds.rishihood.edu.in';
+
+    if (!isAuthorized && !isAdminOverride) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Requires one of these roles: ${allowedRoles.join(', ')}`
+      });
+    }
+
+    next();
+  };
+}
+
+/**
+ * Middleware to require email verification
+ */
+function requireVerified(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+
+  // Allow access if email_verified is true OR missing (for legacy tokens)
+  // If explicitly false, block access
+  if (req.user.email_verified === false) {
     return res.status(403).json({
       success: false,
-      message: 'You can only access your own account'
+      message: 'Email verification required. Please check your inbox.',
+      verificationRequired: true
+    });
+  }
+
+  next();
+}
+
+/**
+ * Middleware to ensure the authenticated user is the one they are trying to access/modify
+ */
+function requireSameUser(req, res, next) {
+  const targetId = Number(req.params.id || req.body.userId);
+  const authId = Number(req.user?.id);
+
+  if (targetId !== authId && req.user?.role?.toLowerCase() !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Unauthorized access attempt'
     });
   }
 
@@ -57,5 +127,7 @@ function requireSameUser(req, res, next) {
 
 module.exports = {
   authenticateUser,
+  requireRole,
+  requireVerified,
   requireSameUser
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/db');
 const { sendCollaborationRequestEmail } = require('../config/mailer');
-const { authenticateUser, requireSameUser } = require('../middleware/auth');
+const { authenticateUser, requireSameUser, requireVerified } = require('../middleware/auth');
 const { createNotification } = require('../utils/notifications');
 const { getCanonicalDisplayName } = require('../utils/formatting');
 const router = express.Router();
@@ -40,7 +40,7 @@ async function ensureRequestsTable() {
   `);
 }
 
-router.post('/', authenticateUser, async (req, res) => {
+router.post('/', authenticateUser, requireVerified, async (req, res) => {
   try {
     await ensureRequestsTable();
 
@@ -178,7 +178,7 @@ router.post('/', authenticateUser, async (req, res) => {
   }
 });
 
-router.patch('/:id/status', authenticateUser, async (req, res) => {
+router.patch('/:id/status', authenticateUser, requireVerified, async (req, res) => {
   try {
     await ensureRequestsTable();
 

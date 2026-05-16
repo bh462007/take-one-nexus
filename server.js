@@ -24,46 +24,69 @@ const issuesRoutes = require('./routes/issues');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 1. Security Headers (Helmet)
+const helmet = require('helmet');
+app.use(helmet());
+
+// 2. Strict CORS Configuration
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:5500',
-  'http://127.0.0.1:5500',
-  'https://take-one-nexus.vercel.app',
   'https://takeone-nexus.net.in',
   'https://www.takeone-nexus.net.in'
 ];
 
-if (process.env.ALLOWED_ORIGINS) {
-  process.env.ALLOWED_ORIGINS.split(',').forEach(origin => {
-    const trimmed = origin.trim();
-    if (trimmed && !allowedOrigins.includes(trimmed)) {
-      allowedOrigins.push(trimmed);
-    }
-  });
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push(
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:5500',
+    'http://127.0.0.1:5500'
+  );
 }
 
 app.use(cors({
-  origin(origin, callback) {
-    // Allow same-origin requests (origin will be undefined) or allowed origins
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+  origin: (origin, callback) => {
+    // Allow same-origin (no origin) or allowed origins
+    if (!origin || allowedOrigins.includes(origin) || (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost'))) {
+      return callback(null, true);
+    }
+    
+    // Check for Vercel preview deployments
+    if (origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
 
-    console.warn(`CORS blocked origin: ${origin}`);
-    return callback(new Error(`CORS blocked this origin: ${origin}`));
+    console.warn(`[SECURITY] CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  maxAge: 86400 // 24 hours
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 3. Global Rate Limiting
+const { createRateLimiter } = require('./middleware/rateLimiter');
+const globalLimiter = createRateLimiter({
+  limit: 200, // 200 requests
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  keyPrefix: 'global'
+});
+app.use(globalLimiter);
+
+// 4. Body Parsing & Sanitization
+app.use(express.json({ limit: '10kb' })); // Limit body size to 10kb
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
+
+const { sanitizeMiddleware } = require('./utils/validation');
+app.use(sanitizeMiddleware); // Prevent XSS globally
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 5. Routes
 app.use('/api/home', homeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/scripts', scriptRoutes);

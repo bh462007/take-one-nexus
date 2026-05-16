@@ -1,5 +1,7 @@
 const express = require('express');
-const { authenticateUser } = require('../middleware/auth');
+const { authenticateUser, requireVerified } = require('../middleware/auth');
+const { body, param } = require('express-validator');
+const { validateRequest } = require('../middleware/validator');
 const { PrismaClient } = require('@prisma/client');
 const Pusher = require('pusher');
 
@@ -19,7 +21,10 @@ const pusher = new Pusher({
  * GET /api/tasks/:conversationId
  * Get all tasks for a conversation
  */
-router.get('/:conversationId', authenticateUser, async (req, res) => {
+router.get('/:conversationId', authenticateUser, requireVerified, [
+  param('conversationId').isNumeric().withMessage('Invalid conversation ID'),
+  validateRequest
+], async (req, res) => {
   try {
     const conversationId = Number(req.params.conversationId);
     const userId = Number(req.user.id);
@@ -54,7 +59,18 @@ router.get('/:conversationId', authenticateUser, async (req, res) => {
  * POST /api/tasks
  * Create a new task
  */
-router.post('/', authenticateUser, async (req, res) => {
+const taskCreateValidation = [
+  body('conversationId').isNumeric().withMessage('Conversation ID is required'),
+  body('title').trim().notEmpty().withMessage('Title is required').isLength({ max: 200 }),
+  body('description').optional().trim().isLength({ max: 2000 }),
+  body('priority').optional().isIn(['Low', 'Medium', 'High', 'Critical']).withMessage('Invalid priority'),
+  body('assigneeId').optional({ nullable: true }).isNumeric(),
+  body('dueDate').optional({ nullable: true }).isISO8601().withMessage('Invalid date format'),
+  body('rewardCredits').optional().isNumeric().withMessage('Credits must be a number'),
+  validateRequest
+];
+
+router.post('/', authenticateUser, requireVerified, taskCreateValidation, async (req, res) => {
   try {
     const { conversationId, title, description, priority, assigneeId, dueDate, rewardCredits } = req.body;
     const userId = Number(req.user.id);
@@ -121,7 +137,18 @@ router.post('/', authenticateUser, async (req, res) => {
  * PATCH /api/tasks/:id
  * Update task status or details
  */
-router.patch('/:id', authenticateUser, async (req, res) => {
+const taskUpdateValidation = [
+  param('id').isNumeric().withMessage('Invalid task ID'),
+  body('status').optional().isIn(['Pending', 'In Progress', 'In Review', 'Done', 'Cancelled']),
+  body('priority').optional().isIn(['Low', 'Medium', 'High', 'Critical']),
+  body('title').optional().trim().notEmpty().isLength({ max: 200 }),
+  body('description').optional().trim().isLength({ max: 2000 }),
+  body('assigneeId').optional({ nullable: true }).isNumeric(),
+  body('dueDate').optional({ nullable: true }).isISO8601(),
+  validateRequest
+];
+
+router.patch('/:id', authenticateUser, requireVerified, taskUpdateValidation, async (req, res) => {
   try {
     const taskId = Number(req.params.id);
     const userId = Number(req.user.id);
@@ -194,7 +221,10 @@ router.patch('/:id', authenticateUser, async (req, res) => {
  * DELETE /api/tasks/:id
  * Delete a task
  */
-router.delete('/:id', authenticateUser, async (req, res) => {
+router.delete('/:id', authenticateUser, requireVerified, [
+  param('id').isNumeric().withMessage('Invalid task ID'),
+  validateRequest
+], async (req, res) => {
   try {
     const taskId = Number(req.params.id);
     const userId = Number(req.user.id);
@@ -252,7 +282,10 @@ router.delete('/:id', authenticateUser, async (req, res) => {
  * POST /api/tasks/:id/approve
  * Approve a completed task and award credits
  */
-router.post('/:id/approve', authenticateUser, async (req, res) => {
+router.post('/:id/approve', authenticateUser, requireVerified, [
+  param('id').isNumeric().withMessage('Invalid task ID'),
+  validateRequest
+], async (req, res) => {
   try {
     const taskId = Number(req.params.id);
     const userId = Number(req.user.id);

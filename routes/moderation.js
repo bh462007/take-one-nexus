@@ -1,7 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/db');
-const { authenticateUser } = require('../middleware/auth');
-const { requireModerator } = require('../middleware/moderation');
+const { authenticateUser, requireRole, requireVerified } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -30,7 +29,7 @@ async function ensureReportsTable() {
   `);
 }
 
-router.post('/reports', authenticateUser, async (req, res) => {
+router.post('/reports', authenticateUser, requireVerified, async (req, res) => {
   try {
     await ensureReportsTable();
 
@@ -74,7 +73,7 @@ router.post('/reports', authenticateUser, async (req, res) => {
   }
 });
 
-router.get('/reports', authenticateUser, requireModerator, async (req, res) => {
+router.get('/reports', authenticateUser, requireRole(['Moderator', 'Admin', 'Developer']), async (req, res) => {
   try {
     await ensureReportsTable();
 
@@ -121,7 +120,7 @@ router.get('/reports', authenticateUser, requireModerator, async (req, res) => {
   }
 });
 
-router.patch('/reports/:id', authenticateUser, requireModerator, async (req, res) => {
+router.patch('/reports/:id', authenticateUser, requireRole(['Moderator', 'Admin', 'Developer']), async (req, res) => {
   try {
     await ensureReportsTable();
 
