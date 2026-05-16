@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { getConsent, hasConsented } from '@/lib/cookie-consent';
 import { initPostHog, optOutPostHog } from '@/lib/posthog';
+import PostHogPageview from '@/app/PostHogPageview';
 
 interface PostHogProviderProps {
   children: React.ReactNode;
@@ -16,6 +17,23 @@ export default function PostHogProvider({ children }: PostHogProviderProps) {
 
     if (consent.analytics || consent.sessionReplay || consent.featureFlags) {
       await initPostHog(consent);
+      
+      // Also identify if user is logged in
+      const userData = localStorage.getItem('take_one_user');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.id) {
+            const { identifyUser } = await import('@/lib/posthog');
+            identifyUser(user.id, {
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              college: user.college
+            });
+          }
+        } catch (e) {}
+      }
     } else {
       await optOutPostHog();
     }
@@ -25,11 +43,16 @@ export default function PostHogProvider({ children }: PostHogProviderProps) {
     // Apply consent on initial load
     applyConsent();
 
-    // Listen for consent changes (from CookieConsentBanner dispatching custom events)
+    // Listen for consent changes
     const handleConsentUpdate = () => applyConsent();
     window.addEventListener('consentUpdated', handleConsentUpdate);
     return () => window.removeEventListener('consentUpdated', handleConsentUpdate);
   }, [applyConsent]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <PostHogPageview />
+      {children}
+    </>
+  );
 }

@@ -20,7 +20,7 @@ let posthogInstance: any = null;
  */
 export async function initPostHog(consent: ConsentPreferences): Promise<void> {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com';
+  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
   if (!key || typeof window === 'undefined') return;
 
@@ -30,34 +30,29 @@ export async function initPostHog(consent: ConsentPreferences): Promise<void> {
     if (!posthogInstance) {
       posthog.init(key, {
         api_host: host,
-        // Performance: only load what's consented
-        capture_pageview: consent.analytics,
-        capture_pageleave: consent.analytics,
+        // Manual pageview tracking via PostHogPageview component
+        capture_pageview: false,
+        capture_pageleave: true,
         // Session replay config
         session_recording: {
-          maskAllInputs: true,                        // mask all inputs by default
+          maskAllInputs: true,
           maskInputOptions: {
-            password: true,                           // always mask passwords
+            password: true,
           },
-          // maskInputFn masks any input containing 'token', 'secret', 'key'
         },
-        // Disable persistence to respect consent until explicitly enabled
+        // Persistence depends on consent
         persistence: consent.analytics ? 'localStorage+cookie' : 'memory',
-        // Don't auto-capture if no analytics consent
         autocapture: consent.analytics,
         disable_session_recording: !consent.sessionReplay,
-        // Bootstrap feature flags only if consented
+        // Bootstrap feature flags
         bootstrap: consent.featureFlags ? {} : undefined,
         loaded: (ph: any) => {
           posthogInstance = ph;
-          // Apply session replay consent
-          if (!consent.sessionReplay) {
-            ph.stopSessionRecording();
-          }
+          if (!consent.sessionReplay) ph.stopSessionRecording();
         },
       });
     } else {
-      // Already initialized — update opt-in state
+      // Update opt-in state
       if (consent.analytics) {
         posthog.opt_in_capturing();
       } else {
@@ -71,13 +66,12 @@ export async function initPostHog(consent: ConsentPreferences): Promise<void> {
       }
     }
   } catch (err) {
-    // PostHog init should never break the app
     console.warn('[PostHog] Initialization failed:', err);
   }
 }
 
 /**
- * Opt out of all PostHog capturing (called on consent rejection).
+ * Opt out of all PostHog capturing.
  */
 export async function optOutPostHog(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -91,7 +85,7 @@ export async function optOutPostHog(): Promise<void> {
 }
 
 /**
- * Track a custom event. No-ops if PostHog is not initialized or not consented.
+ * Track a custom event with IST timestamp.
  */
 export async function trackEvent(event: string, properties?: Record<string, unknown>): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -99,23 +93,24 @@ export async function trackEvent(event: string, properties?: Record<string, unkn
     const posthog = (await import('posthog-js')).default;
     posthog.capture(event, {
       ...properties,
-      // Always include IST timestamp for consistency
-      event_time_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      $set_once: {
+        first_visited_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      },
+      event_timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
     });
   } catch {
-    // Never let tracking break the UI
+    // silent fail
   }
 }
 
 /**
- * Identify a user in PostHog (called after login).
- * Strips sensitive fields before sending.
+ * Identify a user after login/signup.
  */
 export async function identifyUser(userId: string | number, traits?: Record<string, unknown>): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
     const posthog = (await import('posthog-js')).default;
-    // Sanitize — never send password, token, or secret
+    // Scrub sensitive traits
     const safe = Object.fromEntries(
       Object.entries(traits || {}).filter(
         ([k]) => !/(password|token|secret|key|hash)/i.test(k)
@@ -128,7 +123,7 @@ export async function identifyUser(userId: string | number, traits?: Record<stri
 }
 
 /**
- * Reset PostHog user identity (called on logout).
+ * Reset identity on logout.
  */
 export async function resetPostHog(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -137,5 +132,19 @@ export async function resetPostHog(): Promise<void> {
     posthog.reset();
   } catch {
     // silent fail
+  }
+}
+
+/**
+ * Check if a feature flag is enabled.
+ */
+export function isFeatureEnabled(flag: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    // We use the sync version here for quick checks
+    const posthog = require('posthog-js').default;
+    return posthog.isFeatureEnabled(flag) === true;
+  } catch {
+    return false;
   }
 }

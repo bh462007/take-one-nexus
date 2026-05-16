@@ -32,10 +32,11 @@ module.exports = withSentryConfig(nextConfig, {
   project: "nexus-frontend",
 }, {
   // Upload Options
-  widenClientFileUpload: true,
-  transpileClientSDK: true,
+  widenClientFileUpload: false, // Don't widen client uploads
+  transpileClientSDK: false,
   tunnelRoute: "/monitoring",
   hideSourceMaps: true,
   disableLogger: true,
+  disableClientSide: true, // Specifically disable on the client
 });
 

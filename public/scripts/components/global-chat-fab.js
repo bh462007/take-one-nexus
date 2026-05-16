@@ -119,6 +119,14 @@
       void button.offsetWidth;
       button.classList.add('is-rippling');
 
+      // Track interaction
+      if (typeof window !== 'undefined' && window.posthog) {
+        window.posthog.capture('chat_fab_clicked', {
+          pathname: window.location.pathname,
+          timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+        });
+      }
+
       if (hasLocalSession() || await fetchSession()) {
         window.location.href = getChatTarget();
         return;

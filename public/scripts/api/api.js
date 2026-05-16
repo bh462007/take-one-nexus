@@ -4,6 +4,17 @@ const API = (() => {
   const USER_KEY = 'take_one_user';
   let activeRequests = 0;
 
+  // PostHog helper for legacy scripts
+  function track(event, props = {}) {
+    if (typeof window !== 'undefined' && window.posthog) {
+      window.posthog.capture(event, {
+        ...props,
+        source: 'legacy_api',
+        event_timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+      });
+    }
+  }
+
   function getActiveRequests() {
     return activeRequests;
   }
@@ -90,28 +101,43 @@ const API = (() => {
         if (genre) params.set('genre', genre);
         return request(`/api/scripts/search?${params.toString()}`);
       },
-      create(payload) {
-        return request('/api/scripts', {
+      async create(payload) {
+        const result = await request('/api/scripts', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
+        if (result.success) {
+          track('project_created', { title: payload.title, genre: payload.genre });
+        }
+        return result;
       }
     },
     requests: {
-      create(payload) {
-        return request('/api/requests', {
+      async create(payload) {
+        const result = await request('/api/requests', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
+        if (result.success) {
+          track('task_created', { 
+            project_id: payload.scriptId || payload.projectId,
+            role: payload.role 
+          });
+        }
+        return result;
       },
       forUser(id) {
         return request(`/api/requests/user/${id}`);
       },
-      updateStatus(id, status) {
-        return request(`/api/requests/${id}/status`, {
+      async updateStatus(id, status) {
+        const result = await request(`/api/requests/${id}/status`, {
           method: 'PATCH',
           body: JSON.stringify({ status })
         });
+        if (result.success && status === 'Accepted') {
+          track('task_approved', { request_id: id });
+        }
+        return result;
       }
     },
     notifications: {
@@ -160,17 +186,31 @@ const API = (() => {
       }
     },
     users: {
-      register(payload) {
-        return request('/api/users/register', {
+      async register(payload) {
+        const result = await request('/api/users/register', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
+        if (result.success) {
+          track('signup', { role: payload.role, college: payload.college });
+        }
+        return result;
       },
-      login(email, password) {
-        return request('/api/users/login', {
+      async login(email, password) {
+        const result = await request('/api/users/login', {
           method: 'POST',
           body: JSON.stringify({ email, password })
         });
+        if (result.success && result.user) {
+          track('login', { user_id: result.user.id });
+          if (typeof window !== 'undefined' && window.posthog) {
+            window.posthog.identify(String(result.user.id), {
+              email: result.user.email,
+              name: result.user.name
+            });
+          }
+        }
+        return result;
       },
       search(params = {}) {
         const query = new URLSearchParams();
