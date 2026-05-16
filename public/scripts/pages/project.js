@@ -824,7 +824,7 @@ function updateFeatureDashboard(stats = {}, scripts = []) {
       `${latestScript.genre || 'General'} · ${latestScript.tag || 'Open for collaboration'}`
     );
   } else {
-    updateText('featureSpotlightTitle', 'No projects posted yet. Directors can post the first project here.');
+    updateText('featureSpotlightTitle', 'No scripts yet');
     updateText('featureSpotlightMeta', 'Upload a script to activate this');
   }
 

@@ -27,6 +27,11 @@ const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'https://take-one-nexus.vercel.app',
   'https://takeone-nexus.net.in',
   'https://www.takeone-nexus.net.in'
 ];
@@ -40,28 +45,21 @@ if (process.env.ALLOWED_ORIGINS) {
   });
 }
 
-// Strict CORS Configuration
 app.use(cors({
   origin(origin, callback) {
-    // 1. Allow same-origin requests (undefined origin)
-    if (!origin) return callback(null, true);
+    // Allow same-origin requests (origin will be undefined) or allowed origins
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
 
-    // 2. Allow explicitly listed production/dev domains
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-
-    // 3. Allow Vercel preview deployments (optional, but keep for now if needed)
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
-
-    console.warn(`[CORS_BLOCKED] Origin: ${origin}`);
-    return callback(new Error(`CORS policy does not allow access from ${origin}`));
+    console.warn(`CORS blocked origin: ${origin}`);
+    return callback(new Error(`CORS blocked this origin: ${origin}`));
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  credentials: true
 }));
 
-app.use(express.json({ limit: '10mb' })); // Add limit for protection
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'uploads')));

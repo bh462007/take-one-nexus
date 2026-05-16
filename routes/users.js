@@ -12,7 +12,6 @@ const { createRateLimiter } = require('../middleware/rateLimiter');
 
 const prisma = new PrismaClient();
 const router = express.Router();
-const { validate, schemas } = require('../middleware/validator');
 
 // Rate limiters
 const loginLimiter = createRateLimiter({
@@ -80,7 +79,7 @@ async function getProfileData(userId) {
   };
 }
 
-router.post('/register', registerLimiter, validate({ body: schemas.register }), async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, email, password, role, college, city, gender, screen_name, display_preference } = req.body;
     
@@ -288,7 +287,7 @@ router.post('/register', registerLimiter, validate({ body: schemas.register }), 
 });
 
 
-router.post('/login', loginLimiter, validate({ body: schemas.login }), async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -494,7 +493,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.get('/admin/list', authenticateUser, authorizeRoles('Admin', 'Developer', 'Moderator'), async (req, res) => {
+router.get('/admin/list', authenticateUser, async (req, res) => {
   try {
     const role = String(req.user.role || '').toLowerCase();
     const email = String(req.user.email || '').toLowerCase();
@@ -535,7 +534,7 @@ router.get('/admin/list', authenticateUser, authorizeRoles('Admin', 'Developer',
   }
 });
 
-router.put('/:id', authenticateUser, requireSameUser, validate({ body: schemas.profileUpdate }), async (req, res) => {
+router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
   try {
     const userId = Number(req.params.id);
     const {

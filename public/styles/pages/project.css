@@ -376,29 +376,6 @@ nav a:hover::after { width: 100%; }
   pointer-events: none;
 }
 
-.hero-bg-video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: -1;
-  opacity: 0.35;
-  mix-blend-mode: hard-light;
-  filter: grayscale(100%) contrast(120%) brightness(0.8);
-  transition: opacity 2s ease;
-}
-
-.hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, var(--void) 0%, transparent 20%, transparent 80%, var(--void) 100%);
-  z-index: 0;
-  pointer-events: none;
-}
-
 /* ── CASSETTE REEL DECORATION ── */
 .hero-reel {
   position: absolute; right: 6%; top: 50%;
