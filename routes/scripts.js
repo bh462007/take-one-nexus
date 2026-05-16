@@ -4,6 +4,8 @@ const { authenticateUser } = require('../middleware/auth');
 const Pusher = require('pusher');
 
 const router = express.Router();
+const { validate, schemas } = require('../middleware/validator');
+const { authorizeRoles } = require('../middleware/auth');
 
 // Configure Pusher
 const pusher = new Pusher({
@@ -87,7 +89,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.post('/', authenticateUser, async (req, res) => {
+router.post('/', authenticateUser, validate({ body: schemas.script }), async (req, res) => {
   try {
     const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;
 
@@ -181,7 +183,7 @@ router.post('/', authenticateUser, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateUser, async (req, res) => {
+router.put('/:id', authenticateUser, validate({ body: schemas.script }), async (req, res) => {
   try {
     const scriptId = Number(req.params.id);
     const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;

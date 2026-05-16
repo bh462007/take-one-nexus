@@ -2,6 +2,8 @@ const express = require('express');
 const { authenticateUser } = require('../middleware/auth');
 const { PrismaClient } = require('@prisma/client');
 const Pusher = require('pusher');
+const { validate, schemas } = require('../middleware/validator');
+const { authorizeRoles } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -54,7 +56,7 @@ router.get('/:conversationId', authenticateUser, async (req, res) => {
  * POST /api/tasks
  * Create a new task
  */
-router.post('/', authenticateUser, async (req, res) => {
+router.post('/', authenticateUser, validate({ body: schemas.task }), async (req, res) => {
   try {
     const { conversationId, title, description, priority, assigneeId, dueDate, rewardCredits } = req.body;
     const userId = Number(req.user.id);
@@ -121,7 +123,7 @@ router.post('/', authenticateUser, async (req, res) => {
  * PATCH /api/tasks/:id
  * Update task status or details
  */
-router.patch('/:id', authenticateUser, async (req, res) => {
+router.patch('/:id', authenticateUser, validate({ body: schemas.task.partial() }), async (req, res) => {
   try {
     const taskId = Number(req.params.id);
     const userId = Number(req.user.id);

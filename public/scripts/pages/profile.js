@@ -109,7 +109,7 @@ function renderProjects(scripts) {
     ` : (items.length === 0 ? `
         <div class="project-card"
              style="background: rgba(255,77,26,0.03); border: 1px dashed rgba(255,77,26,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center;">
-          <div style="font-size: 12px; color: rgba(255,77,26,0.5); text-transform: uppercase; letter-spacing: 0.2em;">No scripts yet</div>
+          <div style="font-size: 12px; color: rgba(255,77,26,0.5); text-transform: uppercase; letter-spacing: 0.2em;">No projects posted yet. Directors can post the first project here.</div>
         </div>` : ''));
 
     if (typeof updateStat === 'function') updateStat('projCount', items.length);
