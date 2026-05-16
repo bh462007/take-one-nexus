@@ -6,6 +6,29 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ---
 
+## [1.1.0] — Nexus Security Suite - 2026-05-16
+
+### Added
+- **Email Verification Flow**: Full signup → verification email → verified gate. Token lifecycle: generate (crypto) → hash (SHA-256) → store hash → email raw → validate hash → clear.
+- **EmailVerificationBanner**: Sticky top banner for unverified users. Calls `POST /api/auth/verify-email` with 60-second resend cooldown. Detects unverified state via `GET /api/users/me`.
+- **Password Reset Flow**: `forgot-password` page → `POST /api/auth/forgot-password` (rate-limited, enumeration-safe) → reset email → `reset-password` page with strength meter.
+- **3 New Auth Pages**: `/verify-email` (7-state FSM), `/forgot-password`, `/reset-password`.
+- **4 New API Routes**: `GET|POST /api/auth/verify-email`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`.
+- **Cyberpunk Email Templates** (`src/lib/email-templates/`): Inline-HTML emails matching platform design system. Neon gradient headers, expiry timers, feature unlock lists.
+- **IP Rate Limiting**: Dual-layer — `src/lib/rate-limiter.ts` (Next.js) and `middleware/rateLimiter.js` (Express). Sliding window, in-memory, fail-open.
+- **GDPR Cookie Consent Banner** (`src/components/CookieConsentBanner.tsx`): Slide-up animated banner. Per-category toggles (Essential, Analytics, Replay, Flags). Consent persisted in `localStorage`.
+- **PostHog Integration** (`src/lib/posthog.ts` + `PostHogProvider`): Consent-gated. Lazy-loaded via dynamic import. Full input masking. IST timestamps on all events.
+- **Sentry Integration** (`src/lib/sentry.ts`): Backend-only. `captureError()` + `withSentry()` wrappers. `beforeSend` PII scrubber.
+- **6 New Prisma Fields**: `email_verified`, `email_verified_at`, `verification_token`, `verification_token_expires`, `reset_token`, `reset_token_expires` on `User` model.
+
+### Changed
+- `src/proxy.ts`: Email verification gate for `/chat` route.
+- `src/app/layout.tsx`: `PostHogProvider` wrapper + two banner components.
+- `routes/users.js`: Verification email on register, rate limiters on login/register, `email_verified` in `/me` response.
+- `.env.example` + `.env`: Documented and set `RESEND_API_KEY`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`, `SENTRY_DSN`.
+
+---
+
 ## [Unreleased / Open Source Prep] - 2026-05
 
 ### Added
