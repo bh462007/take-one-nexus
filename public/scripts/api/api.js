@@ -4,6 +4,37 @@ const API = (() => {
   const USER_KEY = 'take_one_user';
   let activeRequests = 0;
 
+  // PostHog for legacy pages
+  (async function initLegacyPostHog() {
+    if (typeof window === 'undefined' || window.posthog) return;
+
+    const consentRaw = localStorage.getItem('ton_cookie_consent');
+    if (!consentRaw) return;
+
+    try {
+      const consent = JSON.parse(consentRaw).preferences;
+      if (!consent.analytics) return;
+
+      // Dynamic load PostHog from CDN
+      const script = document.createElement('script');
+      script.src = 'https://us-assets.i.posthog.com/static/array.js';
+      script.async = true;
+      script.onload = () => {
+        if (window.posthog) {
+          window.posthog.init('phc_zHX9qoufwk9jdTkqP8Fef53gyoMnhw2MMiFXGazpWA2F', {
+            api_host: 'https://us.i.posthog.com',
+            capture_pageview: true, // Auto-track pageview on legacy pages
+            persistence: 'localStorage+cookie',
+          });
+          console.log('[PostHog] Legacy initialized');
+        }
+      };
+      document.head.appendChild(script);
+    } catch (e) {
+      console.warn('[PostHog] Legacy init failed:', e);
+    }
+  })();
+
   // PostHog helper for legacy scripts
   function track(event, props = {}) {
     if (typeof window !== 'undefined' && window.posthog) {

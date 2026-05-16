@@ -5,6 +5,11 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const { connectDB } = require('./config/db');
+const { captureError, initSentry } = require('./src/lib/sentry');
+
+// Initialize Sentry for backend tracking
+initSentry();
+
 const homeRoutes = require('./routes/home');
 const userRoutes = require('./routes/users');
 const scriptRoutes = require('./routes/scripts');
@@ -173,6 +178,13 @@ app.use((err, req, res, next) => {
   
   console.error(`[Server Error] ${req.method} ${req.url}`);
   console.error(err);
+
+  // Report to Sentry with request context
+  captureError(err, {
+    url: req.url,
+    method: req.method,
+    status
+  });
 
   // Hide detailed error messages in production unless they are intentionally thrown
   const message = (isProd && status === 500) 

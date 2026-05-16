@@ -28,42 +28,40 @@ export async function initPostHog(consent: ConsentPreferences): Promise<void> {
     const posthog = (await import('posthog-js')).default;
 
     if (!posthogInstance) {
+      console.log('[PostHog] Initializing with key:', key.slice(0, 8) + '...');
       posthog.init(key, {
         api_host: host,
-        // Manual pageview tracking via PostHogPageview component
         capture_pageview: false,
         capture_pageleave: true,
-        // Session replay config
         session_recording: {
           maskAllInputs: true,
-          maskInputOptions: {
-            password: true,
-          },
+          maskInputOptions: { password: true },
         },
-        // Persistence depends on consent
         persistence: consent.analytics ? 'localStorage+cookie' : 'memory',
         autocapture: consent.analytics,
         disable_session_recording: !consent.sessionReplay,
-        // Bootstrap feature flags
         bootstrap: consent.featureFlags ? {} : undefined,
         loaded: (ph: any) => {
           posthogInstance = ph;
-          if (!consent.sessionReplay) ph.stopSessionRecording();
+          // Make accessible to legacy scripts
+          (window as any).posthog = ph;
+          console.log('[PostHog] Initialized successfully');
+          
+          // Send a bootstrap event
+          ph.capture('posthog_initialized', {
+            analytics: consent.analytics,
+            replay: consent.sessionReplay,
+            flags: consent.featureFlags
+          });
         },
       });
     } else {
-      // Update opt-in state
-      if (consent.analytics) {
-        posthog.opt_in_capturing();
-      } else {
-        posthog.opt_out_capturing();
-      }
+      // Update state
+      if (consent.analytics) posthog.opt_in_capturing();
+      else posthog.opt_out_capturing();
 
-      if (!consent.sessionReplay) {
-        posthog.stopSessionRecording();
-      } else {
-        posthog.startSessionRecording();
-      }
+      if (!consent.sessionReplay) posthog.stopSessionRecording();
+      else posthog.startSessionRecording();
     }
   } catch (err) {
     console.warn('[PostHog] Initialization failed:', err);

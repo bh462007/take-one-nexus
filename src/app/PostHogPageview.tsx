@@ -20,10 +20,20 @@ function PostHogPageviewInner() {
         url = url + `?${searchParams.toString()}`;
       }
       
-      trackEvent('$pageview', {
-        $current_url: url,
-        pathname: pathname,
-      });
+      // Wait for PostHog to be ready
+      const capture = () => {
+        if (typeof window !== 'undefined' && (window as any).posthog) {
+          trackEvent('$pageview', {
+            $current_url: url,
+            pathname: pathname,
+          });
+        } else {
+          // Retry in 100ms
+          setTimeout(capture, 100);
+        }
+      };
+      
+      capture();
     }
   }, [pathname, searchParams]);
 

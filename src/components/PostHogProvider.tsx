@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getConsent, hasConsented } from '@/lib/cookie-consent';
 import { initPostHog, optOutPostHog } from '@/lib/posthog';
 import PostHogPageview from '@/app/PostHogPageview';
@@ -10,6 +10,8 @@ interface PostHogProviderProps {
 }
 
 export default function PostHogProvider({ children }: PostHogProviderProps) {
+  const [initialized, setInitialized] = useState(false);
+
   const applyConsent = useCallback(async () => {
     if (!hasConsented()) return;
     const consent = getConsent();
@@ -17,6 +19,7 @@ export default function PostHogProvider({ children }: PostHogProviderProps) {
 
     if (consent.analytics || consent.sessionReplay || consent.featureFlags) {
       await initPostHog(consent);
+      setInitialized(true);
       
       // Also identify if user is logged in
       const userData = localStorage.getItem('take_one_user');
@@ -36,6 +39,7 @@ export default function PostHogProvider({ children }: PostHogProviderProps) {
       }
     } else {
       await optOutPostHog();
+      setInitialized(false);
     }
   }, []);
 
