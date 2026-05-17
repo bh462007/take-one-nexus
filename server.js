@@ -26,7 +26,37 @@ const PORT = process.env.PORT || 3000;
 
 // 1. Security Headers (Helmet)
 const helmet = require('helmet');
-app.use(helmet());
+
+const cspConfig = {
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://cdn.jsdelivr.net", "https://js.sentry-cdn.com", "https://browser.sentry-cdn.com", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+    imgSrc: ["'self'", "blob:", "data:", "https://api.dicebear.com", "https://ui-avatars.com", "https://us.i.posthog.com", "https://eu.i.posthog.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
+    connectSrc: ["'self'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://sentry.io", "https://*.sentry.io", "wss://*.pusher.com", "https://*.pusher.com", "https://*.pusherapp.com", "wss://*.pusherapp.com", "http://localhost:*", "ws://localhost:*", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in"],
+    frameSrc: ["'self'", "https://us.posthog.com", "https://eu.posthog.com", "https://app.posthog.com"],
+    workerSrc: ["'self'", "blob:"],
+    objectSrc: ["'none'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    upgradeInsecureRequests: [],
+  },
+};
+
+app.use(helmet({
+  contentSecurityPolicy: cspConfig,
+  crossOriginEmbedderPolicy: false,
+  xFrameOptions: { action: "sameorigin" },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  xContentTypeOptions: true,
+}));
+
+// Set Permissions-Policy globally
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=()');
+  next();
+});
 
 // 2. Strict CORS Configuration
 const allowedOrigins = [

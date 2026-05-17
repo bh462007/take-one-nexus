@@ -1,5 +1,19 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
+const cspHeader = `
+  default-src 'self';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://us.i.posthog.com https://eu.i.posthog.com https://app.posthog.com https://cdn.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://takeone-nexus.net.in https://www.takeone-nexus.net.in;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+  img-src 'self' blob: data: https://api.dicebear.com https://ui-avatars.com https://us.i.posthog.com https://eu.i.posthog.com;
+  font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net;
+  connect-src 'self' https://us.i.posthog.com https://eu.i.posthog.com https://app.posthog.com https://sentry.io https://*.sentry.io wss://*.pusher.com https://*.pusher.com https://*.pusherapp.com wss://*.pusherapp.com http://localhost:* ws://localhost:* https://takeone-nexus.net.in https://www.takeone-nexus.net.in;
+  frame-src 'self' https://us.posthog.com https://eu.posthog.com https://app.posthog.com;
+  worker-src 'self' blob:;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+`.replace(/\s{2,}/g, ' ').trim();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -8,6 +22,35 @@ const nextConfig = {
       { protocol: 'https', hostname: 'api.dicebear.com' },
       { protocol: 'https', hostname: 'ui-avatars.com' },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: cspHeader,
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=()',
+          },
+        ],
+      },
+    ];
   },
   async rewrites() {
     if (process.env.VERCEL || process.env.NEXT_DISABLE_API_PROXY === 'true') {
