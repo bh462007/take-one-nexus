@@ -196,6 +196,25 @@ To give TAKE ONE Nexus its signature "live mission control" feel, we utilize Pus
 
 ---
 
+## 10. Future Payment Engine & Escrow Architecture
+
+To safely transition the Take One Nexus platform into a commercial creative ecosystem, the following architectural boundaries are planned for the upcoming Payment Engine:
+
+### A. Idempotency & Transaction Safety
+- All payment execution API requests (`POST /api/payments/charge`) will require an `Idempotency-Key` header generated client-side. This ensures duplicate clicks or networking retries do not result in duplicate transactions.
+- The transaction engine will use database-level transactional locks (`PRISMA TRANSACTION`) to ensure database states (e.g. credit updates, script license transfers) align atomically with external provider results.
+
+### B. Secure Webhook Validation
+- Stripe / Razorpay webhook notifications will be routed through `/api/payments/webhooks`.
+- Webhook payloads will be processed asynchronously via an isolated worker queue to keep the main event loop non-blocking.
+- The webhook controller will enforce cryptographically signed headers, validating signatures against a secure, local environment variable secret (`STRIPE_WEBHOOK_SECRET`).
+
+### C. Ledgers & Audit Trails
+- A dedicated `TransactionLedger` table will maintain an immutable history of all charges, refunds, split distributions, and payouts.
+- Every transaction log is tied back to the specific `User` and, if applicable, the specific script `Task` (Mission) that prompted the escrow payment.
+
+---
+
 ## Architectural Decision Records (ADR)
 
 | # | Title | Decision |
@@ -207,3 +226,4 @@ To give TAKE ONE Nexus its signature "live mission control" feel, we utilize Pus
 | ADR-005 | PostHog vs. Sentry Separation | Analytics and error tracking are strictly separate tools with separate scopes. PostHog = behaviour. Sentry = exceptions. |
 | ADR-006 | Email-Only Verification Gate | Only `/chat` is hard-gated by email verification. `/profile` is accessible so unverified users can see the banner and resend. |
 | ADR-007 | Token Hashing Strategy | SHA-256 of a 32-byte random token. Hash stored in DB. Raw token in email URL only. Prevents token enumeration from DB breach. |
+| ADR-008 | Secure Webhook Signature Validation | Webhook processing MUST cryptographically verify signatures using raw request buffers. Avoid parsed bodies to ensure security against signature spoofing. |

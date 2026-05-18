@@ -51,6 +51,11 @@ We maintain a high standard for code quality to ensure scalability and maintaina
 - **TypeScript / Next.js**: Use strict typing where possible. Avoid `any`. Follow modern React patterns (functional components, hooks).
 - **Styling**: We use Vanilla CSS for static pages and Tailwind/CSS Modules for Next.js components. Please adhere to the established futuristic/cinematic design tokens (e.g., `var(--neon)`, `var(--cyber-bg)`).
 - **Express Backend**: Use `asyncHandler` for wrapping async routes. Ensure all API responses return consistent JSON: `{ success: boolean, message?: string, data?: any }`.
+- **Payment & Escrow Systems (Phase 5)**: When contributing code to the billing or gateway flows:
+  - Never commit raw credentials, test secrets, or API keys. Always use environment variable bounds.
+  - Webhook endpoint handlers must use raw request buffers to allow cryptographic signature verification.
+  - Data mutations on credits or transactions must be wrapped inside Prisma transaction blocks (`$transaction`) to guarantee atomic consistency.
+  - Build strong mock toggles so other developers can run and test billing workflows locally without needing live credentials.
 - **Linting**: Before committing, ensure your code passes our linting rules:
   ```bash
   npm run lint

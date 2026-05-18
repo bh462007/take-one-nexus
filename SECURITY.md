@@ -26,7 +26,7 @@ We will work diligently to validate and fix the vulnerability. Once resolved, we
 ## 🔒 Security Best Practices
 
 To maintain a secure ecosystem, we adhere to the following practices:
-- **Authentication**: JWT tokens stored securely via HTTP-only, secure cookies. Migration to Clerk identity services is actively maintained.
+- **Authentication**: JWT tokens stored securely via HTTP-only, secure cookies, ensuring a fully decentralized, robust, and custom-tailored identity validation pipeline.
 - **Role-Based Access Control (RBAC)**: All task assignment, creation, and administrative APIs are strictly gated to ensure only authorized users (e.g. `creator`, `admin`) can access them.
 - **Database**: Parameterized queries using Prisma and prepared SQL statements to prevent SQL Injection.
 - **Data Privacy**: Passwords are cryptographically hashed using bcrypt. Sensitive user data is never exposed to the frontend.

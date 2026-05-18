@@ -227,6 +227,7 @@ We have ambitious plans for the future of TAKE ONE Nexus. See our detailed [ROAD
 - AI Crew Matching Engine
 - Realtime Production Storyboards
 - Native Mobile App Development
+- **Introducing Payment System**: Creator monetization, tiered subscription memberships, secure production escrows, and global payment gateway integrations (Stripe/Razorpay).
 
 ---
 

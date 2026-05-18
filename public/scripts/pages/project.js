@@ -752,7 +752,7 @@ function updateLiveScriptStatus(count, query = activeSearchQuery, genre = active
     genre && genre !== 'all' ? `genre: ${genre}` : ''
   ].filter(Boolean).join(' · ');
 
-  status.textContent = `${count} live script${count === 1 ? '' : 's'} loaded from MySQL${filterText ? ` · ${filterText}` : ''}`;
+  status.textContent = `${count} live script${count === 1 ? '' : 's'} loaded${filterText ? ` · ${filterText}` : ''}`;
 }
 
 function renderHomepageScripts(scripts) {
@@ -1091,7 +1091,7 @@ async function loadLiveScripts() {
   if (typeof API === 'undefined' || !API.scripts) return;
 
   const genre = activeGenreFilter === 'all' ? '' : activeGenreFilter;
-  updateText('liveScriptStatus', 'Loading live scripts from MySQL...');
+  updateText('liveScriptStatus', 'Loading live scripts...');
 
   try {
     const response = await API.scripts.search(activeSearchQuery, genre);
@@ -1100,7 +1100,7 @@ async function loadLiveScripts() {
     renderSearchResults(allLiveScripts, activeSearchQuery);
   } catch (err) {
     console.error('Live script load failed:', err);
-    updateText('liveScriptStatus', 'Could not load live scripts. Check server and MySQL connection.');
+    updateText('liveScriptStatus', 'Could not load live scripts.');
   }
 }
 

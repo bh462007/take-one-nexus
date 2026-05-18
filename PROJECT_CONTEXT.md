@@ -79,6 +79,13 @@ Separated concerns between analytics and error monitoring.
 - **PostHog** (`src/lib/posthog.ts`): Frontend analytics, session replay (with full input masking), and feature flags. Only activates after explicit cookie consent.
 - **Sentry** (`src/lib/sentry.ts`): Backend API and server error capture only. Never used for analytics. Scrubs `password`, `token`, `secret`, `key` from all events before sending.
 
+### 9. Futuristic Payment Engine *(v1.2 Proposed)*
+A premium financial layer to power the independent film economy, integrating monetization seamlessly into our role-based mission architecture.
+- **Creator Monetization**: Standardizes script pricing, option agreements, and digital custom writing packages directly from the portfolio showcase.
+- **Premium Memberships & Tiers**: Handles recurring subscription packages to grant advanced filters, prominent badge layouts, and prioritized crew listings.
+- **Production Escrows & Milestones**: Directors can fund a project budget securely. Payments are held in a secure escrow engine and programmatically released as crew members successfully complete their assigned tasks/missions.
+- **Revenue Splitting**: Seamless split-payouts for script co-writers and multi-partner packages.
+
 ---
 
 ## 🔒 Security & Auth
@@ -105,6 +112,7 @@ As the platform grows, we plan to decouple the monolithic architecture:
 2. **CDN Optimization**: User uploaded media (avatars, posters) will be migrated to dedicated object storage (AWS S3/CloudFront).
 3. **Public API**: Implementing `/api/v1/` for external integrations and the upcoming mobile app.
 4. **Rate Limiting at Scale**: Migrate in-memory rate limiters to Redis/Upstash when horizontal scaling is needed (`RATE_LIMIT_STORE` env var).
+5. **Secure Payment Gateway Infrastructure**: Deploying PCI-compliant gateway endpoints utilizing Stripe and Razorpay. This system will introduce idempotent transaction processing to avoid double charges, custom ledger audit trails in MySQL, and highly secure, signature-validated webhook controllers.
 
 ---
 

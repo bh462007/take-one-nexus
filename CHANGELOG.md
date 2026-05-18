@@ -44,7 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - **Global Timezone Support**: Admin analytics and charts now natively support Indian Standard Time (IST) out of the box, ensuring midnight resets occur correctly for the target demographic.
 - **Cinematic Markdown Documentation**: Complete rewrite of all standard open-source documentation including README, CONTRIBUTING, SECURITY, and ROADMAP.
-- **Clerk Authentication Ready**: Backend models and middleware refactored to support seamless migration to Clerk.
+- **Authentication Engine Solidified**: Cleaned up pre-migration references to third-party identity providers, optimizing our secure JWT session architecture and reducing configuration footprints.
 
 ### Changed
 - **Codebase Optimization**: Removed all unused components, dead code, and debug spam (`console.log`) across frontend and backend for a smaller bundle size and faster execution.
