@@ -162,8 +162,7 @@
 
 
             <span class="hero-sub" id="heroSubText">
-                Take One Nexus is the decentralized launchpad for independent cinema.
-                Connect with passionate directors, screenwriters, and crew members to bring your vision to the screen.
+                The easiest way to find your film crew online. Connect with passionate directors, screenwriters, and crew members to bring your vision to the screen.
             </span>
             
             <!-- Guest Split CTAs (Shown when not logged in) -->
@@ -179,7 +178,7 @@
             </div>
 
 
-            <div class="hero-stats">
+            <div class="hero-stats" id="heroStatsContainer" style="opacity: 0; transition: opacity 0.4s ease;">
                 <div>
                     <div class="hstat-num" id="statCreators">0</div>
                     <div class="hstat-label">Creators</div>
@@ -242,8 +241,8 @@
             <span>Costume Designer</span><span>Gaffer</span><span>Actor</span>
         </div>
     </div>
-
-    <!-- ── FEATURES ── -->
+    
+    <!-- ── FEATURES (moved up — primary explainer) ── -->
     <section>
         <div class="sec-label reveal">Platform</div>
         <div class="sec-title reveal reveal-d1">Built for<br>Film Crews</div>
@@ -297,6 +296,53 @@
         </div>
     </section>
 
+    <!-- ── CREATOR EMOTIONAL HOOK ── -->
+    <section class="cinematic-hook-sec reveal">
+        <div class="cinematic-backdrop"></div>
+        <div class="hook-box">
+            <div class="hook-icon">✦</div>
+            <blockquote class="hook-quote">
+                "Make films with people who share your vision. Your next collaborator could be one connection away. Turn ambition into production."
+            </blockquote>
+            <cite class="hook-author">— TAKE ONE NEXUS DIRECTORY</cite>
+        </div>
+    </section>
+
+    <!-- ── WHY SHOULD I JOIN? ── -->
+    <section class="why-join" id="whyJoin" style="padding-top: 0;">
+        <div class="sec-label reveal">Benefits</div>
+        <div class="sec-title reveal reveal-d1">Why Join The Nexus?</div>
+        <p class="sec-sub reveal reveal-d2">
+            The ultimate dynamic toolkit designed specifically for independent filmmakers to build credibility and networks.
+        </p>
+        
+        <div class="benefits-grid">
+            <div class="benefit-card reveal">
+                <div class="b-icon">🔍</div>
+                <h3>Find Film Collaborators</h3>
+                <p>Assemble active crew department lists. Meet directors, DPs, gaffers, actors, and editors who are eager to work on set.</p>
+            </div>
+            
+            <div class="benefit-card reveal reveal-d1">
+                <div class="b-icon">📄</div>
+                <h3>Discover Original Scripts</h3>
+                <p>Browse a trending library of creative scripts, read loglines, and apply to option screenplays that are ready for production.</p>
+            </div>
+            
+            <div class="benefit-card reveal reveal-d2">
+                <div class="b-icon">⚡</div>
+                <h3>Showcase Your Reel</h3>
+                <p>Build your digital filmmaker identity. Showcase past work, listing your city, college, skills, and portfolio highlights.</p>
+            </div>
+            
+            <div class="benefit-card reveal reveal-d3">
+                <div class="b-icon">💎</div>
+                <h3>Reputation & Credits</h3>
+                <p>Earn verified Nexus Creator Credits on completed missions, climb the platform leaderboard, and gain industry-wide recognition.</p>
+            </div>
+        </div>
+    </section>
+
     <section class="production-deck reveal">
         <div class="deck-copy">
             <div class="sec-label">Production Flow</div>
@@ -310,7 +356,7 @@
             <button class="stage-card active" type="button" data-stage="script">
                 <span>01</span>
                 <strong>Script Locked</strong>
-                <em>Live stories from MySQL</em>
+                <em>Active pitches & screenplays</em>
             </button>
             <button class="stage-card" type="button" data-stage="crew">
                 <span>02</span>
@@ -436,7 +482,7 @@
           </div>
 
           <div class="upload-actions">
-            <p id="liveCommunityText">Reviewed within 24 hrs. Join 0 creators across 0 colleges.</p>
+            <p id="liveCommunityText">Reviewed within 24 hrs. Join the creative film collective.</p>
             <button class="btn-upload" id="uploadActionButton">Submit Work →</button>
           </div>
         </div>

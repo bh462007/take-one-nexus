@@ -10,7 +10,7 @@
     {
       targetSelector: 'header .logo',
       title: 'Nexus Hub',
-      body: 'Welcome to Take One Nexus. This is the ultimate decentralized launchpad for independent student cinema.',
+      body: 'Welcome to Take One Nexus. The easiest way to find your film crew online and collaborate with creators.',
       placement: 'bottom'
     },
     {

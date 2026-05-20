@@ -68,7 +68,24 @@ const buildVerifyEmailTemplate = ({ userName, verificationUrl, expiresInHours = 
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 40px 32px;border-top:1px solid #1C2330;">
+            <td style="padding:24px 40px 0;border-top:1px solid #1C2330;text-align:center;">
+              <div style="font-size:9px;letter-spacing:0.3em;color:#3A4556;text-transform:uppercase;margin-bottom:16px;">Join The Community</div>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                <tr>
+                  <td style="padding:0 8px;">
+                    <a href="https://www.linkedin.com/company/take-one-nexus" target="_blank" rel="noopener"
+                       style="display:inline-block;background:#0E1218;border:1px solid rgba(0,212,255,0.2);padding:10px 18px;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:0.15em;color:#00D4FF;text-transform:uppercase;">&#9656;&nbsp;LinkedIn</a>
+                  </td>
+                  <td style="padding:0 8px;">
+                    <a href="https://www.instagram.com/__take__one" target="_blank" rel="noopener"
+                       style="display:inline-block;background:#0E1218;border:1px solid rgba(255,77,26,0.2);padding:10px 18px;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:0.15em;color:#FF4D1A;text-transform:uppercase;">&#9656;&nbsp;Instagram</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 40px 32px;text-align:center;">
               <div style="font-size:9px;color:#3A4556;letter-spacing:0.25em;text-transform:uppercase;text-align:center;line-height:1.8;">
                 TAKE ONE NEXUS · Film Crew Connect<br/>
                 takeone-nexus.net.in · © ${year} TAKE ONE
@@ -141,7 +158,24 @@ const buildResetPasswordTemplate = ({ userName, resetUrl, expiresInMinutes = 60 
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 40px 32px;border-top:1px solid #1C2330;">
+            <td style="padding:24px 40px 0;border-top:1px solid #1C2330;text-align:center;">
+              <div style="font-size:9px;letter-spacing:0.3em;color:#3A4556;text-transform:uppercase;margin-bottom:16px;">Join The Community</div>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                <tr>
+                  <td style="padding:0 8px;">
+                    <a href="https://www.linkedin.com/company/take-one-nexus" target="_blank" rel="noopener"
+                       style="display:inline-block;background:#0E1218;border:1px solid rgba(0,212,255,0.2);padding:10px 18px;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:0.15em;color:#00D4FF;text-transform:uppercase;">&#9656;&nbsp;LinkedIn</a>
+                  </td>
+                  <td style="padding:0 8px;">
+                    <a href="https://www.instagram.com/__take__one" target="_blank" rel="noopener"
+                       style="display:inline-block;background:#0E1218;border:1px solid rgba(255,77,26,0.2);padding:10px 18px;text-decoration:none;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:0.15em;color:#FF4D1A;text-transform:uppercase;">&#9656;&nbsp;Instagram</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 40px 32px;text-align:center;">
               <div style="font-size:9px;color:#3A4556;letter-spacing:0.25em;text-transform:uppercase;text-align:center;line-height:1.8;">
                 TAKE ONE NEXUS · Film Crew Connect<br/>
                 takeone-nexus.net.in · © ${year} TAKE ONE

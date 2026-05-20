@@ -912,7 +912,7 @@ const STAGE_COPY = {
   },
   request: {
     title: 'Collaboration Request',
-    text: 'Send a request from any script card. TAKE ONE saves it in MySQL and tries to email the owner.'
+    text: 'Send a request from any script card. TAKE ONE instantly notifies the project creator via transmission & email.'
   }
 };
 
@@ -960,10 +960,12 @@ async function loadHomepageData() {
     updateText('countActor', roleCounts.actor || 0);
     updateText('countSpotBoy', roleCounts.spot_boy || 0);
 
-    updateText(
-      'liveCommunityText',
-      `Reviewed within 24 hrs. Join ${stats.creators || 0} creators across ${stats.colleges || 0} colleges.`
-    );
+    if (stats.creators && stats.colleges) {
+      updateText(
+        'liveCommunityText',
+        `Reviewed within 24 hrs. Join ${stats.creators} creators across ${stats.colleges} colleges.`
+      );
+    }
 
     try {
       const lbRes = await fetch('/api/users/leaderboard');
@@ -1005,6 +1007,13 @@ async function loadHomepageData() {
     } catch (err) {
       console.error('Leaderboard preview error:', err);
     }
+    // Fade in stats, features, and monitor slate once loaded
+    if (stats.creators || stats.scripts || stats.colleges) {
+      document.querySelector('.hero-stats')?.classList.add('loaded');
+      document.querySelectorAll('.feat-live').forEach(el => el.classList.add('loaded'));
+      document.querySelector('.monitor-slate')?.classList.add('loaded');
+    }
+
     updateText('statusCreators', `${stats.creators || 0} Creators Active`);
 
     allLiveScripts = response.scripts || [];
@@ -1015,7 +1024,7 @@ async function loadHomepageData() {
     hideLoader();
   } catch (err) {
     console.error('Homepage data load failed:', err);
-    updateText('liveScriptStatus', 'Could not load live scripts. Check server and MySQL connection.');
+    updateText('liveScriptStatus', 'Could not load live scripts. Please check your network connection.');
     clearTimeout(safetyTimeout);
     hideLoader();
   }

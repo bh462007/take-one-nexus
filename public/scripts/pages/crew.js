@@ -112,7 +112,7 @@ async function loadPeople() {
   } catch (error) {
     const grid = document.getElementById('crewGrid');
     if (grid) {
-      grid.innerHTML = '<div class="crew-empty">Could not load crew right now. Check your server and MySQL connection.</div>';
+      grid.innerHTML = '<div class="crew-empty">Could not load crew right now. Please check your network connection.</div>';
     }
   }
 }

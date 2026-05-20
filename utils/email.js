@@ -101,7 +101,20 @@ async function sendWelcomeEmail(to, name) {
                 3. Establish secure transmissions with collaborators.
               </div>
             </div>
-            <div class="footer">
+            <div class="footer" style="padding-top: 24px; border-top: 1px solid rgba(204, 68, 27, 0.1);">
+              <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 20px; width: auto;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.linkedin.com/company/take-one-nexus" target="_blank" rel="noopener"
+                       style="display:inline-block;background:#06080a;border:1px solid rgba(0,212,255,0.2);padding:10px 18px;text-decoration:none;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#00D4FF;text-transform:uppercase;">&#9656;&nbsp;LinkedIn</a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://www.instagram.com/__take__one" target="_blank" rel="noopener"
+                       style="display:inline-block;background:#06080a;border:1px solid rgba(204,68,27,0.2);padding:10px 18px;text-decoration:none;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#cc441b;text-transform:uppercase;">&#9656;&nbsp;Instagram</a>
+                  </td>
+                </tr>
+              </table>
+              <div style="font-size: 9px; letter-spacing: 0.2em; color: #555555; text-transform: uppercase;">JOIN THE COMMUNITY</div><br/>
               SYSTEM TIME: ${new Date().toUTCString()}<br>
               © 2026 TAKE ONE NEXUS. ALL RIGHTS RESERVED.
             </div>
