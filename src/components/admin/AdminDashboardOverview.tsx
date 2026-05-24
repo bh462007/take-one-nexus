@@ -18,6 +18,10 @@ interface Stats {
   users: number;
   scripts: number;
   requests: number;
+  issues?: number;
+  openIssues?: number;
+  inProgressIssues?: number;
+  resolvedIssues?: number;
 }
 
 interface DashboardData {
@@ -136,6 +140,37 @@ export default function AdminDashboardOverview() {
           <div className="stat-label">Active Collabs</div>
           <div className="stat-value">{data.counts.requests}</div>
           <div style={{ marginTop: '10px', fontSize: '9px', color: 'var(--silver)', letterSpacing: '2px' }}>COLLABORATION SIGNALS</div>
+        </div>
+      </div>
+
+      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '40px', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '15px' }}>
+        <div>
+          <h2 style={{ fontFamily: 'var(--font-title)', fontSize: '20px', letterSpacing: '2px', textTransform: 'uppercase', margin: 0 }}>System Issue Signals</h2>
+          <p style={{ margin: '5px 0 0 0', fontSize: '10px', letterSpacing: '3px', color: 'var(--silver)', textTransform: 'uppercase' }}>Live bug reporting & feedback metrics</p>
+        </div>
+        <Link href="/admin/issues" className="btn-action">Manage Issues →</Link>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--neon)', background: 'rgba(255, 77, 26, 0.02)' }}>
+          <div className="stat-label">Total Reports</div>
+          <div className="stat-value">{data.counts.issues ?? 0}</div>
+          <div style={{ marginTop: '10px', fontSize: '9px', color: 'var(--silver)', letterSpacing: '2px' }}>ALL SYSTEM TICKETS</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: '3px solid #ffcc00', background: 'rgba(255, 204, 0, 0.02)' }}>
+          <div className="stat-label">Open / Unresolved</div>
+          <div className="stat-value" style={{ color: '#ffcc00' }}>{data.counts.openIssues ?? 0}</div>
+          <div style={{ marginTop: '10px', fontSize: '9px', color: 'var(--silver)', letterSpacing: '2px' }}>AWAITING ACTION</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--cyan)', background: 'rgba(0, 255, 255, 0.02)' }}>
+          <div className="stat-label">In Progress</div>
+          <div className="stat-value" style={{ color: 'var(--cyan)' }}>{data.counts.inProgressIssues ?? 0}</div>
+          <div style={{ marginTop: '10px', fontSize: '9px', color: 'var(--silver)', letterSpacing: '2px' }}>UNDER INVESTIGATION</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: '3px solid #00ff66', background: 'rgba(0, 255, 102, 0.02)' }}>
+          <div className="stat-label">Resolved</div>
+          <div className="stat-value" style={{ color: '#00ff66' }}>{data.counts.resolvedIssues ?? 0}</div>
+          <div style={{ marginTop: '10px', fontSize: '9px', color: 'var(--silver)', letterSpacing: '2px' }}>VERIFIED FIXES</div>
         </div>
       </div>
 

@@ -1244,6 +1244,67 @@ bindSafeClick(closeRegisterBtn, () => closeTakeOneModal(registerModal), 'Close r
 bindSafeClick(closePeopleModalBtn, () => closeTakeOneModal(peopleModal), 'Close people modal');
 bindSafeClick(closeScriptModalBtn, () => closeTakeOneModal(scriptModal), 'Close script modal');
 
+// ── FORGOT PASSWORD MODAL WIRING ──
+const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+const closeForgotPasswordBtn = document.getElementById('closeForgotPasswordBtn');
+const backToLoginFromForgot = document.getElementById('backToLoginFromForgot');
+const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+
+bindSafeClick(forgotPasswordLink, (e) => {
+  e.preventDefault();
+  closeTakeOneModal(loginModal);
+  openTakeOneModal(forgotPasswordModal);
+}, 'Forgot password modal open');
+
+bindSafeClick(closeForgotPasswordBtn, () => closeTakeOneModal(forgotPasswordModal), 'Close forgot password modal');
+
+bindSafeClick(backToLoginFromForgot, (e) => {
+  e.preventDefault();
+  closeTakeOneModal(forgotPasswordModal);
+  openTakeOneModal(loginModal);
+}, 'Back to login from forgot');
+
+forgotPasswordForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const emailInput = document.getElementById('forgotEmail');
+  const msgDiv = document.getElementById('forgotPasswordMsg');
+  const submitBtn = document.getElementById('forgotPasswordSubmitBtn');
+
+  if (!emailInput || !msgDiv || !submitBtn) return;
+
+  const email = emailInput.value.trim();
+  const originalText = submitBtn.textContent;
+
+  msgDiv.style.display = 'none';
+  msgDiv.className = '';
+  msgDiv.textContent = '';
+
+  try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Transmitting request...';
+
+    const response = await API.users.forgotPassword(email);
+    if (response.success) {
+      msgDiv.style.display = 'block';
+      msgDiv.style.background = 'rgba(0, 212, 255, 0.1)';
+      msgDiv.style.border = '1px solid var(--cyan)';
+      msgDiv.style.color = 'var(--cyan)';
+      msgDiv.textContent = response.message || 'If registered, a secure reset link has been sent.';
+      forgotPasswordForm.reset();
+    }
+  } catch (err) {
+    msgDiv.style.display = 'block';
+    msgDiv.style.background = 'rgba(255, 77, 26, 0.1)';
+    msgDiv.style.border = '1px solid var(--neon)';
+    msgDiv.style.color = 'var(--neon)';
+    msgDiv.textContent = err.message || 'Transmission failed. Please try again later.';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+});
+
 function openAuthFromUrl() {
   const authMode = new URLSearchParams(window.location.search).get('auth');
   if (authMode === 'login') openTakeOneModal(loginModal);

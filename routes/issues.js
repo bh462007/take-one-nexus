@@ -71,15 +71,28 @@ router.get('/', authenticateUser, requireRole(['Developer', 'Admin']), async (re
 
 /**
  * PUT /api/issues/:id
- * Update issue status
+ * Update issue status, priority, and assignment
  */
 router.put('/:id', authenticateUser, requireRole(['Developer', 'Admin']), async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { status } = req.body;
+    const { status, priority, assigned_admin } = req.body;
+
+    const updateData = {};
+    if (status !== undefined) updateData.status = status;
+    if (priority !== undefined) updateData.priority = priority;
+    if (assigned_admin !== undefined) updateData.assigned_admin = assigned_admin ? Number(assigned_admin) : null;
+
+    // Auto-set resolved_at when status changes to 'resolved'
+    if (status === 'resolved') {
+      updateData.resolved_at = new Date();
+    } else if (status && status !== 'resolved') {
+      updateData.resolved_at = null;
+    }
+
     const issue = await prisma.issue.update({
       where: { id },
-      data: { status }
+      data: updateData
     });
     res.json({ success: true, data: issue });
   } catch (error) {

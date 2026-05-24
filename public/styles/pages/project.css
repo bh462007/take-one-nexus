@@ -2501,6 +2501,40 @@ footer {
   transform: rotate(90deg);
 }
 
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: var(--silver);
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: none;
+  padding: 0;
+  transition: color 0.3s, text-shadow 0.3s;
+  position: relative;
+}
+
+.forgot-password-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--neon);
+  transition: width 0.3s;
+}
+
+.forgot-password-link:hover {
+  color: var(--neon);
+  text-shadow: 0 0 8px var(--glow);
+}
+
+.forgot-password-link:hover::after {
+  width: 100%;
+}
+
 .form-group {
   margin-bottom: 24px;
 }

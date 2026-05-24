@@ -58,6 +58,10 @@ model Script {
   media_links        String?                @db.Text
   role_data          String?                @db.Text
   work_type          String                 @default("Script") @db.VarChar(50)
+  approval_status    String                 @default("pending") @db.VarChar(50)
+  approved_by        Int?                   @db.UnsignedInt
+  approved_at        DateTime?              @db.Timestamp(0)
+  moderation_notes   String?                @db.Text
   collaboration_reqs CollaborationRequest[]
   user               User?                  @relation(fields: [user_id], references: [id])
 
@@ -146,17 +150,20 @@ model CreditTransaction {
 }
 
 model Issue {
-  id          Int      @id @default(autoincrement()) @db.UnsignedInt
-  user_id     Int?     @db.UnsignedInt
-  title       String   @db.VarChar(255)
-  description String   @db.Text
-  location    String?  @db.VarChar(255)
-  severity    String   @default("low") @db.VarChar(50)
-  screenshot  String?  @db.VarChar(255)
-  status      String   @default("open") @db.VarChar(50)
-  created_at  DateTime @default(now()) @db.Timestamp(0)
-  updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
-  user        User?    @relation(fields: [user_id], references: [id])
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  user_id        Int?      @db.UnsignedInt
+  title          String    @db.VarChar(255)
+  description    String    @db.Text
+  location       String?   @db.VarChar(255)
+  severity       String    @default("low") @db.VarChar(50)
+  screenshot     String?   @db.VarChar(255)
+  status         String    @default("open") @db.VarChar(50)
+  priority       String    @default("medium") @db.VarChar(50)
+  assigned_admin Int?      @db.UnsignedInt
+  resolved_at    DateTime? @db.Timestamp(0)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  updated_at     DateTime  @default(now()) @updatedAt @db.Timestamp(0)
+  user           User?     @relation(fields: [user_id], references: [id])
 
   @@index([user_id], map: "issues_user_id_fkey")
   @@map("issues")

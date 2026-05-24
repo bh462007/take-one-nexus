@@ -8,7 +8,9 @@ We currently provide security updates and patches for the following versions of 
 
 | Version | Supported          |
 | ------- | ------------------ |
-| v1.0.x  | :white_check_mark: |
+| v1.2.x  | :white_check_mark: |
+| v1.1.x  | :white_check_mark: |
+| v1.0.x  | :x:                |
 | v0.x.x  | :x:                |
 
 *(Note: Since we operate as a live SaaS platform, users always interact with the latest production version).*
@@ -26,12 +28,17 @@ We will work diligently to validate and fix the vulnerability. Once resolved, we
 ## 🔒 Security Best Practices
 
 To maintain a secure ecosystem, we adhere to the following practices:
+
 - **Authentication**: JWT tokens stored securely via HTTP-only, secure cookies, ensuring a fully decentralized, robust, and custom-tailored identity validation pipeline.
 - **Role-Based Access Control (RBAC)**: All task assignment, creation, and administrative APIs are strictly gated to ensure only authorized users (e.g. `creator`, `admin`) can access them.
+- **Moderation Pipeline**: The `PATCH /api/scripts/:id/moderate` endpoint requires `Admin` or `Developer` role via `requireRole()` middleware. All moderation actions are timestamped and attributed to the moderating admin's `user_id`.
+- **Scripts Platform Isolation**: The `scripts-platform/` admin tool uses a **separate** JWT secret (`SP_JWT_SECRET`) and cookie (`sp_token`) from the main platform. A compromised main-platform token cannot be used to access the moderation interface.
 - **Database**: Parameterized queries using Prisma and prepared SQL statements to prevent SQL Injection.
 - **Data Privacy**: Passwords are cryptographically hashed using bcrypt. Sensitive user data is never exposed to the frontend.
-- **Rate Limiting**: Global and endpoint-specific rate limiting (Login, Register, Password Reset, Email Delivery) are enforced on both the Next.js API and legacy Express server to prevent abuse and brute force attacks.
-- **Security Headers**: Strict Content Security Policy (CSP), anti-clickjacking (X-Frame-Options), and strict referrer policies are enforced globally via Next.js and Express middleware.
+- **Token Hashing**: Verification and password-reset tokens are stored as SHA-256 hashes in the database. The raw token is transmitted exclusively via email link — never stored plaintext.
+- **Rate Limiting**: Global and endpoint-specific rate limiting (Login, Register, Password Reset, Email Delivery, Script Moderation) are enforced on both the Next.js API and legacy Express server.
+- **Security Headers**: Strict Content Security Policy (CSP), anti-clickjacking (X-Frame-Options: DENY), and strict referrer policies are enforced globally. The scripts-platform also sets its own `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff` headers.
 - **XSS Prevention**: React/Next.js automatically sanitizes inputs, and we strictly validate HTML rendered on static routes.
+- **Crawl Protection**: The scripts-platform sets `robots: noindex, nofollow` in its metadata to prevent indexing of the internal moderation tool.
 
 Thank you for helping us keep TAKE ONE Nexus secure!

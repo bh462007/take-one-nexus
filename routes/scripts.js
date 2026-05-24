@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/db');
-const { authenticateUser, requireVerified } = require('../middleware/auth');
+const { authenticateUser, requireVerified, requireRole } = require('../middleware/auth');
 const Pusher = require('pusher');
 
 const router = express.Router();
@@ -267,6 +267,81 @@ router.delete('/:id', authenticateUser, requireVerified, async (req, res) => {
       success: false,
       message: 'Could not delete script'
     });
+  }
+});
+
+/**
+ * PATCH /api/scripts/:id/moderate
+ * Approve or reject a script (Admin only)
+ * Body: { action: 'approved' | 'rejected' | 'pending', moderation_notes?: string }
+ */
+router.patch('/:id/moderate', authenticateUser, requireRole(['Admin', 'Developer']), async (req, res) => {
+  try {
+    const scriptId = Number(req.params.id);
+    const { action, moderation_notes } = req.body;
+
+    const allowed = ['approved', 'rejected', 'pending'];
+    if (!allowed.includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid moderation action' });
+    }
+
+    const now = action === 'approved' ? new Date() : null;
+
+    await pool.query(
+      `UPDATE scripts SET approval_status = ?, approved_by = ?, approved_at = ?, moderation_notes = ?, updated_at = NOW() WHERE id = ?`,
+      [action, req.user.id, now, moderation_notes || null, scriptId]
+    );
+
+    const [rows] = await pool.query(
+      `SELECT scripts.*, users.email AS author_email, users.name AS author_name
+       FROM scripts LEFT JOIN users ON users.id = scripts.user_id
+       WHERE scripts.id = ? LIMIT 1`,
+      [scriptId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Script not found' });
+    }
+
+    const script = rows[0];
+
+    // Send rejection email if the script was rejected and Resend is configured
+    if (action === 'rejected' && script.author_email && process.env.RESEND_API_KEY) {
+      try {
+        const { Resend } = require('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: 'TAKE ONE Nexus <noreply@takeone-nexus.net.in>',
+          to: script.author_email,
+          subject: `Your work "${script.title}" — Moderation Update`,
+          html: `<div style="font-family:monospace;background:#0a0a0a;color:#e8e8e0;padding:32px;border-radius:8px;max-width:560px;">
+            <div style="color:#ff6b00;font-size:12px;letter-spacing:3px;margin-bottom:16px;">TAKE ONE NEXUS</div>
+            <h2 style="color:#e8e8e0;margin:0 0 16px;">Moderation Update</h2>
+            <p>Hi ${script.author_name || 'Creator'},</p>
+            <p>Your submission <strong>${script.title}</strong> was reviewed by our moderation team and requires changes before it can go live.</p>
+            ${moderation_notes ? `<div style="background:#1a1a1a;border-left:3px solid #ff6b00;padding:12px 16px;margin:16px 0;"><strong>Moderator Notes:</strong><br/>${moderation_notes}</div>` : ''}
+            <p>You can edit your submission and resubmit from your profile. If you have questions, reply to this email.</p>
+            <p style="color:rgba(232,232,224,0.4);font-size:11px;">TAKE ONE Nexus · Empowering Independent Film Crews</p>
+          </div>`
+        });
+      } catch (emailErr) {
+        console.error('Rejection email failed:', emailErr.message);
+      }
+    }
+
+    // Notify admin dashboard
+    if (process.env.PUSHER_APP_ID) {
+      pusher.trigger('admin-dashboard', 'update', {
+        type: 'SCRIPT_MODERATED',
+        scriptId,
+        action
+      });
+    }
+
+    res.json({ success: true, message: `Script ${action}`, data: script });
+  } catch (error) {
+    console.error('Script moderation error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not moderate script' });
   }
 });
 

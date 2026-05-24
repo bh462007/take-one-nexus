@@ -26,6 +26,23 @@ Due to the transition from a purely static/Express application to a modern Next.
   | `/api/auth/reset-password` | API Route | Password update |
   | `/leaderboard` | Dynamic SSR | Top 50 creators |
 
+### C. Script Review Platform (`scripts-platform/`)
+- **Purpose**: Internal moderation tool for Admin / Developer roles. Not accessible to the public (`noindex, nofollow`).
+- **Port**: 3001 (local) | Separate Vercel project or subdomain (`scripts.takeone-nexus.net.in`) in production.
+- **Auth**: Independent JWT (`SP_JWT_SECRET`) stored in `sp_token` HTTP-only cookie. Session duration 8 hours.
+- **Key Routes**:
+  | Route | Purpose |
+  |---|---|
+  | `/login` | Admin-only login (bcrypt verify, role-gated to Admin/Developer) |
+  | `/dashboard` | Live stats grid + recent submissions & issues |
+  | `/scripts` | Filterable moderation queue (pending / approved / rejected) |
+  | `/scripts/[id]` | Full script review: PDF iframe, moderator notes, approve/reject/reset |
+  | `/issues` | Issue triage with status transitions (open → in_progress → resolved) |
+  | `GET /api/scripts` | Internal API: script list filtered by `approval_status` |
+  | `PATCH /api/scripts/[id]/moderate` | Apply moderation action + send rejection email |
+  | `GET /api/issues` | Internal API: issue list filtered by `status` |
+  | `PATCH /api/issues/[id]` | Update issue status / priority / assigned_admin |
+
 ### B. Legacy Express Server (`server.js`)
 - **Purpose**: Core REST API for data mutations. Serves legacy static `.htm` pages (`/public`).
 - **Execution**: Serverless Function on Vercel.
@@ -90,6 +107,21 @@ reset_token             String?    @unique  // SHA-256 hash of raw token
 reset_token_expires     DateTime?
 ```
 
+**`Script` model moderation fields (added v1.2):**
+```prisma
+approval_status   String?   @default("pending")  // pending | approved | rejected
+approved_by       Int?      // FK → User.id of the moderating admin
+approved_at       DateTime?
+moderation_notes  String?   @db.Text
+```
+
+**`Issue` model admin fields (added v1.2):**
+```prisma
+priority          String?   @default("medium")   // low | medium | high
+assigned_admin    Int?      // FK → User.id of assigned moderator
+resolved_at       DateTime?
+```
+
 > **Security principle**: Raw tokens are 32-byte `crypto.randomBytes` values. Only SHA-256 hashes are stored in the database. The raw token travels exclusively in the email link.
 
 ### Connection Strategy
@@ -107,6 +139,7 @@ All transactional emails are delivered via **Resend** using the custom domain `t
 | Welcome | On registration | `utils/email.js` |
 | Email Verification | On registration + resend | `src/lib/email-templates/verify-email.ts` |
 | Password Reset | On forgot-password request | `src/lib/email-templates/reset-password.ts` |
+| Script Rejection | On admin rejection via scripts-platform | Inline HTML in `scripts-platform/src/app/api/scripts/[id]/moderate/route.ts` |
 
 **Template design**: Cyberpunk/cinematic theme matching the platform UI. HTML-only, table-based layout for maximum email client compatibility.
 
@@ -193,10 +226,25 @@ To give TAKE ONE Nexus its signature "live mission control" feel, we utilize Pus
 - **Global Chat**: Direct peer-to-peer messaging (`chat.js`).
 - **Admin Dashboard**: Live metrics (user registration, issue submission).
 - **Task Updates**: Live credits awarding and issue tracking.
+- **Script Moderation** (`SCRIPT_MODERATED`): Triggered by `PATCH /api/scripts/:id/moderate`. Admin dashboard updates in real-time when a script is approved or rejected from the scripts-platform.
 
 ---
 
-## 10. Future Payment Engine & Escrow Architecture
+## 10. Verified Account Badge System
+
+Creators with `email_verified = true` receive a visual verified badge (neon ✦ SVG) across all platform surfaces:
+
+| Surface | Implementation |
+|---|---|
+| Leaderboard (`/leaderboard`) | `LeaderboardClient.tsx` — inline SVG badge next to creator name |
+| Profile page (`/profile`) | `src/app/profile/page.tsx` — badge in the profile header |
+| Crew Finder (`/crew.htm`) | `public/scripts/pages/crew.js` — badge injected into `personCard()` HTML |
+
+Both `GET /api/users/search` and `GET /api/users/leaderboard` now return `email_verified` in their SQL `SELECT` statements.
+
+---
+
+## Future Payment Engine & Escrow Architecture
 
 To safely transition the Take One Nexus platform into a commercial creative ecosystem, the following architectural boundaries are planned for the upcoming Payment Engine:
 
@@ -227,3 +275,4 @@ To safely transition the Take One Nexus platform into a commercial creative ecos
 | ADR-006 | Email-Only Verification Gate | Only `/chat` is hard-gated by email verification. `/profile` is accessible so unverified users can see the banner and resend. |
 | ADR-007 | Token Hashing Strategy | SHA-256 of a 32-byte random token. Hash stored in DB. Raw token in email URL only. Prevents token enumeration from DB breach. |
 | ADR-008 | Secure Webhook Signature Validation | Webhook processing MUST cryptographically verify signatures using raw request buffers. Avoid parsed bodies to ensure security against signature spoofing. |
+| ADR-009 | Independent scripts-platform JWT | The scripts-platform uses a separate `SP_JWT_SECRET` and `sp_token` cookie, isolated from the main platform's auth session. This means a compromised main JWT cannot grant moderation access. |

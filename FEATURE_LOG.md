@@ -6,6 +6,24 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ---
 
+## [1.2.0] — Scripts Platform & Creator Verification - 2026-05-24
+
+### Added
+- **Verified Creator Badge**: Added `email_verified` to `GET /api/users/search` and `GET /api/users/leaderboard` SQL routes. Renders a neon verified badge (✦) next to verified names on the leaderboard, profile, and crew pages.
+- **Prisma Schema Update**:
+  - `Script` model updated with `approval_status` (pending/approved/rejected), `approved_by`, `approved_at`, and `moderation_notes`.
+  - `Issue` model updated with `priority` (low/medium/high), `assigned_admin`, and `resolved_at`.
+- **Script Review & Moderation API**:
+  - `PATCH /api/scripts/:id/moderate` triggers status updates and automated rejection feedback email dispatch via Resend.
+  - Broadcasts real-time `SCRIPT_MODERATED` status changes via Pusher WebSockets.
+- **Standalone Moderation Hub (`scripts-platform/`)**:
+  - Admin login portal under JWT session verification (`SP_JWT_SECRET`).
+  - Interactive moderation queue and PDF iframe script viewer.
+  - Interactive issue management console supporting status transition logs and priority updates.
+  - Strict security headers (`CSP`, `X-Frame-Options: DENY`, `noindex` tags).
+
+---
+
 ## [1.1.0] — Nexus Security Suite - 2026-05-16
 
 ### Added

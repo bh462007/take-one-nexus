@@ -420,7 +420,7 @@ router.get('/search', async (req, res) => {
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at
+      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified
       FROM users
       WHERE 1 = 1
     `;
@@ -673,7 +673,7 @@ router.get('/public/:id', async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const rows = await safeQuery(
-      `SELECT id, name, role, college, city, avatar_url, gender, credits, screen_name, display_preference
+      `SELECT id, name, role, college, city, avatar_url, gender, credits, screen_name, display_preference, email_verified
        FROM users
        WHERE credits > 0
        ORDER BY credits DESC, name ASC

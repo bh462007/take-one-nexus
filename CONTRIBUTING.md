@@ -26,6 +26,23 @@ Whether you're participating in **SSOC**, **GSSoC**, or just dropping by, we wel
    - *Note*: For local development, `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_SENTRY_DSN` are optional. If left blank, analytics and error tracking will be bypassed in dev mode.
    - *Note*: Rate limiting is active locally. If you encounter 429 errors during testing, you can temporarily increase limits in `src/lib/rate-limit-config.ts` or `middleware/rateLimiter.js` (do not commit these changes).
 
+## 🖥️ Script Review Platform (`scripts-platform/`)
+For internal administration/moderation tasks, a separate application resides in the `scripts-platform/` directory.
+1. Navigate to the directory and install dependencies:
+   ```bash
+   cd scripts-platform
+   npm install
+   ```
+2. Duplicate `scripts-platform/.env.example` to `scripts-platform/.env` and supply:
+   - `DATABASE_URL` (pointing to the shared TiDB database instance)
+   - `SP_JWT_SECRET` (session token signer for moderation logins)
+   - `RESEND_API_KEY` (for moderation emails)
+3. Launch the development server:
+   ```bash
+   npm run dev
+   ```
+   The portal runs on port `3001` (http://localhost:3001).
+
 ---
 
 ## 🌿 Branching Strategy

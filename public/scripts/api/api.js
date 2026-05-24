@@ -243,6 +243,12 @@ const API = (() => {
         }
         return result;
       },
+      forgotPassword(email) {
+        return request('/api/auth/forgot-password', {
+          method: 'POST',
+          body: JSON.stringify({ email })
+        });
+      },
       search(params = {}) {
         const query = new URLSearchParams();
         Object.entries(params).forEach(([key, value]) => {

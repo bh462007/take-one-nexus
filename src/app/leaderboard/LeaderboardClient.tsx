@@ -16,6 +16,7 @@ interface User {
   role?: string;
   college?: string;
   credits: number;
+  email_verified?: boolean;
 }
 
 interface LeaderboardClientProps {
@@ -136,7 +137,16 @@ export default function LeaderboardClient({ initialUsers, pusherConfig }: Leader
                             <div className="user-avatar">{getInitials(user.name)}</div>
                           )}
                           <div className="user-info">
-                            <span className="user-name">{displayName}</span>
+                            <span className="user-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {displayName}
+                              {user.email_verified && (
+                                <span className="verified-badge-inline" title="Verified Creator" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--neon)', filter: 'drop-shadow(0 0 3px var(--neon))' }}>
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="var(--neon)" />
+                                  </svg>
+                                </span>
+                              )}
+                            </span>
                             <span className="user-role">{user.college || 'Nexus Creator'}</span>
                           </div>
                         </div>

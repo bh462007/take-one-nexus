@@ -136,6 +136,25 @@ router.get('/stats', authenticateUser, requireRole(['Admin', 'Developer', 'Moder
     const [scriptCount] = await pool.query('SELECT COUNT(*) as count FROM scripts');
     const [requestCount] = await pool.query('SELECT COUNT(*) as count FROM collaboration_requests');
     
+    // Aggregate issue tracking statistics
+    let issueTotal = 0;
+    let openIssues = 0;
+    let inProgressIssues = 0;
+    let resolvedIssues = 0;
+    try {
+      const [issueCountResult] = await pool.query('SELECT COUNT(*) as count FROM issues');
+      const [openResult] = await pool.query("SELECT COUNT(*) as count FROM issues WHERE status = 'open' OR status = 'Open'");
+      const [inProgressResult] = await pool.query("SELECT COUNT(*) as count FROM issues WHERE status = 'in_progress' OR status = 'in-progress' OR status = 'In Progress'");
+      const [resolvedResult] = await pool.query("SELECT COUNT(*) as count FROM issues WHERE status = 'resolved' OR status = 'closed' OR status = 'Resolved' OR status = 'Closed'");
+      
+      issueTotal = issueCountResult[0]?.count || 0;
+      openIssues = openResult[0]?.count || 0;
+      inProgressIssues = inProgressResult[0]?.count || 0;
+      resolvedIssues = resolvedResult[0]?.count || 0;
+    } catch (e) {
+      console.warn('Could not query issues table for stats:', e.message);
+    }
+    
     const [recentUsers] = await pool.query(`
       SELECT id, name, email, role, college, city, created_at 
       FROM users 
@@ -149,7 +168,11 @@ router.get('/stats', authenticateUser, requireRole(['Admin', 'Developer', 'Moder
         counts: {
           users: userCount[0].count,
           scripts: scriptCount[0].count,
-          requests: requestCount[0].count
+          requests: requestCount[0].count,
+          issues: issueTotal,
+          openIssues: openIssues,
+          inProgressIssues: inProgressIssues,
+          resolvedIssues: resolvedIssues
         },
         recentUsers: recentUsers
       }
