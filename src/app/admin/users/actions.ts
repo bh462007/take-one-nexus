@@ -105,9 +105,6 @@ export async function updateUser(id: number, formData: any) {
 
 export async function deleteUser(id: number) {
   try {
-    // Prevent self-deletion would be good, but we don't have current user ID here easily 
-    // unless we get it from session. For now we just delete.
-    
     await prisma.user.delete({
       where: { id }
     });
@@ -115,7 +112,6 @@ export async function deleteUser(id: number) {
     revalidatePath('/admin/users');
     revalidatePath('/admin');
     
-    // Trigger Pusher update for admin dashboard
     if (process.env.PUSHER_APP_ID) {
       pusher.trigger('admin-dashboard', 'update', {
         type: 'USER_DELETED',
@@ -126,5 +122,32 @@ export async function deleteUser(id: number) {
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to delete user' };
+  }
+}
+
+const VALID_SECONDARY_ROLES = ['', 'moderator', 'admin', 'developer'];
+
+export async function updateSecondaryRole(id: number, secondary_role: string) {
+  try {
+    const role = VALID_SECONDARY_ROLES.includes(secondary_role) ? secondary_role : null;
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { secondary_role: role || null }
+    });
+
+    revalidatePath('/admin/users');
+    revalidatePath('/admin');
+
+    if (process.env.PUSHER_APP_ID) {
+      pusher.trigger('admin-dashboard', 'update', {
+        type: 'USER_UPDATED',
+        user: { id: updatedUser.id, secondary_role: updatedUser.secondary_role }
+      });
+    }
+
+    return { success: true, user: updatedUser };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update secondary role' };
   }
 }

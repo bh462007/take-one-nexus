@@ -224,6 +224,42 @@ export default async function ProfilePage({
                   <span className="badge">Creator</span>
                 )}
               </div>
+
+              {/* ── VERIFY EMAIL BANNER — visible only to unverified owners ── */}
+              {isOwner && !user.email_verified && (
+                <div id="verifyBanner" style={{
+                  marginTop: '16px',
+                  background: 'linear-gradient(135deg, rgba(255,77,26,0.1), rgba(255,122,26,0.05))',
+                  border: '1px solid rgba(255,77,26,0.35)',
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                }}>
+                  <div style={{ fontSize: '9px', letterSpacing: '3px', color: 'var(--neon)', textTransform: 'uppercase', marginBottom: '6px' }}>⚠ Unverified</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginBottom: '12px', lineHeight: '1.5' }}>
+                    Verify your email to unlock verified badge and earn 50 credits.
+                  </div>
+                  <button
+                    id="verifyEmailBtn"
+                    type="button"
+                    style={{
+                      background: 'var(--neon)',
+                      color: '#06080A',
+                      border: 'none',
+                      borderRadius: '5px',
+                      padding: '8px 14px',
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      letterSpacing: '2px',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      width: '100%',
+                      boxShadow: '0 0 16px rgba(255,77,26,0.35)',
+                    }}
+                  >
+                    VERIFY EMAIL →
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── MAIN CONTENT ── */}
@@ -469,10 +505,215 @@ export default async function ProfilePage({
             <div className="status-item" id="statusTime"></div>
           </div>
 
+          {/* ── OTP VERIFICATION MODAL ── */}
+          {isOwner && !user.email_verified && (
+            <div id="otpModal" style={{
+              display: 'none',
+              position: 'fixed', inset: 0,
+              background: 'rgba(6,8,10,0.92)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 9999,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <div style={{
+                background: 'var(--machine)',
+                border: '1px solid rgba(255,77,26,0.3)',
+                borderRadius: '12px',
+                padding: '40px',
+                width: '100%',
+                maxWidth: '420px',
+                position: 'relative',
+                boxShadow: '0 0 60px rgba(255,77,26,0.12)',
+              }}>
+                {/* Filmstrip top accent */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'linear-gradient(90deg, var(--neon), var(--neon2))', borderRadius: '12px 12px 0 0' }}></div>
+
+                <button id="otpModalClose" style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--silver)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>✕</button>
+
+                <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '22px', letterSpacing: '6px', color: 'var(--neon)', marginBottom: '6px' }}>VERIFY IDENTITY</div>
+                <div style={{ fontSize: '10px', letterSpacing: '2px', color: 'var(--silver)', marginBottom: '24px', textTransform: 'uppercase' }}>Enter the 6-digit code sent to your email</div>
+
+                <div id="otpError" style={{ display: 'none', background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)', borderRadius: '6px', padding: '10px 14px', fontSize: '11px', color: 'var(--red)', marginBottom: '16px', letterSpacing: '1px' }}></div>
+                <div id="otpSuccess" style={{ display: 'none', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.25)', borderRadius: '6px', padding: '10px 14px', fontSize: '11px', color: 'var(--green)', marginBottom: '16px', letterSpacing: '1px' }}></div>
+
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                  {[0,1,2,3,4,5].map(i => (
+                    <input
+                      key={i}
+                      id={`otp-digit-${i}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      style={{
+                        width: '48px', height: '56px',
+                        background: 'var(--panel)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: 'var(--neon)',
+                        fontSize: '24px',
+                        fontWeight: '700',
+                        textAlign: 'center',
+                        fontFamily: 'Space Mono, monospace',
+                        outline: 'none',
+                        flex: 1,
+                        transition: 'border-color 0.2s',
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <button id="otpConfirmBtn" type="button" style={{
+                  width: '100%',
+                  background: 'var(--neon)',
+                  color: '#06080A',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '13px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  letterSpacing: '3px',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  marginBottom: '14px',
+                  boxShadow: '0 0 20px rgba(255,77,26,0.3)',
+                }}>CONFIRM CODE</button>
+
+                <div style={{ textAlign: 'center' }}>
+                  <button id="otpResendBtn" type="button" style={{
+                    background: 'none', border: 'none',
+                    color: 'var(--silver)', fontSize: '10px',
+                    letterSpacing: '2px', textTransform: 'uppercase',
+                    cursor: 'pointer', textDecoration: 'underline',
+                  }}>Resend Code</button>
+                  <span id="otpCooldown" style={{ display: 'none', color: 'var(--silver)', fontSize: '10px', letterSpacing: '2px' }}></span>
+                </div>
+              </div>
+            </div>
+          )}
+
         <Script src="/scripts/utils/helpers.js" strategy="afterInteractive" />
         <Script src="/scripts/components/ui.js" strategy="afterInteractive" />
         <Script src="/scripts/animations/common.js" strategy="afterInteractive" />
         <Script src="/scripts/pages/profile.js" strategy="afterInteractive" />
+        <Script id="otp-init" strategy="afterInteractive">{`
+          (function () {
+            var verifyBtn = document.getElementById('verifyEmailBtn');
+            var modal     = document.getElementById('otpModal');
+            var closeBtn  = document.getElementById('otpModalClose');
+            var confirmBtn= document.getElementById('otpConfirmBtn');
+            var resendBtn = document.getElementById('otpResendBtn');
+            var errBox    = document.getElementById('otpError');
+            var okBox     = document.getElementById('otpSuccess');
+            var cooldown  = document.getElementById('otpCooldown');
+            var resendTimer = null;
+
+            function getCode() {
+              return [0,1,2,3,4,5].map(function(i){
+                return (document.getElementById('otp-digit-'+i)||{}).value||'';
+              }).join('');
+            }
+
+            function showErr(msg) {
+              if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; }
+              if (okBox)  { okBox.style.display = 'none'; }
+            }
+
+            function showOk(msg) {
+              if (okBox)  { okBox.textContent = msg; okBox.style.display = 'block'; }
+              if (errBox) { errBox.style.display = 'none'; }
+            }
+
+            function startCooldown(secs) {
+              if (!cooldown || !resendBtn) return;
+              resendBtn.style.display = 'none';
+              cooldown.style.display  = 'inline';
+              var remaining = secs;
+              resendTimer = setInterval(function() {
+                remaining--;
+                cooldown.textContent = 'Resend in ' + remaining + 's';
+                if (remaining <= 0) {
+                  clearInterval(resendTimer);
+                  cooldown.style.display  = 'none';
+                  resendBtn.style.display = 'inline';
+                }
+              }, 1000);
+              cooldown.textContent = 'Resend in ' + secs + 's';
+            }
+
+            // Wire OTP digit auto-advance
+            [0,1,2,3,4,5].forEach(function(i) {
+              var el = document.getElementById('otp-digit-'+i);
+              if (!el) return;
+              el.addEventListener('input', function() {
+                el.value = el.value.replace(/[^0-9]/g,'').slice(-1);
+                if (el.value && i < 5) document.getElementById('otp-digit-'+(i+1)).focus();
+              });
+              el.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && !el.value && i > 0) document.getElementById('otp-digit-'+(i-1)).focus();
+              });
+            });
+
+            // Open modal + auto-send OTP
+            if (verifyBtn && modal) {
+              verifyBtn.addEventListener('click', function() {
+                modal.style.display = 'flex';
+                fetch('/api/otp/send', { method: 'POST', credentials: 'include' })
+                  .then(function(r){ return r.json(); })
+                  .then(function(d){
+                    if (d.success) startCooldown(60);
+                    else showErr(d.message || 'Failed to send code');
+                  })
+                  .catch(function(){ showErr('Connection error. Try again.'); });
+              });
+            }
+
+            if (closeBtn && modal)  closeBtn.addEventListener('click', function(){ modal.style.display='none'; });
+
+            if (confirmBtn) {
+              confirmBtn.addEventListener('click', function() {
+                var code = getCode();
+                if (code.length !== 6) { showErr('Please enter the full 6-digit code.'); return; }
+                confirmBtn.textContent = 'VERIFYING...';
+                confirmBtn.disabled = true;
+                fetch('/api/otp/confirm', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ otp: code })
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                  confirmBtn.textContent = 'CONFIRM CODE';
+                  confirmBtn.disabled = false;
+                  if (d.success) {
+                    showOk('Email verified! Credits awarded. Reloading...');
+                    setTimeout(function(){ window.location.reload(); }, 1800);
+                  } else {
+                    showErr(d.message || 'Invalid code');
+                  }
+                })
+                .catch(function(){
+                  confirmBtn.textContent = 'CONFIRM CODE';
+                  confirmBtn.disabled = false;
+                  showErr('Connection error. Try again.');
+                });
+              });
+            }
+
+            if (resendBtn) {
+              resendBtn.addEventListener('click', function() {
+                fetch('/api/otp/send', { method: 'POST', credentials: 'include' })
+                  .then(function(r){ return r.json(); })
+                  .then(function(d){
+                    if (d.success) { showOk('New code sent!'); startCooldown(60); }
+                    else showErr(d.message || 'Failed to resend code');
+                  })
+                  .catch(function(){ showErr('Connection error. Try again.'); });
+              });
+            }
+          })();
+        `}</Script>
       </>
     );
   } catch (criticalError: any) {

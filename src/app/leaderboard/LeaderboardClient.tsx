@@ -19,6 +19,16 @@ interface User {
   email_verified?: boolean;
 }
 
+interface CreditTask {
+  id: number;
+  name: string;
+  description: string | null;
+  credits_rewarded: number;
+  trigger_type: string;
+  completed: boolean;
+  completed_at: string | null;
+}
+
 interface LeaderboardClientProps {
   initialUsers: User[];
   pusherConfig: {
@@ -31,6 +41,8 @@ export default function LeaderboardClient({ initialUsers, pusherConfig }: Leader
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [loading, setLoading] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [creditTasks, setCreditTasks] = useState<CreditTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
 
   const fetchLeaderboard = useCallback(async () => {
     try {
@@ -61,6 +73,15 @@ export default function LeaderboardClient({ initialUsers, pusherConfig }: Leader
       pusher.unsubscribe('global-events');
     };
   }, [pusherConfig, fetchLeaderboard]);
+
+  useEffect(() => {
+    setTasksLoading(true);
+    fetch('/api/credits/tasks', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { if (d.success) setCreditTasks(d.data); })
+      .catch(() => {})
+      .finally(() => setTasksLoading(false));
+  }, []);
 
   const getDisplayName = (u: User) => {
     return getCanonicalDisplayName(u);
@@ -162,6 +183,75 @@ export default function LeaderboardClient({ initialUsers, pusherConfig }: Leader
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── EARN CREDITS TASK BOARD ── */}
+      <div className="reveal" style={{ marginTop: '64px' }}>
+        <div className="sec-label">Rewards</div>
+        <div className="sec-title" style={{ fontSize: 'clamp(28px,4vw,42px)', marginBottom: '12px' }}>Earn Credits</div>
+        <p className="sec-sub" style={{ marginBottom: '32px' }}>Complete these actions to climb the leaderboard and unlock platform privileges.</p>
+
+        {tasksLoading ? (
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '11px', letterSpacing: '3px', padding: '40px' }}>LOADING TASKS...</div>
+        ) : creditTasks.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '11px', letterSpacing: '3px', padding: '40px' }}>No active tasks at this time.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+            {creditTasks.map(task => (
+              <div
+                key={task.id}
+                style={{
+                  background: task.completed
+                    ? 'linear-gradient(135deg, rgba(0,255,136,0.05), rgba(0,255,136,0.02))'
+                    : 'linear-gradient(135deg, rgba(255,77,26,0.07), rgba(28,35,48,0.8))',
+                  border: `1px solid ${task.completed ? 'rgba(0,255,136,0.2)' : 'rgba(255,77,26,0.18)'}`,
+                  borderRadius: '10px',
+                  padding: '20px 22px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Accent bar */}
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '3px', height: '100%', background: task.completed ? 'var(--green)' : 'var(--neon)', borderRadius: '10px 0 0 10px' }} />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', paddingLeft: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '1px', color: 'var(--text)', lineHeight: 1.4 }}>{task.name}</div>
+                  <div style={{
+                    background: task.completed ? 'rgba(0,255,136,0.12)' : 'rgba(255,77,26,0.12)',
+                    border: `1px solid ${task.completed ? 'rgba(0,255,136,0.3)' : 'rgba(255,77,26,0.3)'}`,
+                    borderRadius: '4px',
+                    padding: '3px 8px',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    letterSpacing: '1px',
+                    color: task.completed ? 'var(--green)' : 'var(--neon)',
+                    whiteSpace: 'nowrap',
+                    marginLeft: '8px',
+                  }}>
+                    +{task.credits_rewarded} PTS
+                  </div>
+                </div>
+
+                {task.description && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-dim)', lineHeight: 1.6, paddingLeft: '8px', marginBottom: '12px' }}>{task.description}</div>
+                )}
+
+                <div style={{ paddingLeft: '8px' }}>
+                  {task.completed ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '9px', letterSpacing: '2px', color: 'var(--green)', textTransform: 'uppercase' }}>
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      COMPLETED
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '9px', letterSpacing: '2px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>PENDING</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="faq-section reveal">

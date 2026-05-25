@@ -88,6 +88,55 @@ function requireRole(allowedRoles) {
 }
 
 /**
+ * Middleware to require a specific secondary_role (or fall back to primary role)
+ * @param {string[]} allowedRoles
+ */
+function requireSecondaryRole(allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const primaryRole = String(req.user.role || '').toLowerCase();
+    const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
+    const email = String(req.user.email || '').toLowerCase();
+
+    // Admin email override always passes
+    const isAdminOverride =
+      email === 'aarushgupta289@gmail.com' ||
+      email === 'alok.r25012@csds.rishihood.edu.in';
+
+    const isAuthorized = allowedRoles.some(role => {
+      const r = role.toLowerCase();
+      return primaryRole === r || secondaryRole === r;
+    });
+
+    if (!isAuthorized && !isAdminOverride) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Requires one of: ${allowedRoles.join(', ')}`
+      });
+    }
+
+    next();
+  };
+}
+
+/**
+ * Convenience middleware: requires primary role 'admin' OR secondary_role 'admin'
+ */
+function requireAdmin(req, res, next) {
+  return requireSecondaryRole(['admin'])(req, res, next);
+}
+
+/**
+ * Convenience middleware: requires primary or secondary role 'moderator' or 'admin'
+ */
+function requireModerator(req, res, next) {
+  return requireSecondaryRole(['admin', 'moderator'])(req, res, next);
+}
+
+/**
  * Middleware to require email verification
  */
 function requireVerified(req, res, next) {
@@ -129,5 +178,8 @@ module.exports = {
   authenticateUser,
   requireRole,
   requireVerified,
-  requireSameUser
+  requireSameUser,
+  requireSecondaryRole,
+  requireAdmin,
+  requireModerator
 };

@@ -20,6 +20,8 @@ const moderationRoutes = require('./routes/moderation');
 const chatRoutes = require('./routes/chat');
 const tasksRoutes = require('./routes/tasks');
 const issuesRoutes = require('./routes/issues');
+const otpRoutes = require('./routes/otp');
+const creditsRoutes = require('./routes/credits');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -127,6 +129,8 @@ app.use('/api/moderation', moderationRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/issues', issuesRoutes);
+app.use('/api/otp', otpRoutes);
+app.use('/api/credits', creditsRoutes);
 
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'disconnected';
