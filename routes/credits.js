@@ -89,7 +89,7 @@ router.post('/tasks', authenticateUser, requireAdmin, async (req, res) => {
 
     // Upsert by trigger_type so you can update reward values safely
     const task = await prisma.creditTask.upsert({
-      where: { trigger_type } as any,
+      where: { trigger_type },
       update: { name, description, credits_rewarded: Number(credits_rewarded), is_active },
       create: { name, description, credits_rewarded: Number(credits_rewarded), trigger_type, is_active },
     });

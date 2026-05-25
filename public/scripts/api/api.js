@@ -331,6 +331,30 @@ const API = (() => {
         localStorage.removeItem('take_one_session_start');
         window.location.reload();
       }
+    },
+    payments: {
+      createOrder(payload) {
+        return request('/api/payments/create-order', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      },
+      verify(payload) {
+        return request('/api/payments/verify', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      }
+    },
+    creators: {
+      list() {
+        return request('/api/creators');
+      }
+    },
+    leaderboard: {
+      get() {
+        return request('/api/leaderboard');
+      }
     }
   };
 })();

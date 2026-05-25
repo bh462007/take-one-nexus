@@ -377,7 +377,12 @@ async function safeQuery(sql, params = []) {
   } catch (error) {
     console.error(`Database query failed: ${sql}`);
     console.error(`Error: ${error.message}`);
-    return [];
+    const { captureError } = require('../src/lib/sentry');
+    captureError(error, {
+      action: 'database_query_failure',
+      extra: { sql, params }
+    });
+    throw error;
   }
 }
 

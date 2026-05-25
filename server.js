@@ -22,6 +22,7 @@ const tasksRoutes = require('./routes/tasks');
 const issuesRoutes = require('./routes/issues');
 const otpRoutes = require('./routes/otp');
 const creditsRoutes = require('./routes/credits');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,12 +33,12 @@ const helmet = require('helmet');
 const cspConfig = {
   directives: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://cdn.jsdelivr.net", "https://js.sentry-cdn.com", "https://browser.sentry-cdn.com", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in"],
+    scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://cdn.jsdelivr.net", "https://js.sentry-cdn.com", "https://browser.sentry-cdn.com", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in", "https://checkout.razorpay.com", "https://*.razorpay.com"],
     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
     imgSrc: ["'self'", "blob:", "data:", "https://api.dicebear.com", "https://ui-avatars.com", "https://us.i.posthog.com", "https://eu.i.posthog.com"],
     fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
-    connectSrc: ["'self'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://sentry.io", "https://*.sentry.io", "wss://*.pusher.com", "https://*.pusher.com", "https://*.pusherapp.com", "wss://*.pusherapp.com", "http://localhost:*", "ws://localhost:*", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in"],
-    frameSrc: ["'self'", "https://us.posthog.com", "https://eu.posthog.com", "https://app.posthog.com"],
+    connectSrc: ["'self'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://sentry.io", "https://*.sentry.io", "wss://*.pusher.com", "https://*.pusher.com", "https://*.pusherapp.com", "wss://*.pusherapp.com", "http://localhost:*", "ws://localhost:*", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in", "https://api.razorpay.com", "https://*.razorpay.com"],
+    frameSrc: ["'self'", "https://us.posthog.com", "https://eu.posthog.com", "https://app.posthog.com", "https://api.razorpay.com", "https://*.razorpay.com", "https://checkout.razorpay.com"],
     workerSrc: ["'self'", "blob:"],
     objectSrc: ["'none'"],
     baseUri: ["'self'"],
@@ -56,7 +57,7 @@ app.use(helmet({
 
 // Set Permissions-Policy globally
 app.use((req, res, next) => {
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=()');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=*, usb=(), accelerometer=(), gyroscope=()');
   next();
 });
 
@@ -131,6 +132,80 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/issues', issuesRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/credits', creditsRoutes);
+app.use('/api/payments', paymentRoutes);
+
+// Alias routes — mirror endpoints the frontend expects
+app.use('/api/projects', scriptRoutes); // /api/projects mirrors /api/scripts
+
+// Top-level leaderboard endpoint
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const { pool } = require('./config/db');
+    const [rows] = await pool.query(`
+      SELECT 
+        u.id, u.name, u.screen_name, u.role, u.college, u.avatar_url,
+        u.display_preference,
+        COUNT(DISTINCT s.id) AS scripts_count,
+        COUNT(DISTINCT r.id) AS collaborations_count,
+        (COUNT(DISTINCT s.id) * 10 + COUNT(DISTINCT r.id) * 5) AS credit_score
+      FROM users u
+      LEFT JOIN scripts s ON s.user_id = u.id
+      LEFT JOIN collaboration_requests r ON (r.requester_id = u.id OR r.owner_id = u.id) AND r.status = 'Accepted'
+      GROUP BY u.id
+      ORDER BY credit_score DESC
+      LIMIT 20
+    `);
+    const data = rows.map(u => ({
+      id: u.id,
+      displayName: u.display_preference === 'screen_name' && u.screen_name
+        ? u.screen_name : u.name,
+      screen_name: u.screen_name,
+      role: u.role,
+      college: u.college,
+      avatar_url: u.avatar_url,
+      scripts_count: Number(u.scripts_count) || 0,
+      collaborations_count: Number(u.collaborations_count) || 0,
+      credit_score: Number(u.credit_score) || 0
+    }));
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('Leaderboard error:', err.message);
+    res.status(500).json({ success: false, message: 'Could not load leaderboard' });
+  }
+});
+
+// Top-level creators endpoint — returns registered users with basic info
+app.get('/api/creators', async (req, res) => {
+  try {
+    const { pool } = require('./config/db');
+    const [rows] = await pool.query(`
+      SELECT 
+        u.id, u.name, u.screen_name, u.role, u.college, u.avatar_url,
+        u.display_preference, u.email_verified,
+        COUNT(DISTINCT s.id) AS scripts_count
+      FROM users u
+      LEFT JOIN scripts s ON s.user_id = u.id
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+      LIMIT 50
+    `);
+    const data = rows.map(u => ({
+      id: u.id,
+      displayName: u.display_preference === 'screen_name' && u.screen_name
+        ? u.screen_name : u.name,
+      screen_name: u.screen_name,
+      role: u.role,
+      college: u.college,
+      avatar_url: u.avatar_url,
+      is_verified: Boolean(u.email_verified),
+      scripts_count: Number(u.scripts_count) || 0
+    }));
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('Creators list error:', err.message);
+    res.status(500).json({ success: false, message: 'Could not load creators' });
+  }
+});
 
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'disconnected';

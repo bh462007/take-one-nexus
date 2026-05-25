@@ -22,6 +22,8 @@ function isCreatorRole(role) {
   return true;
 }
 
+const { captureError } = require('../src/lib/sentry');
+
 async function safeQuery(sql, params = []) {
   try {
     const [rows] = await pool.query(sql, params);
@@ -29,9 +31,49 @@ async function safeQuery(sql, params = []) {
   } catch (error) {
     console.error(`Database query failed: ${sql}`);
     console.error(`Error: ${error.message}`);
-    return [];
+    captureError(error, {
+      action: 'database_query_failure',
+      extra: { sql, params }
+    });
+    throw error;
   }
 }
+
+router.get('/', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        scripts.id,
+        scripts.user_id AS owner_id,
+        scripts.title,
+        scripts.genre,
+        scripts.synopsis,
+        scripts.status,
+        scripts.roles_needed,
+        scripts.poster_url,
+        scripts.work_type,
+        scripts.media_links,
+        scripts.role_data,
+        users.name AS author_name,
+        users.screen_name,
+        users.display_preference
+      FROM scripts
+      LEFT JOIN users ON users.id = scripts.user_id
+      ORDER BY scripts.created_at DESC, scripts.id DESC LIMIT 50
+    `;
+    const rows = await safeQuery(sql, []);
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (error) {
+    console.error('Fetch all scripts error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Could not fetch scripts'
+    });
+  }
+});
 
 router.get('/search', async (req, res) => {
   try {

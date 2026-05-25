@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/db');
 const { TAKE_ONE_ROLES, ROLE_SLUGS, LEGACY_ROLE_MAPPING } = require('../public/scripts/constants/roles.js');
+const { captureError } = require('../src/lib/sentry');
 
 const router = express.Router();
 
@@ -41,8 +42,12 @@ async function safeQuery(sql, params = []) {
   } catch (error) {
     console.error(`Database query failed: ${sql}`);
     console.error(`Error: ${error.message}`);
-    // If table doesn't exist or connection fails, return empty result instead of throwing
-    return [];
+    // Report to Sentry with parameters context
+    captureError(error, {
+      action: 'database_query_failure',
+      extra: { sql, params }
+    });
+    throw error;
   }
 }
 

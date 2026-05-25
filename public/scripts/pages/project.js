@@ -157,48 +157,286 @@ async function uploadWork() {
     }
     
     const submitBtn = document.getElementById('uploadActionButton');
-    const originalText = submitBtn.textContent;
-    
+    const originalText = submitBtn ? submitBtn.textContent : 'TRANSMIT SIGNAL';
+
     try {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Transmitting...';
-        
-        // Convert role_data to string for DB
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Preparing Order...';
+        }
+
+        // Serialize role_data
         const finalPayload = {
             ...payload,
             role_data: JSON.stringify(payload.role_data)
         };
-        
-        const response = await API.scripts.create(finalPayload);
-        
-        if (response.success) {
-            showToast('Work uploaded to Showcase ✦');
-            
-            // Simulate UI update (add to row)
-            const card = document.createElement('div');
-            card.className = 'movie-card';
-            card.innerHTML = `
-                <div class="data-num">NEW</div>
-                <div class="card-genre">${payload.genre || role}</div>
-                <div class="card-title">${payload.title}</div>
-                <div class="card-tag">Just Added</div>
-            `;
-            document.getElementById('cardRow')?.prepend(card);
-            
-            // Reset form
+
+        // Step 1: Create Razorpay order + draft via backend
+        const orderRes = await API.payments.createOrder(finalPayload);
+        if (!orderRes.success) throw new Error(orderRes.message || 'Order creation failed');
+
+        const { order_id, draft_id, amount, currency, key_id, is_simulated } = orderRes;
+
+        if (is_simulated) {
+            // ── SIMULATED CHECKOUT (dev / placeholder keys) ──────────────
+            if (submitBtn) submitBtn.textContent = 'Simulating Payment...';
+            await new Promise(r => setTimeout(r, 1200));
+
+            const verifyRes = await API.payments.verify({
+                razorpay_order_id: order_id,
+                razorpay_payment_id: `pay_sim_${Date.now()}`,
+                razorpay_signature: 'simulated_signature',
+                draft_id
+            });
+
+            if (!verifyRes.success) throw new Error(verifyRes.message || 'Verification failed');
+
+            showTransmissionAccepted(payload.title);
             renderDynamicUploadForm(user);
+        } else {
+            // ── LIVE RAZORPAY CHECKOUT ────────────────────────────────────
+            if (submitBtn) submitBtn.textContent = 'Opening Payment...';
+
+            await new Promise((resolve, reject) => {
+                const options = {
+                    key: key_id,
+                    amount,
+                    currency,
+                    name: 'TAKE ONE',
+                    description: `Script Submission: ${payload.title}`,
+                    image: '/assets/logo-icon.png',
+                    order_id,
+                    theme: { color: '#ff4d1a' },
+                    modal: {
+                        ondismiss() {
+                            reject(new Error('Payment dismissed by user'));
+                        }
+                    },
+                    handler: async function(rzpResponse) {
+                        try {
+                            if (submitBtn) submitBtn.textContent = 'Verifying...';
+                            const verifyRes = await API.payments.verify({
+                                razorpay_order_id: rzpResponse.razorpay_order_id,
+                                razorpay_payment_id: rzpResponse.razorpay_payment_id,
+                                razorpay_signature: rzpResponse.razorpay_signature,
+                                draft_id
+                            });
+                            if (!verifyRes.success) throw new Error(verifyRes.message || 'Verification failed');
+                            showTransmissionAccepted(payload.title);
+                            renderDynamicUploadForm(user);
+                            resolve();
+                        } catch (verifyErr) {
+                            reject(verifyErr);
+                        }
+                    }
+                };
+
+                if (typeof Razorpay === 'undefined') {
+                    reject(new Error('Razorpay SDK not loaded'));
+                    return;
+                }
+
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function(resp) {
+                    reject(new Error(resp.error?.description || 'Payment failed'));
+                });
+                rzp.open();
+            });
         }
     } catch (err) {
-        showToast(`❌ Upload failed: ${err.message}`);
+        if (err.message === 'Payment dismissed by user') {
+            showToast('Payment cancelled. Your draft has been saved.');
+        } else {
+            console.error('Upload/payment error:', err.message);
+            showTransmissionLost(err.message, () => uploadWork());
+        }
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
     }
 }
 
 /* Utility functions moved to /scripts/utils/helpers.js and /scripts/components/ui.js */
 
 /* Scroll progress moved to /scripts/animations/common.js */
+
+/**
+ * TRANSMISSION LOST — cinematic overlay shown when an API signal fails.
+ * @param {string} reason   — short error message to display
+ * @param {Function} retryFn — callback to call when user clicks RETRY SIGNAL
+ */
+function showTransmissionLost(reason, retryFn) {
+  // Remove any existing overlay
+  document.getElementById('__txLostOverlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = '__txLostOverlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    animation: __txFadeIn 0.4s ease forwards;
+    backdrop-filter: blur(6px);
+  `;
+
+  overlay.innerHTML = `
+    <style>
+      @keyframes __txFadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes __txScanline {
+        0%   { background-position: 0 0; }
+        100% { background-position: 0 100vh; }
+      }
+      @keyframes __txPulse {
+        0%, 100% { opacity: 1; text-shadow: 0 0 20px #ff4d1a, 0 0 40px #ff2200; }
+        50%       { opacity: 0.5; text-shadow: 0 0 4px #ff4d1a; }
+      }
+      @keyframes __txRetryPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255,77,26,0.6); }
+        70%       { box-shadow: 0 0 0 12px rgba(255,77,26,0); }
+      }
+      #__txLostOverlay::before {
+        content: '';
+        position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(255, 77, 26, 0.03) 0px,
+          rgba(255, 77, 26, 0.03) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+        animation: __txScanline 8s linear infinite;
+      }
+    </style>
+
+    <div style="text-align:center; position:relative; z-index:1; max-width:520px; padding:0 24px;">
+      <div style="font-size:11px; letter-spacing:0.25em; color:rgba(255,77,26,0.6); text-transform:uppercase; margin-bottom:12px;">
+        TAKE ONE / SIGNAL STATUS
+      </div>
+
+      <div style="
+        font-family:'Bebas Neue',sans-serif;
+        font-size:clamp(48px,10vw,96px);
+        line-height:1;
+        color:#ff4d1a;
+        animation: __txPulse 1.8s ease-in-out infinite;
+        letter-spacing:0.04em;
+        margin-bottom:8px;
+      ">TRANSMISSION<br>LOST</div>
+
+      <div style="
+        font-size:11px; letter-spacing:0.12em; color:rgba(255,255,255,0.35);
+        text-transform:uppercase; margin-bottom:32px; line-height:1.7;
+      ">
+        SIGNAL INTERRUPTED — DATABASE UNREACHABLE<br>
+        <span style="color:rgba(255,77,26,0.5);">${reason ? reason.replace(/</g,'&lt;').replace(/>/g,'&gt;').substring(0, 80) : 'UNKNOWN ERROR'}</span>
+      </div>
+
+      <button id="__txRetryBtn" style="
+        background: transparent;
+        border: 1px solid rgba(255,77,26,0.7);
+        color: #ff4d1a;
+        font-family: 'Space Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        padding: 14px 36px;
+        cursor: pointer;
+        animation: __txRetryPulse 2s infinite;
+        transition: all 0.2s ease;
+        margin-bottom: 16px;
+      ">RETRY SIGNAL</button>
+
+      <div style="display:block;">
+        <button id="__txDismissBtn" style="
+          background: none; border: none;
+          color: rgba(255,255,255,0.2);
+          font-family: 'Space Mono', monospace;
+          font-size: 9px; letter-spacing: 0.2em;
+          text-transform: uppercase; cursor: pointer;
+          padding: 8px;
+        ">DISMISS</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#__txRetryBtn').addEventListener('click', () => {
+    overlay.style.animation = 'none';
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => overlay.remove(), 300);
+    if (typeof retryFn === 'function') retryFn();
+  });
+
+  overlay.querySelector('#__txDismissBtn').addEventListener('click', () => {
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => overlay.remove(), 300);
+  });
+}
+
+/**
+ * TRANSMISSION ACCEPTED — cinematic flash shown when a script upload succeeds.
+ * @param {string} title — title of the script that was transmitted
+ */
+function showTransmissionAccepted(title) {
+  document.getElementById('__txAcceptOverlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = '__txAcceptOverlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    animation: __txFadeIn 0.3s ease forwards;
+    pointer-events: none;
+  `;
+
+  overlay.innerHTML = `
+    <style>
+      @keyframes __txAcceptFlash {
+        0%   { opacity: 0; transform: scale(0.94); }
+        20%  { opacity: 1; transform: scale(1.02); }
+        100% { opacity: 0; transform: scale(1); }
+      }
+      @keyframes __txGreenPulse {
+        0%, 100% { text-shadow: 0 0 20px #00ff88, 0 0 40px #00cc66; }
+        50%       { text-shadow: 0 0 4px #00ff88; }
+      }
+    </style>
+    <div style="
+      text-align:center;
+      animation: __txAcceptFlash 3s ease forwards;
+      max-width:480px; padding:0 24px;
+    ">
+      <div style="font-size:11px; letter-spacing:0.25em; color:rgba(0,255,136,0.5); text-transform:uppercase; margin-bottom:12px;">
+        TAKE ONE / SIGNAL STATUS
+      </div>
+      <div style="
+        font-family:'Bebas Neue',sans-serif;
+        font-size:clamp(48px,10vw,96px);
+        line-height:1;
+        color:#00ff88;
+        animation: __txGreenPulse 1.4s ease-in-out 3;
+        letter-spacing:0.04em;
+        margin-bottom:8px;
+      ">TRANSMISSION<br>ACCEPTED</div>
+      <div style="font-size:11px; letter-spacing:0.12em; color:rgba(255,255,255,0.35); text-transform:uppercase; margin-top:16px;">
+        "${(title || 'YOUR WORK').toUpperCase()}" IS NOW PENDING REVIEW
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 3200);
+}
 
 function scrollToSection(selector) {
   const target = document.querySelector(selector);
@@ -1037,9 +1275,9 @@ async function loadHomepageData() {
     hideLoader();
   } catch (err) {
     console.error('Homepage data load failed:', err);
-    updateText('liveScriptStatus', 'Could not load live scripts. Please check your network connection.');
     clearTimeout(safetyTimeout);
     hideLoader();
+    showTransmissionLost(err.message, loadHomepageData);
   }
 }
 

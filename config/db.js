@@ -51,42 +51,54 @@ const pool = mysql.createPool(poolConfig);
 
 async function connectDB() {
   const { host, database, user } = dbConfig;
+  const maxRetries = 5;
+  let attempt = 1;
+  let delay = 1000; // Start with 1 second delay
   
-  try {
-    if (!process.env.DB_HOST && !process.env.DATABASE_URL) {
-      console.warn('--- DATABASE CONFIGURATION WARNING ---');
-      console.warn('Neither DB_HOST nor DATABASE_URL is set.');
-      console.warn('Defaulting to localhost which may fail in production.');
-      console.warn('--------------------------------------');
+  if (!process.env.DB_HOST && !process.env.DATABASE_URL) {
+    console.warn('--- DATABASE CONFIGURATION WARNING ---');
+    console.warn('Neither DB_HOST nor DATABASE_URL is set.');
+    console.warn('Defaulting to localhost which may fail in production.');
+    console.warn('--------------------------------------');
+  }
+
+  while (attempt <= maxRetries) {
+    try {
+      console.log(`[DB] Attempting connection to ${database} at ${host} (Attempt ${attempt}/${maxRetries})...`);
+      
+      const connection = await pool.getConnection();
+      console.log('[DB] ✅ MySQL connected successfully');
+      
+      // Quick check to see if we can query
+      const [rows] = await connection.query('SELECT 1 as connected');
+      if (rows[0].connected === 1) {
+        console.log('[DB] ✅ Query test passed');
+      }
+      
+      connection.release();
+      return; // Success, exit retry loop
+    } catch (error) {
+      console.error(`[DB] ❌ Attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+      
+      if (attempt === maxRetries) {
+        console.error('[DB] ❌ CRITICAL: All MySQL connection attempts failed!');
+        console.error(`[DB] Target: ${user}@${host}/${database}`);
+        console.error(`[DB] Error Code: ${error.code}`);
+        
+        if (error.code === 'ECONNREFUSED') {
+          console.error('[DB] HINT: Connection refused. Check if the DB host is reachable and the port is correct.');
+        } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+          console.error('[DB] HINT: Access denied. Check your DB_USER and DB_PASSWORD.');
+        } else if (error.message.includes('SSL')) {
+          console.error('[DB] HINT: SSL error. Try setting DB_SSL=true if your provider requires encrypted connections.');
+        }
+      } else {
+        console.log(`[DB] Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      }
+      attempt++;
     }
-    
-    console.log(`[DB] Attempting connection to ${database} at ${host}...`);
-    
-    const connection = await pool.getConnection();
-    console.log('[DB] ✅ MySQL connected successfully');
-    
-    // Quick check to see if we can query
-    const [rows] = await connection.query('SELECT 1 as connected');
-    if (rows[0].connected === 1) {
-      console.log('[DB] ✅ Query test passed');
-    }
-    
-    connection.release();
-  } catch (error) {
-    console.error('[DB] ❌ CRITICAL: MySQL connection failed!');
-    console.error(`[DB] Target: ${user}@${host}/${database}`);
-    console.error(`[DB] Error Code: ${error.code}`);
-    console.error(`[DB] Error Message: ${error.message}`);
-    
-    if (error.code === 'ECONNREFUSED') {
-      console.error('[DB] HINT: Connection refused. Check if the DB host is reachable and the port is correct.');
-    } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-      console.error('[DB] HINT: Access denied. Check your DB_USER and DB_PASSWORD.');
-    } else if (error.message.includes('SSL')) {
-      console.error('[DB] HINT: SSL error. Try setting DB_SSL=true if your provider requires encrypted connections.');
-    }
-    
-    // We don't crash the app here, but API calls will fail later with "Database unavailable"
   }
 }
 

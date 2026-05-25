@@ -69,3 +69,44 @@ CREATE TABLE IF NOT EXISTS collaboration_requests (
     ON DELETE CASCADE
     ON UPDATE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS script_drafts (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED DEFAULT NULL,
+  title VARCHAR(180) NOT NULL,
+  genre VARCHAR(80) DEFAULT NULL,
+  synopsis TEXT DEFAULT NULL,
+  poster_url VARCHAR(255) DEFAULT NULL,
+  roles_needed VARCHAR(255) DEFAULT NULL,
+  status VARCHAR(80) NOT NULL DEFAULT 'Open for collaboration',
+  media_links TEXT DEFAULT NULL,
+  role_data TEXT DEFAULT NULL,
+  work_type VARCHAR(50) NOT NULL DEFAULT 'Script',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_drafts_user_id (user_id),
+  CONSTRAINT fk_drafts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS script_upload_payments (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id INT UNSIGNED NOT NULL,
+  draft_id INT UNSIGNED DEFAULT NULL,
+  script_id INT UNSIGNED DEFAULT NULL,
+  razorpay_order_id VARCHAR(255) NOT NULL,
+  razorpay_payment_id VARCHAR(255) DEFAULT NULL,
+  razorpay_signature VARCHAR(255) DEFAULT NULL,
+  amount DECIMAL(10, 2) NOT NULL DEFAULT 49.00,
+  currency VARCHAR(10) NOT NULL DEFAULT 'INR',
+  status VARCHAR(50) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_payments_order_id (razorpay_order_id),
+  KEY idx_payments_user_id (user_id),
+  KEY idx_payments_draft_id (draft_id),
+  CONSTRAINT fk_payments_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_payments_draft FOREIGN KEY (draft_id) REFERENCES script_drafts(id) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
