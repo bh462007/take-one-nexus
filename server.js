@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const { connectDB } = require('./config/db');
 const { captureError, initSentry } = require('./src/lib/sentry');
+const { generateCsrfToken, verifyCsrfToken } = require('./middleware/csrf');
 
 // Initialize Sentry for backend tracking
 initSentry();
@@ -116,6 +117,9 @@ app.use(express.json({ limit: '10kb' })); // Limit body size to 10kb
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
+// 4b. CSRF Protection — set CSRF cookie on every response
+app.use(generateCsrfToken);
+
 const { sanitizeMiddleware } = require('./utils/validation');
 app.use(sanitizeMiddleware); // Prevent XSS globally
 
@@ -123,19 +127,20 @@ app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'upl
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 5. Routes
+// CSRF verification applied to all mutation API route groups
 app.use('/api/home', homeRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/scripts', scriptRoutes);
-app.use('/api/requests', requestRoutes);
+app.use('/api/users', verifyCsrfToken, userRoutes);
+app.use('/api/scripts', verifyCsrfToken, scriptRoutes);
+app.use('/api/requests', verifyCsrfToken, requestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
-app.use('/api/moderation', moderationRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/tasks', tasksRoutes);
-app.use('/api/issues', issuesRoutes);
-app.use('/api/otp', otpRoutes);
+app.use('/api/moderation', verifyCsrfToken, moderationRoutes);
+app.use('/api/chat', verifyCsrfToken, chatRoutes);
+app.use('/api/tasks', verifyCsrfToken, tasksRoutes);
+app.use('/api/issues', verifyCsrfToken, issuesRoutes);
+app.use('/api/otp', verifyCsrfToken, otpRoutes);
 app.use('/api/credits', creditsRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/payments', verifyCsrfToken, paymentRoutes);
 
 // Alias routes — mirror endpoints the frontend expects
 app.use('/api/projects', scriptRoutes); // /api/projects mirrors /api/scripts

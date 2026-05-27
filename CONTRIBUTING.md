@@ -2,7 +2,7 @@
 
 First off, thank you for considering contributing to TAKE ONE Nexus! It's people like you that make this ecosystem such a great tool for filmmakers and creators.
 
-Whether you're participating in **GSSoC 2026**, or just dropping by, we welcome contributions of all kinds: bug fixes, feature additions, documentation improvements, and design tweaks.
+We welcome contributions of all kinds: bug fixes, feature additions, documentation improvements, and design tweaks.
 
 ---
 
@@ -24,24 +24,7 @@ Whether you're participating in **GSSoC 2026**, or just dropping by, we welcome 
    ```
 5. **Set up your environment variables** as detailed in the `README.md` (duplicate `.env.example` to `.env`).
    - *Note*: For local development, `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_SENTRY_DSN` are optional. If left blank, analytics and error tracking will be bypassed in dev mode.
-   - *Note*: Rate limiting is active locally. If you encounter 429 errors during testing, you can temporarily increase limits in `src/lib/rate-limit-config.ts` or `middleware/rateLimiter.js` (do not commit these changes).
-
-## 🖥️ Script Review Platform (`scripts-platform/`)
-For internal administration/moderation tasks, a separate application resides in the `scripts-platform/` directory.
-1. Navigate to the directory and install dependencies:
-   ```bash
-   cd scripts-platform
-   npm install
-   ```
-2. Duplicate `scripts-platform/.env.example` to `scripts-platform/.env` and supply:
-   - `DATABASE_URL` (pointing to the shared TiDB database instance)
-   - `SP_JWT_SECRET` (session token signer for moderation logins)
-   - `RESEND_API_KEY` (for moderation emails)
-3. Launch the development server:
-   ```bash
-   npm run dev
-   ```
-   The portal runs on port `3001` (http://localhost:3001).
+   - *Note*: Rate limiting is active locally. If you encounter 429 errors during testing, you can disable it locally by setting `CSRF_DISABLED=true` (do not commit these changes).
 
 ---
 
@@ -54,12 +37,6 @@ To keep the repository clean and manageable, please use the following branch nam
 - `docs/what-you-documented` (For documentation updates)
 - `chore/update-dependencies` (For routine tasks)
 
-## Critical Fix Notes
-
-- Do not add any script creation path that inserts into `scripts` before `/api/payments/verify` succeeds.
-- Moderation delete UI must call the backend delete endpoint and must not rely on frontend role checks for authorization.
-- Admin task changes should preserve the minimal task fields: title, description, credits, category, and active.
-
 Example:
 ```bash
 git checkout -b feature/ai-crew-matching
@@ -67,18 +44,20 @@ git checkout -b feature/ai-crew-matching
 
 ---
 
-## 💻 Coding Standards
+## 💻 Coding & Security Standards
 
 We maintain a high standard for code quality to ensure scalability and maintainability.
 
-- **TypeScript / Next.js**: Use strict typing where possible. Avoid `any`. Follow modern React patterns (functional components, hooks).
-- **Styling**: We use Vanilla CSS for static pages and Tailwind/CSS Modules for Next.js components. Please adhere to the established futuristic/cinematic design tokens (e.g., `var(--neon)`, `var(--cyber-bg)`).
-- **Express Backend**: Use `asyncHandler` for wrapping async routes. Ensure all API responses return consistent JSON: `{ success: boolean, message?: string, data?: any }`.
-- **Payment & Escrow Systems (Phase 5)**: When contributing code to the billing or gateway flows:
-  - Never commit raw credentials, test secrets, or API keys. Always use environment variable bounds.
-  - Webhook endpoint handlers must use raw request buffers to allow cryptographic signature verification.
-  - Data mutations on credits or transactions must be wrapped inside Prisma transaction blocks (`$transaction`) to guarantee atomic consistency.
-  - Build strong mock toggles so other developers can run and test billing workflows locally without needing live credentials.
+### 🛡️ Security Guidelines (Mandatory)
+- **CSRF Token Handling**: All state-changing API endpoints must check for CSRF token parity. If adding new POST/PUT/PATCH/DELETE endpoints, ensure they go through the `verifyCsrfToken` middleware in `server.js`.
+- **Session Cookie Security**: In production, auth cookies must enforce `domain: '.takeone-nexus.net.in'` to permit session validation on subdomains. Do not override this logic in `users.js`.
+- **Database Interactivity**: Under no circumstances should you dynamically concatenate strings for SQL commands. All database interactions must use parameterized queries (via `?` placeholder inputs or Prisma).
+- **Payment Operations**: Razorpay Webhook handlers must use signature-verification on raw buffers before executing state transitions.
+- **Credit Ledgers**: Operations that modify user credits must be performed inside a database transaction block to ensure atomic safety.
+
+### 🎨 Visual & Frontend Code
+- **Typography & Styling**: We use Vanilla CSS for static pages and Tailwind/CSS Modules for Next.js components. Adhere strictly to the cinematic tokens (e.g., `var(--neon)`, `var(--cyber-bg)`).
+- **Error Handling**: API endpoints must catch exceptions using `try-catch` blocks and return consistent JSON structures: `{ success: boolean, message: string, data?: any }`.
 - **Linting**: Before committing, ensure your code passes our linting rules:
   ```bash
   npm run lint
@@ -93,13 +72,13 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `feat:` A new feature
 - `fix:` A bug fix
 - `docs:` Documentation only changes
-- `style:` Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
-- `refactor:` A code change that neither fixes a bug nor adds a feature
-- `test:` Adding missing tests or correcting existing tests
-- `chore:` Changes to the build process or auxiliary tools and libraries such as documentation generation
+- `style:` Formatting changes (white-space, formatting, missing semi-colons, etc)
+- `refactor:` Code restructuring
+- `test:` Adding or updating tests
+- `chore:` Maintenance tasks
 
 **Example Commit:**
-`feat: add global timezone formatting for admin analytics`
+`feat: add custom double-submit csrf token verification`
 
 ---
 
@@ -113,18 +92,3 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
    ```
 3. **Write a clear description**: Detail what the PR does, why it's needed, and how to test it. Link any relevant issues using `Closes #123`.
 4. **Pass Checks**: Ensure your PR passes all automated checks (linting, build process) before requesting a review.
-
----
-
-## 🐛 Reporting Issues
-
-If you find a bug, please create an issue using the following format:
-
-- **Environment**: OS, Browser, Node version
-- **Steps to Reproduce**: Detailed steps on how to trigger the bug
-- **Expected Result**: What should have happened
-- **Actual Result**: What actually happened (include screenshots if applicable)
-
----
-
-Thank you for contributing to TAKE ONE Nexus and helping build the cinematic future!

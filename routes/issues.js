@@ -1,9 +1,29 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const { authenticateUser, requireRole, requireVerified } = require('../middleware/auth');
+const { createRateLimiter } = require('../middleware/rateLimiter');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 const router = express.Router();
+
+const issuesLimiter = createRateLimiter({
+  limit: 20,
+  windowMs: 15 * 60 * 1000, // 15 mins
+  keyPrefix: 'issues'
+});
+
+function validatePayload(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: errors.array()[0].msg,
+      errors: errors.array()
+    });
+  }
+  return null;
+}
 
 // requireDeveloperOrAdmin replaced by requireRole(['Developer', 'Admin'])
 
@@ -11,7 +31,25 @@ const router = express.Router();
  * POST /api/issues
  * Create a new issue report
  */
-router.post('/', async (req, res) => {
+const createIssueValidation = [
+  body('title')
+    .trim().notEmpty().withMessage('Issue title is required')
+    .isLength({ max: 255 }).withMessage('Title must be 255 characters or less'),
+  body('description')
+    .trim().notEmpty().withMessage('Description is required')
+    .isLength({ max: 5000 }).withMessage('Description must be 5000 characters or less'),
+  body('location')
+    .optional().trim().isLength({ max: 255 }).withMessage('Location must be 255 characters or less'),
+  body('severity')
+    .optional().trim().isIn(['low', 'medium', 'high', 'critical']).withMessage('Severity must be low, medium, high, or critical'),
+  body('screenshot')
+    .optional().trim().isLength({ max: 2048 }).withMessage('Screenshot link must be 2048 characters or less'),
+];
+
+router.post('/', issuesLimiter, createIssueValidation, async (req, res) => {
+  const validationError = validatePayload(req, res);
+  if (validationError) return;
+
   try {
     const { title, description, location, severity, screenshot } = req.body;
     let userId = null;

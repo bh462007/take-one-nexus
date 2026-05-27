@@ -3,6 +3,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { pool } = require('../config/db');
 const { authenticateUser, requireVerified, requireRole } = require('../middleware/auth');
+const { createRateLimiter } = require('../middleware/rateLimiter');
 const Pusher = require('pusher');
 
 const router = express.Router();
@@ -223,7 +224,14 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.post('/portfolio', authenticateUser, requireVerified, async (req, res) => {
+// Portfolio rate limit — prevents spam upload of unmoderated portfolio entries
+const portfolioLimiter = createRateLimiter({
+  limit: 20,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'portfolio'
+});
+
+router.post('/portfolio', authenticateUser, requireVerified, portfolioLimiter, async (req, res) => {
   try {
     const {
       title,

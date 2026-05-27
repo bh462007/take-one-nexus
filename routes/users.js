@@ -48,10 +48,35 @@ function createToken(user) {
   }
 
   return jwt.sign(
-    { id: user.id, email: user.email, role: role },
+    {
+      id: user.id,
+      email: user.email,
+      role: role,
+      // secondary_role is critical — requireAdmin/requireSecondaryRole checks this field.
+      // Without it, admin subdomain access always fails, causing the redirect loop.
+      secondary_role: user.secondary_role || null,
+      email_verified: user.email_verified ?? null
+    },
     secret,
     { expiresIn: '10d' }
   );
+}
+
+/**
+ * Build cookie options for the auth token.
+ * In production, domain is set to the apex domain so the cookie is shared
+ * across takeone-nexus.net.in AND admin.takeone-nexus.net.in.
+ */
+function getCookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+    ...(isProd && { domain: '.takeone-nexus.net.in' })
+  };
 }
 
 async function getProfileData(userId) {
@@ -159,16 +184,7 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
     };
 
     const token = createToken(user);
-    const cookieOptions = {
-      httpOnly: true, // Secure: cannot be accessed via JS
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
-    };
-
-
-    res.cookie('token', token, cookieOptions);
+    res.cookie('token', token, getCookieOptions());
 
     res.status(201).json({
       success: true,
@@ -284,7 +300,7 @@ router.post('/login', loginLimiter, loginValidation, async (req, res) => {
     let rows;
     try {
       [rows] = await pool.query(
-        `SELECT id, name, email, password, role, college, city, gender, screen_name, display_preference, social_links, credits, email_verified
+        `SELECT id, name, email, password, role, secondary_role, college, city, gender, screen_name, display_preference, social_links, credits, email_verified
          FROM users
          WHERE email = ?
          LIMIT 1`,
@@ -313,18 +329,7 @@ router.post('/login', loginLimiter, loginValidation, async (req, res) => {
     }
 
     const token = createToken(user);
-    
-    // Cookie configuration optimized for Vercel
-    const cookieOptions = {
-      httpOnly: true, // Secure: cannot be accessed via JS
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
-    };
-
-
-    res.cookie('token', token, cookieOptions);
+    res.cookie('token', token, getCookieOptions());
 
     res.json({
       success: true,
@@ -333,6 +338,7 @@ router.post('/login', loginLimiter, loginValidation, async (req, res) => {
         name: formatDisplayName(user.name),
         email: user.email,
         role: user.role || '',
+        secondary_role: user.secondary_role || null,
         college: user.college || '',
         city: user.city || '',
         gender: user.gender || 'Prefer not to say',
@@ -372,11 +378,13 @@ router.post('/login', loginLimiter, loginValidation, async (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
+  const isProd = process.env.NODE_ENV === 'production';
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProd,
     sameSite: 'lax',
-    path: '/'
+    path: '/',
+    ...(isProd && { domain: '.takeone-nexus.net.in' })
   });
   res.json({
     success: true,

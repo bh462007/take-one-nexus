@@ -12,23 +12,11 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-blue.svg?cacheSeconds=2592000" />
+    <img alt="Version" src="https://img.shields.io/badge/version-2.0.0-blue.svg?cacheSeconds=2592000" />
     <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" />
-    <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" />
     <img alt="Production Ready" src="https://img.shields.io/badge/PRODUCTION_READY-FF4D1A?style=flat&logo=vercel" />
   </p>
-
-  <p>
-    <img alt="GSSoC" src="https://img.shields.io/badge/GSSoC-2026-orange" />
-  </p>
 </div>
-
-## Critical Fixes
-
-- Scripts now use a draft-first Razorpay flow and are created only after backend signature verification.
-- Direct `POST /api/scripts` creation is blocked until payment verification succeeds.
-- Moderators/admins can delete scripts through an audited backend flow.
-- Admins can create credit tasks from `/admin` and approve/reject submissions with manual Nexus Credits.
 
 ---
 
@@ -50,9 +38,10 @@ TAKE ONE Nexus is the definitive digital ecosystem for the next generation of fi
 - **🛰️ Secure Transmission (Chat):** Real-time communication suite powered by Pusher. Direct messaging, group chats, live sync, and intelligent unread tracking.
 - **🏆 Live Leaderboard:** Real-time community ranking system powered by our internal Credits engine to reward platform engagement.
 - **💎 Creator Credits & Task System:** Secure, role-based task management where only verified creators can assign and complete production tasks.
-- **🛡️ Production-Grade Security:** Global rate limiting, strict Content Security Policy (CSP), anti-clickjacking headers, XSS sanitization, and parameterized SQL queries.
+- **🛡️ Production-Grade Security:** Custom stateless double-submit CSRF validation, subdomain cookie sharing, global and per-route rate limiting, CSP/security headers, HTML sanitization, and parameterized SQL queries.
 - **📊 Observability & Analytics:** Integrated PostHog telemetry (GDPR compliant) and Sentry error tracking for robust production monitoring.
 - **✉️ Cinematic Automation:** Resend-powered transactional email system for seamless, cinematic user onboarding and verification.
+- **💳 Payment Integration:** Secure backend-verified Razorpay payment flow guarding public script listings.
 
 ---
 
@@ -94,25 +83,11 @@ TAKE ONE Nexus utilizes a **dual-server architecture** running side-by-side on V
 - **Next.js App (`src/app/`):** Handles dynamic authenticated routes (e.g., `/profile`, `/chat`, `/admin`), PostHog analytics, and Sentry monitoring.
 - **Express Server (`server.js`):** Acts as the API layer (`/api/*`), processes complex SQL queries securely, handles rate limiting, and serves high-performance static HTML files (`public/*.htm`).
 
-> 📖 **Developer Resources**: For a deep dive into the platform architecture, brand clarity reforms, dynamic self-onboarding systems, and the screenplay submission helper, explore our premium **[Take One Nexus Developer Wiki](docs/WIKI.md)**. You can also view the core system design details in [ARCHITECTURE.md](ARCHITECTURE.md).
-
----
-
-## 📁 Folder Structure
-
-```text
-take-one-nexus/
-├── .github/            # GitHub templates and workflows
-├── config/             # Server configuration (DB, mailer)
-├── middleware/         # Express middleware (Auth, Error handling, Security Headers, Rate Limiting)
-├── prisma/             # Database schema and migrations
-├── public/             # Static Assets, CSS, Vanilla JS, and .htm pages
-├── routes/             # Express API routes grouped by domain
-├── src/                # Next.js Application (React components, App Router, Sentry config)
-├── utils/              # Shared backend utilities
-├── server.js           # Hybrid Express Server entry point
-└── vercel.json         # Production Deployment Configuration
-```
+### Subdomain Strategy
+The Administrative Moderation Console is decoupled and hosted on the `admin` subdomain:
+- **Main App**: `takeone-nexus.net.in` (Apex)
+- **Admin Portal**: `admin.takeone-nexus.net.in` (Subdomain)
+- **Shared Session**: Auth cookies share a common apex domain configuration: `domain: '.takeone-nexus.net.in'`. Users with the appropriate `secondary_role` permissions (e.g. `Admin`, `Developer`) can navigate to the admin console without re-authenticating.
 
 ---
 
@@ -210,62 +185,7 @@ TAKE ONE Nexus is optimized for deployment on **Vercel**.
 
 ---
 
-## 🤝 Open Source Contribution Guide
-
-We actively welcome contributions from the community, especially participants of **GSSoC 2026**!
-
-### Contributor Workflow
-
-1. **Fork** the repository and clone it locally.
-2. **Create a branch** for your feature or bug fix (`git checkout -b feature/your-feature-name`).
-3. **Commit** your changes following our [Commit Conventions](CONTRIBUTING.md).
-4. **Push** to your fork and open a **Pull Request**.
-
-> Please read our full [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on coding standards, testing, and UI consistency.
-> 
-> Check out [CODING_RULES.md](CODING_RULES.md) for our engineering standards.
-
----
-
-## 🗺️ Roadmap
-
-We have ambitious plans for the future of TAKE ONE Nexus. See our detailed [ROADMAP.md](ROADMAP.md) for upcoming phases, including:
-- AI Crew Matching Engine
-- Realtime Production Storyboards
-- Native Mobile App Development
-- **Introducing Payment System**: Creator monetization, tiered subscription memberships, secure production escrows, and global payment gateway integrations (Stripe/Razorpay).
-
----
-
-## 🐛 Known Issues
-
-- Chat FAB occasionally overlaps UI on certain admin pages.
-- Client-side file type validation for avatar uploads needs hardening.
-- See the [Issue Tracker](https://github.com/alokr25012-lab/take-one-nexus/issues) for an up-to-date list.
-
-If you find a bug, please report it using the in-app Global Issue Reporter or via our GitHub Issues.
-
----
-
-## 🛡️ Security & Conduct
-
-- Please read our [SECURITY.md](SECURITY.md) for responsible disclosure policies and supported versions.
-- This project enforces a strict [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code to foster an inclusive environment.
-
----
-
 ## 👥 Maintainers & Credits
 
-Production of **ALOK R** & the **TAKE ONE** Team.
-A special thanks to all open-source contributors and the GSSoC 2026 community.
-
----
-
-## 💬 Community
-
-Join our community to discuss features, get help, or showcase your creative work!
-*(Add Discord / Community links here)*
-
-<div align="center">
-  <p>Designed for the Cinematic Future. All Rights Reserved.</p>
-</div>
+Maintainership and Production of **Aarush Gupta** and **Alok Rawat**.
+All Rights Reserved.

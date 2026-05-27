@@ -26,21 +26,6 @@ Due to the transition from a purely static/Express application to a modern Next.
   | `/api/auth/reset-password` | API Route | Password update |
   | `/leaderboard` | Dynamic SSR | Top 50 creators |
 
-### C. Script Review Platform (`scripts-platform/`)
-- **Purpose**: Internal moderation tool for Admin / Developer roles. Not accessible to the public (`noindex, nofollow`).
-- **Port**: 3001 (local) | Separate Vercel project or subdomain (`scripts.takeone-nexus.net.in`) in production.
-- **Auth**: Independent JWT (`SP_JWT_SECRET`) stored in `sp_token` HTTP-only cookie. Session duration 8 hours.
-- **Key Routes**:
-  | Route | Purpose |
-  |---|---|
-  | `/login` | Admin-only login (bcrypt verify, role-gated to Admin/Developer) |
-  | `/dashboard` | Live script moderation stats grid (Pending, Approved, Rejected, Creators) + recent submissions |
-  | `/scripts` | Filterable moderation queue (pending / approved / rejected) |
-  | `/scripts/[id]` | Full script review: PDF iframe, moderator notes, approve/reject/reset |
-  | `GET /api/scripts` | Internal API: script list filtered by `approval_status` |
-  | `PATCH /api/scripts/[id]/moderate` | Apply moderation action + send rejection email |
-  | `POST /api/issues` | Public/Authenticated standalone bug ingestion pipeline for local environment reporting |
-
 ### B. Legacy Express Server (`server.js`)
 - **Purpose**: Core REST API for data mutations. Serves legacy static `.htm` pages (`/public`).
 - **Execution**: Serverless Function on Vercel.
@@ -57,11 +42,17 @@ Due to the transition from a purely static/Express application to a modern Next.
 
 > **Routing Magic**: `vercel.json` rewrite rules map `/api/*` to Express while Next.js handles everything else.
 
+### C. Admin Panel Subdomain Decoupling
+- **Apex Domain**: `takeone-nexus.net.in`
+- **Admin Subdomain**: `admin.takeone-nexus.net.in`
+- **Decoupled Architecture**: The admin panel is decoupled into its own codebase, referencing the central API server.
+- **Subdomain Cookie Sharing**: Auth sessions share a common apex domain configuration: `domain: '.takeone-nexus.net.in'` on cookies. Users possessing the correct `secondary_role` permissions (e.g. `Admin`, `Developer`) can navigate to the admin console without re-authenticating.
+
 ---
 
 ## 2. Middleware & Authentication
 
-### `src/middleware.ts` → `src/proxy.ts`
+### `src/proxy.ts`
 The Next.js Edge Middleware validates the HTTP-only JWT cookie and enforces access rules before any page renders.
 
 **Access Matrix:**
@@ -74,16 +65,11 @@ The Next.js Edge Middleware validates the HTTP-only JWT cookie and enforces acce
 
 **JWT Payload fields checked by middleware:**
 - `id`, `email`, `role` — authorization
-- `email_verified` — chat access gate (only gates when explicitly `false`; older tokens without the field are allowed through)
+- `secondary_role` — admin authorization checks
+- `email_verified` — chat access gate
 
 ### Express `middleware/auth.js`
 Stateless JWT verification for Express API routes. Re-uses the same `JWT_SECRET`.
-
-### Role-Based Access Control (RBAC) & Task System
-Tasks can only be created and managed by users with the `creator` role.
-- Creators can create, edit, and assign tasks.
-- Standard users (`crew`, etc.) can only be assigned to tasks and mark them as completed.
-- Gated securely at both the middleware (`/admin/*` and task endpoints) and frontend UI levels.
 
 ---
 
@@ -95,7 +81,7 @@ Distributed SQL database. Accessed from both the Express API (via `mysql2` conne
 ### Prisma ORM (`prisma/schema.prisma`)
 Single source of truth for the database schema. Generated client types are used across all Next.js API routes.
 
-**`User` model security fields (added v1.1):**
+**`User` model security fields:**
 ```prisma
 email_verified          Boolean?   @default(false)
 email_verified_at       DateTime?
@@ -105,7 +91,7 @@ reset_token             String?    @unique  // SHA-256 hash of raw token
 reset_token_expires     DateTime?
 ```
 
-**`Script` model moderation fields (added v1.2):**
+**`Script` model moderation fields:**
 ```prisma
 approval_status   String?   @default("pending")  // pending | approved | rejected
 approved_by       Int?      // FK → User.id of the moderating admin
@@ -113,7 +99,7 @@ approved_at       DateTime?
 moderation_notes  String?   @db.Text
 ```
 
-**`Issue` model admin fields (added v1.2):**
+**`Issue` model admin fields:**
 ```prisma
 priority          String?   @default("medium")   // low | medium | high
 assigned_admin    Int?      // FK → User.id of assigned moderator
@@ -121,10 +107,6 @@ resolved_at       DateTime?
 ```
 
 > **Security principle**: Raw tokens are 32-byte `crypto.randomBytes` values. Only SHA-256 hashes are stored in the database. The raw token travels exclusively in the email link.
-
-### Connection Strategy
-- **Express**: `mysql2` connection pool (configured in `config/db.js`).
-- **Next.js API Routes**: Prisma singleton via `src/lib/prisma.ts` to prevent connection exhaustion in serverless environments.
 
 ---
 
@@ -137,9 +119,6 @@ All transactional emails are delivered via **Resend** using the custom domain `t
 | Welcome | On registration | `utils/email.js` |
 | Email Verification | On registration + resend | `src/lib/email-templates/verify-email.ts` |
 | Password Reset | On forgot-password request | `src/lib/email-templates/reset-password.ts` |
-| Script Rejection | On admin rejection via scripts-platform | Inline HTML in `scripts-platform/src/app/api/scripts/[id]/moderate/route.ts` |
-
-**Template design**: Cyberpunk/cinematic theme matching the platform UI. HTML-only, table-based layout for maximum email client compatibility.
 
 ---
 
@@ -149,115 +128,67 @@ Dual-layer rate limiting — Next.js and Express both protected independently.
 
 ### `src/lib/rate-limiter.ts` (Next.js API Routes)
 - Sliding-window in-memory counter.
-- Key format: `prefix:ip` or `prefix:type:value` for per-resource limits.
+- Key format: `prefix:ip` or `prefix:type:value`.
 - Fail-open: limiter errors never block legitimate traffic.
 
 ### `middleware/rateLimiter.js` (Express Routes)
 - Identical algorithm, CommonJS module for Express compatibility.
 - Applied as route-level middleware via `createRateLimiter({ limit, windowMs })`.
 
-**Configured limits (`src/lib/rate-limit-config.ts`):**
-| Endpoint | Limit | Window |
-|---|---|---|
-| Login | 5 requests | 15 min |
-| Register | 3 requests | 60 min |
-| Verify Email | 10 requests | 60 min |
-| Resend Verification | 3 requests | 60 min |
-| Forgot Password | 5 requests | 60 min |
-| Reset Password | 10 requests | 15 min |
-
-> **Scaling note**: The in-memory store is reset on cold starts. For production horizontal scaling, replace with Redis/Upstash by setting `RATE_LIMIT_STORE=redis` (planned, not yet implemented).
-
----
-
-## 6. Security Headers (CSP & Helmet)
-
-TAKE ONE Nexus employs strict HTTP security headers to achieve an A/A+ security rating.
-
-- **Content Security Policy (CSP)**: Blocks inline scripts (except nonces/hashes where needed), restricts font/image sources, and mandates `https:` for external assets.
-- **X-Frame-Options (`DENY`)**: Completely mitigates clickjacking attacks.
-- **X-Content-Type-Options (`nosniff`)**: Prevents MIME-type sniffing.
-- **Referrer-Policy (`strict-origin-when-cross-origin`)**: Protects cross-origin request data.
-- **Permissions-Policy**: Disables unnecessary browser features (geolocation, camera, microphone) globally.
-
-Applied globally via `next.config.js` and Express helmet middleware.
+**Configured limits:**
+| Endpoint | Limit | Window | Key Prefix |
+|---|---|---|---|
+| Login | 5 requests | 15 min | `login` |
+| Register | 3 requests | 60 min | `register` |
+| Verification | 3 requests | 60 min | `verify` |
+| Payments | 10 requests | 15 min | `payment` |
+| Portfolio Uploads | 20 requests | 60 min | `portfolio` |
+| Issue Reporting | 20 requests | 15 min | `issues` |
+| Task Creation | 30 requests | 15 min | `task-create` |
 
 ---
 
-## 7. Observability
+## 6. CSRF Double-Submit Protection
 
-Strictly separated between two tools to avoid scope creep:
+To defend state-changing API endpoints, TAKE ONE Nexus implements a stateless **Double-Submit Cookie Pattern**:
+
+1. **Global Cookie Placement**: Every HTTP response sets a `csrf_token` cookie (Secure in production, sameSite: strict, path: `/`, readable by JS).
+2. **Client-Side Header Binding**: The frontend reads `csrf_token` from cookies and appends it to all state-changing requests (POST, PUT, PATCH, DELETE) as the `X-CSRF-Token` header.
+3. **Server-Side Verification**: Express middleware (`verifyCsrfToken`) checks for cookie/header parity in constant-time. Requests with missing or mismatching tokens are rejected with a `403 Forbidden` response.
+4. **Exemptions**: Safe methods (GET, HEAD, OPTIONS) and webhook endpoints (protected by cryptographic signature validations) bypass this middleware.
+
+---
+
+## 7. Security Headers
+
+Strict HTTP headers are enforced globally via Next.js configurations and Helmet middleware in Express:
+- **Content Security Policy (CSP)**: Strict resource limits, frame-ancestors control.
+- **X-Frame-Options (`DENY`)**: CLICKJACKING protection.
+- **X-Content-Type-Options (`nosniff`)**: MIME-sniff protection.
+- **Referrer-Policy (`strict-origin-when-cross-origin`)**: Cross-origin leak protection.
+- **Permissions-Policy**: Disables geolocation/microphone access globally.
+
+---
+
+## 8. Observability
 
 ### PostHog (`src/lib/posthog.ts`)
-- **Used for**: Frontend analytics (page views, custom events), session replay, feature flags.
-- **NOT used for**: Error tracking.
-- **Activation**: Consent-gated. Only initializes after the user accepts analytics cookies.
-- **Privacy**: All inputs masked by default. Sensitive field names (`password`, `token`, `secret`, `key`) are stripped from user identity traits before sending.
-- **Config**: `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`.
+- **Used for**: Frontend analytics, session replay, feature flags.
+- **Privacy**: Input masking enabled by default. Sensitive fields (passwords, tokens, keys) are stripped from attributes prior to transmission.
 
 ### Sentry (`src/lib/sentry.ts`)
-- **Used for**: Backend API failures, database errors, server-side exceptions.
-- **NOT used for**: Analytics, frontend UX, session tracking.
-- **Scrubbing**: `beforeSend` hook strips `password`, `token`, `secret`, `key` from all request bodies and cookies before transmitting to Sentry.
-- **Config**: `SENTRY_DSN`.
-
----
-
-## 7. GDPR Cookie Consent
-
-### `src/components/CookieConsentBanner.tsx`
-- Slide-up animated banner shown on first visit (1.2s delay).
-- Persist preferences in `localStorage` under `ton_cookie_consent`.
-- Three action modes: Accept All, Reject Non-Essential, Customize.
-- Customize panel has per-category toggle switches (Essential always on).
-- Dispatches `consentUpdated` DOM event → `PostHogProvider` re-reads consent and opts in/out without page reload.
-
-### `src/lib/cookie-consent.ts`
-- Pure utility for reading/writing consent to `localStorage`.
-- Exported: `setConsent()`, `getConsent()`, `hasConsented()`.
+- **Used for**: Backend API failure logging, database execution error monitoring.
+- **Privacy**: `beforeSend` hook filters sensitive request body parameters.
 
 ---
 
 ## 9. Real-Time Telemetry (Pusher)
 
-To give TAKE ONE Nexus its signature "live mission control" feel, we utilize Pusher WebSockets.
-- **Global Chat**: Direct peer-to-peer messaging (`chat.js`).
-- **Admin Dashboard**: Live metrics (user registration, issue submission).
-- **Task Updates**: Live credits awarding and issue tracking.
-- **Script Moderation** (`SCRIPT_MODERATED`): Triggered by `PATCH /api/scripts/:id/moderate`. Admin dashboard updates in real-time when a script is approved or rejected from the scripts-platform.
-
----
-
-## 10. Verified Account Badge System
-
-Creators with `email_verified = true` receive a visual verified badge (neon ✦ SVG) across all platform surfaces:
-
-| Surface | Implementation |
-|---|---|
-| Leaderboard (`/leaderboard`) | `LeaderboardClient.tsx` — inline SVG badge next to creator name |
-| Profile page (`/profile`) | `src/app/profile/page.tsx` — badge in the profile header |
-| Crew Finder (`/crew.htm`) | `public/scripts/pages/crew.js` — badge injected into `personCard()` HTML |
-
-Both `GET /api/users/search` and `GET /api/users/leaderboard` now return `email_verified` in their SQL `SELECT` statements.
-
----
-
-## Future Payment Engine & Escrow Architecture
-
-To safely transition the Take One Nexus platform into a commercial creative ecosystem, the following architectural boundaries are planned for the upcoming Payment Engine:
-
-### A. Idempotency & Transaction Safety
-- All payment execution API requests (`POST /api/payments/charge`) will require an `Idempotency-Key` header generated client-side. This ensures duplicate clicks or networking retries do not result in duplicate transactions.
-- The transaction engine will use database-level transactional locks (`PRISMA TRANSACTION`) to ensure database states (e.g. credit updates, script license transfers) align atomically with external provider results.
-
-### B. Secure Webhook Validation
-- Stripe / Razorpay webhook notifications will be routed through `/api/payments/webhooks`.
-- Webhook payloads will be processed asynchronously via an isolated worker queue to keep the main event loop non-blocking.
-- The webhook controller will enforce cryptographically signed headers, validating signatures against a secure, local environment variable secret (`STRIPE_WEBHOOK_SECRET`).
-
-### C. Ledgers & Audit Trails
-- A dedicated `TransactionLedger` table will maintain an immutable history of all charges, refunds, split distributions, and payouts.
-- Every transaction log is tied back to the specific `User` and, if applicable, the specific script `Task` (Mission) that prompted the escrow payment.
+Pusher WebSockets drive the live creative interaction layers:
+- **Global Chat**: Direct peer-to-peer messaging.
+- **Admin Dashboard**: Live system metrics.
+- **Task Updates**: Live Nexus Credit awards.
+- **Script Moderation**: Real-time event propagation when script status is updated.
 
 ---
 
@@ -265,21 +196,13 @@ To safely transition the Take One Nexus platform into a commercial creative ecos
 
 | # | Title | Decision |
 |---|---|---|
-| ADR-001 | IST for Admin Analytics | All `GROUP BY DATE` SQL calls use `CONVERT_TZ` to `Asia/Kolkata`. Frontend uses `Intl.DateTimeFormat` with `Asia/Kolkata`. |
-| ADR-002 | Preserve Legacy HTML Pages | Cinematic vanilla HTML pages kept as-is to avoid breaking animations. Next.js conversion deferred until feasible 1:1 parity. |
-| ADR-003 | Dual Rate Limiter | Express and Next.js have independent rate limiters (same algorithm) because they run in separate runtimes. Shared Redis is deferred. |
-| ADR-004 | Fail-Open Rate Limiting | Limiter errors return `success: true` and call `next()`. Platform availability > perfect rate limiting. |
-| ADR-005 | PostHog vs. Sentry Separation | Analytics and error tracking are strictly separate tools with separate scopes. PostHog = behaviour. Sentry = exceptions. |
-| ADR-006 | Email-Only Verification Gate | Only `/chat` is hard-gated by email verification. `/profile` is accessible so unverified users can see the banner and resend. |
-| ADR-007 | Token Hashing Strategy | SHA-256 of a 32-byte random token. Hash stored in DB. Raw token in email URL only. Prevents token enumeration from DB breach. |
-| ADR-008 | Secure Webhook Signature Validation | Webhook processing MUST cryptographically verify signatures using raw request buffers. Avoid parsed bodies to ensure security against signature spoofing. |
-| ADR-009 | Independent scripts-platform JWT | The scripts-platform uses a separate `SP_JWT_SECRET` and `sp_token` cookie, isolated from the main platform's auth session. This means a compromised main JWT cannot grant moderation access. |
-
-## Critical Fixes: Script Payments, Deletes, And Tasks
-
-- Script creation is draft-first: `/api/payments/create-order` stores only `script_drafts`; `/api/payments/verify` is the only promotion path into `scripts`.
-- Razorpay verification is backend-only with `crypto.createHmac("sha256", RAZORPAY_KEY_SECRET)`.
-- Public script surfaces filter to `payment_verified = TRUE`; failed/cancelled drafts do not enter moderation, public pages, or leaderboard counts.
-- `scripts` now carries `payment_status`, `payment_id`, and `payment_verified` so moderation queues can show Paid, Pending Payment, and Failed Payment badges.
-- Script deletion removes references, attempts local asset cleanup, refreshes caches, and writes `SCRIPT_DELETED` to `moderation_logs`.
-- Admin task definitions use `tasks.title`, `tasks.description`, `tasks.credits`, `tasks.category`, and `tasks.active`; review state lives in `task_submissions`.
+| ADR-001 | IST for Admin Analytics | All date grouping SQL conversions use `CONVERT_TZ` to `Asia/Kolkata`. |
+| ADR-002 | Preserve Legacy HTML Pages | Cinematic vanilla HTML pages kept to maintain high-performance animations. |
+| ADR-003 | Dual Rate Limiter | Independent runtimes (Express and Next.js) utilize separate instance limiters. |
+| ADR-004 | Fail-Open Rate Limiting | Limiter errors fail open. Platform availability > perfect limiter coverage. |
+| ADR-005 | PostHog vs. Sentry Separation | PostHog tracks behavior; Sentry tracks runtime exceptions. |
+| ADR-006 | Email-Only Verification Gate | Only chat routes are gated by email verification to keep profile pages accessible. |
+| ADR-007 | Token Hashing Strategy | SHA-256 hashing is enforced for verification and reset tokens in the DB. |
+| ADR-008 | Razorpay Webhook Signatures | Verification must use crypto raw request verification to prevent signature spoofing. |
+| ADR-009 | Double-Submit CSRF Guard | Custom cookie/header matching replaces deprecated packages for stateless CSRF mitigation. |
+| ADR-010 | Subdomain Auth Coupling | Session tokens use apex domain cookie configurations to enable subdomain SSO. |

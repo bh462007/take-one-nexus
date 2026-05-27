@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticateUser, requireVerified, requireAdmin } = require('../middleware/auth');
 const { body, param } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
+const { createRateLimiter } = require('../middleware/rateLimiter');
 const { PrismaClient } = require('@prisma/client');
 const Pusher = require('pusher');
 
@@ -260,7 +261,13 @@ const taskCreateValidation = [
   validateRequest
 ];
 
-router.post('/', authenticateUser, requireVerified, taskCreateValidation, async (req, res) => {
+const taskCreateLimiter = createRateLimiter({
+  limit: 30,
+  windowMs: 15 * 60 * 1000, // 15 mins
+  keyPrefix: 'task-create'
+});
+
+router.post('/', authenticateUser, requireVerified, taskCreateLimiter, taskCreateValidation, async (req, res) => {
   try {
     const { conversationId, title, description, priority, assigneeId, dueDate, rewardCredits } = req.body;
     const userId = Number(req.user.id);

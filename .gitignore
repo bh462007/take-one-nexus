@@ -10,3 +10,5 @@ coverage/
 package-lock.json
 
 /src/generated/prisma
+
+*.pdf

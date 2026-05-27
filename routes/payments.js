@@ -1,11 +1,33 @@
 const express = require('express');
 const crypto = require('crypto');
+const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/db');
 const { authenticateUser } = require('../middleware/auth');
+const { createRateLimiter } = require('../middleware/rateLimiter');
 const { captureError } = require('../src/lib/sentry');
 const Pusher = require('pusher');
 
 const router = express.Router();
+
+// Strict payment rate limiter — prevents order flooding and brute-force attacks
+const paymentLimiter = createRateLimiter({
+  limit: 10,
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'payment',
+});
+
+// Validation helper
+function validatePayload(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: errors.array()[0].msg,
+      errors: errors.array()
+    });
+  }
+  return null;
+}
 
 // Configure Pusher
 const pusher = new Pusher({
@@ -35,7 +57,19 @@ async function safeQuery(sql, params = []) {
  * POST /api/payments/create-order
  * Create a draft script and generate a Razorpay order
  */
-router.post('/create-order', authenticateUser, async (req, res) => {
+const createOrderValidation = [
+  body('title')
+    .trim().notEmpty().withMessage('Script title is required')
+    .isLength({ max: 255 }).withMessage('Title must be 255 characters or less'),
+  body('genre').optional().trim().isLength({ max: 100 }),
+  body('synopsis').optional().trim().isLength({ max: 5000 }),
+  body('poster_url').optional().trim().isURL({ require_protocol: true }).withMessage('poster_url must be a valid URL'),
+  body('work_type').optional().trim().isLength({ max: 100 }),
+];
+
+router.post('/create-order', authenticateUser, paymentLimiter, createOrderValidation, async (req, res) => {
+  const validationError = validatePayload(req, res);
+  if (validationError) return;
   try {
     const userId = req.user.id;
     const { title, genre, synopsis, poster_url, roles_needed, status, media_links, role_data, work_type, temp_path } = req.body;
@@ -151,7 +185,16 @@ router.post('/create-order', authenticateUser, async (req, res) => {
  * POST /api/payments/verify
  * Verify payment signature and promote script draft to scripts list
  */
-router.post('/verify', authenticateUser, async (req, res) => {
+const verifyPaymentValidation = [
+  body('razorpay_order_id').trim().notEmpty().withMessage('razorpay_order_id is required'),
+  body('razorpay_payment_id').trim().notEmpty().withMessage('razorpay_payment_id is required'),
+  body('razorpay_signature').trim().notEmpty().withMessage('razorpay_signature is required'),
+  body('draft_id').isInt({ min: 1 }).withMessage('draft_id must be a positive integer'),
+];
+
+router.post('/verify', authenticateUser, paymentLimiter, verifyPaymentValidation, async (req, res) => {
+  const validationError = validatePayload(req, res);
+  if (validationError) return;
   const connection = await pool.getConnection();
   try {
     const userId = req.user.id;
@@ -303,7 +346,7 @@ router.post('/verify', authenticateUser, async (req, res) => {
  * POST /api/payments/cancel
  * Cancel a pending script draft after payment dismissal/failure.
  */
-router.post('/cancel', authenticateUser, async (req, res) => {
+router.post('/cancel', authenticateUser, paymentLimiter, async (req, res) => {
   try {
     const userId = req.user.id;
     const { draft_id, razorpay_order_id } = req.body;
