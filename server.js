@@ -40,8 +40,8 @@ const cspConfig = {
     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
     imgSrc: ["'self'", "blob:", "data:", "https://api.dicebear.com", "https://ui-avatars.com", "https://us.i.posthog.com", "https://eu.i.posthog.com"],
     fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
-    connectSrc: ["'self'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://sentry.io", "https://*.sentry.io", "wss://*.pusher.com", "https://*.pusher.com", "https://*.pusherapp.com", "wss://*.pusherapp.com", "http://localhost:*", "ws://localhost:*", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in", "https://admin.takeone-nexus.net.in", "https://api.razorpay.com", "https://*.razorpay.com"],
-    frameSrc: ["'self'", "https://us.posthog.com", "https://eu.posthog.com", "https://app.posthog.com", "https://api.razorpay.com", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://admin.takeone-nexus.net.in"],
+    connectSrc: ["'self'", "https://us.i.posthog.com", "https://eu.i.posthog.com", "https://app.posthog.com", "https://sentry.io", "https://*.sentry.io", "wss://*.pusher.com", "https://*.pusher.com", "https://*.pusherapp.com", "wss://*.pusherapp.com", "http://localhost:*", "ws://localhost:*", "https://takeone-nexus.net.in", "https://www.takeone-nexus.net.in", "https://admin.takeone-nexus.net.in", "https://scripts.takeone-nexus.net.in", "https://api.razorpay.com", "https://*.razorpay.com"],
+    frameSrc: ["'self'", "https://us.posthog.com", "https://eu.posthog.com", "https://app.posthog.com", "https://api.razorpay.com", "https://*.razorpay.com", "https://checkout.razorpay.com", "https://admin.takeone-nexus.net.in", "https://scripts.takeone-nexus.net.in"],
     workerSrc: ["'self'", "blob:"],
     objectSrc: ["'none'"],
     baseUri: ["'self'"],
@@ -68,7 +68,8 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   'https://takeone-nexus.net.in',
   'https://www.takeone-nexus.net.in',
-  'https://admin.takeone-nexus.net.in',  // Admin panel subdomain
+  'https://admin.takeone-nexus.net.in',    // Admin panel subdomain
+  'https://scripts.takeone-nexus.net.in',  // Scripts moderation subdomain
 ];
 
 if (process.env.NODE_ENV !== 'production') {
