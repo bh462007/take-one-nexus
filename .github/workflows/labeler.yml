@@ -1,0 +1,129 @@
+name: PR Labeler
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Auto Label PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            const title = pr.title.toLowerCase();
+            const body = (pr.body || "").toLowerCase();
+
+            let labels = [];
+
+            // =========================
+            // TYPE LABELS
+            // =========================
+            if (
+              title.includes("bug") ||
+              body.includes("fix") ||
+              body.includes("error") ||
+              body.includes("issue")
+            ) {
+              labels.push("type:bug");
+            }
+
+            if (
+              title.includes("feature") ||
+              body.includes("enhancement") ||
+              body.includes("new feature")
+            ) {
+              labels.push("type:feature");
+            }
+
+            if (
+              title.includes("docs") ||
+              body.includes("documentation")
+            ) {
+              labels.push("type:docs");
+            }
+
+            if (
+              body.includes("refactor")
+            ) {
+              labels.push("type:refactor");
+            }
+
+            if (
+              body.includes("security") ||
+              body.includes("payment")
+            ) {
+              labels.push("type:security");
+            }
+
+            if (
+              body.includes("test") ||
+              body.includes("testing")
+            ) {
+              labels.push("type:testing");
+            }
+
+            if (
+              body.includes("performance") ||
+              body.includes("optimization")
+            ) {
+              labels.push("type:performance");
+            }
+
+            if (
+              body.includes("accessibility") ||
+              body.includes("a11y")
+            ) {
+              labels.push("type:accessibility");
+            }
+
+            // =========================
+            // DIFFICULTY LABELS
+            // =========================
+            if (
+              body.includes("beginner") ||
+              body.includes("small fix")
+            ) {
+              labels.push("level:beginner");
+            } else if (
+              body.includes("api") ||
+              body.includes("frontend") ||
+              body.includes("backend")
+            ) {
+              labels.push("level:intermediate");
+            } else if (
+              body.includes("architecture") ||
+              body.includes("payment flow") ||
+              body.includes("security redesign")
+            ) {
+              labels.push("level:advanced");
+            }
+
+            // =========================
+            // GSSOC LABEL
+            // =========================
+            labels.push("gssoc:approved");
+
+            // Remove duplicates
+            labels = [...new Set(labels)];
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels
+              });
+            }
