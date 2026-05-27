@@ -4,27 +4,28 @@ on:
   issues:
     types: [closed]
 
+permissions:
+  issues: write
+
 jobs:
   thank-contributor:
     runs-on: ubuntu-latest
-
-    permissions:
-      issues: write
 
     steps:
       - name: Send thank you comment
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: `🎉 Thank you for contributing to Take One Nexus!
 
-Your contribution helps make the platform better for creators, filmmakers, and the community.
+              Your contribution helps make the platform better for creators, filmmakers, and the community.
 
-We truly appreciate your time and effort in improving the project 🚀
+              We truly appreciate your time and effort in improving the project 🚀
 
-Looking forward to more contributions from you!`
-            })
+              Looking forward to more contributions from you!`
+            });
