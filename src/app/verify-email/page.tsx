@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 
 type Status = 'loading' | 'success' | 'already-verified' | 'expired' | 'invalid' | 'error' | 'resending' | 'resent';
 
@@ -33,9 +34,8 @@ function VerifyEmailContent() {
 
     setStatus('resending');
     try {
-      const res = await fetch('/api/auth/verify-email', {
+      const res = await fetchWithCSRF('/api/auth/verify-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: targetEmail }),
       });
       const data = await res.json();

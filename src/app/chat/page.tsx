@@ -6,6 +6,7 @@ import { getAvatarUrl } from '@/lib/avatars';
 import { format } from 'date-fns';
 import CreateGroupModal from '@/components/CreateGroupModal';
 import TaskModal from '@/components/TaskModal';
+import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 import './chat.css';
 
 // ── SKELETON COMPONENT ──
@@ -246,13 +247,9 @@ export default function ChatPage() {
   const createTask = useCallback(async (taskData: any) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch('/api/tasks', {
+      const res = await fetchWithCSRF('/api/tasks', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: JSON.stringify(taskData)
       });
       const json = await res.json();
@@ -267,13 +264,9 @@ export default function ChatPage() {
   const updateTaskStatus = useCallback(async (taskId: number, status: string) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      await fetch(`/api/tasks/${taskId}`, {
+      await fetchWithCSRF(`/api/tasks/${taskId}`, {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: JSON.stringify({ status })
       });
     } catch (err) {
@@ -285,9 +278,8 @@ export default function ChatPage() {
     if (!confirm('Are you sure you want to abort this mission?')) return;
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      await fetch(`/api/tasks/${taskId}`, {
+      await fetchWithCSRF(`/api/tasks/${taskId}`, {
         method: 'DELETE',
-        credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
     } catch (err) {
@@ -298,9 +290,8 @@ export default function ChatPage() {
   const approveTask = useCallback(async (taskId: number) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/tasks/${taskId}/approve`, {
+      const res = await fetchWithCSRF(`/api/tasks/${taskId}/approve`, {
         method: 'POST',
-        credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       const json = await res.json();
@@ -357,13 +348,9 @@ export default function ChatPage() {
     setStatusText('Opening direct transmission...');
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-    const res = await fetch('/api/chat/conversations/direct', {
+    const res = await fetchWithCSRF('/api/chat/conversations/direct', {
       method: 'POST',
-      credentials: 'include',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: JSON.stringify({ recipientId })
     });
 
@@ -393,9 +380,8 @@ export default function ChatPage() {
     if (!confirm('Are you sure you want to delete this conversation? This will remove it from your signal desk.')) return;
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/chat/conversations/${id}`, { 
+      const res = await fetchWithCSRF(`/api/chat/conversations/${id}`, { 
         method: 'DELETE',
-        credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (res.status === 401) { window.location.href = '/?auth=login'; return; }
@@ -412,9 +398,8 @@ export default function ChatPage() {
     if (!confirm('Are you sure you want to leave this group?')) return;
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/chat/conversations/${id}/leave`, { 
+      const res = await fetchWithCSRF(`/api/chat/conversations/${id}/leave`, { 
         method: 'POST',
-        credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (res.status === 401) { window.location.href = '/?auth=login'; return; }
@@ -433,9 +418,8 @@ export default function ChatPage() {
     if (!confirm('Are you sure you want to clear all messages in this conversation? This cannot be undone.')) return;
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/chat/conversations/${id}/clear`, { 
+      const res = await fetchWithCSRF(`/api/chat/conversations/${id}/clear`, { 
         method: 'POST',
-        credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (res.status === 401) { window.location.href = '/?auth=login'; return; }
@@ -458,13 +442,9 @@ export default function ChatPage() {
   const handleTyping = (isTyping: boolean) => {
     if (!activeConv) return;
     const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-    fetch('/api/chat/typing', {
+    fetchWithCSRF('/api/chat/typing', {
       method: 'POST',
-      credentials: 'include',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: JSON.stringify({ conversationId: activeConv.id, isTyping })
     }).catch(() => {});
   };
@@ -498,13 +478,9 @@ export default function ChatPage() {
     setStatusText('Creating group transmission...');
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-    const res = await fetch('/api/chat/conversations/group', {
+    const res = await fetchWithCSRF('/api/chat/conversations/group', {
       method: 'POST',
-      credentials: 'include',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: JSON.stringify({ name, userIds })
     });
     
@@ -780,13 +756,9 @@ export default function ChatPage() {
     
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch('/api/chat/messages', {
+      const res = await fetchWithCSRF('/api/chat/messages', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: JSON.stringify({
           conversationId: activeConv.id,
           content
@@ -1307,13 +1279,10 @@ export default function ChatPage() {
                                 const newUrl = input.value.trim();
                                 
                                 try {
-                                  const token = localStorage.getItem('token') || document.cookie.match(/token=([^;]+)/)?.[1];
-                                  const res = await fetch(`/api/chat/conversations/${activeConv.id}/avatar`, {
+                                  const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                                  const res = await fetchWithCSRF(`/api/chat/conversations/${activeConv.id}/avatar`, {
                                     method: 'PATCH',
-                                    headers: {
-                                      'Content-Type': 'application/json',
-                                      'Authorization': `Bearer ${token}`
-                                    },
+                                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                                     body: JSON.stringify({ avatarUrl: newUrl })
                                   });
                                   const data = await res.json();

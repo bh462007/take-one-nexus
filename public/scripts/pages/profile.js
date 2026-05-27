@@ -794,11 +794,7 @@ window.deleteWork = async function(scriptId) {
     if (!confirm('Are you sure you want to remove this project from your portfolio?')) return;
     
     try {
-        const res = await fetch(`/api/scripts/${scriptId}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const json = await res.json();
+        const json = await API.scripts.delete(scriptId);
         
         if (json.success) {
             if (typeof showToast === 'function') showToast('Project removed ✦');
@@ -844,17 +840,9 @@ async function handleWorkSubmit(e) {
     }
 
     try {
-        const url = scriptId
-            ? `/api/scripts/${scriptId}`
-            : '/api/scripts/portfolio';
-        const method = scriptId ? 'PUT' : 'POST';
-        
-        const res = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        const json = await res.json();
+        const json = scriptId
+            ? await API.scripts.update(scriptId, data)
+            : await API.scripts.createPortfolio(data);
         
         if (json.success) {
             if (typeof showToast === 'function') showToast(scriptId ? 'Project updated ✦' : 'Project added ✦');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 
 type Phase = 'form' | 'loading' | 'success' | 'error';
 
@@ -21,9 +22,8 @@ export default function ForgotPasswordPage() {
 
     setPhase('loading');
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetchWithCSRF('/api/auth/forgot-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
       const data = await res.json();

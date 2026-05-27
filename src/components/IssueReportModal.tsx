@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 
 export default function IssueReportModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [title, setTitle] = useState('');
@@ -18,9 +19,8 @@ export default function IssueReportModal({ isOpen, onClose }: { isOpen: boolean;
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/issues', {
+      const response = await fetchWithCSRF('/api/issues', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description, location, severity, screenshot })
       });
       const data = await response.json();

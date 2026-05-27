@@ -64,6 +64,22 @@ const API = (() => {
       headers.Authorization = `Bearer ${token}`;
     }
 
+    // Automatically fetch and include CSRF token for mutating requests (POST, PUT, PATCH, DELETE)
+    const method = (options.method || 'GET').toUpperCase();
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      try {
+        const csrfRes = await fetch(`${BASE_URL}/api/csrf-token`, { credentials: 'include' });
+        if (csrfRes.ok) {
+          const { csrfToken } = await csrfRes.json();
+          if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+          }
+        }
+      } catch (err) {
+        console.warn('[SECURITY] Failed to retrieve CSRF token:', err);
+      }
+    }
+
     // Timeout mechanism
     const timeout = options.timeout || 15000; // Default 15s
     const controller = new AbortController();
@@ -141,6 +157,23 @@ const API = (() => {
           track('project_created', { title: payload.title, genre: payload.genre });
         }
         return result;
+      },
+      update(id, payload) {
+        return request(`/api/scripts/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+      },
+      delete(id) {
+        return request(`/api/scripts/${id}`, {
+          method: 'DELETE'
+        });
+      },
+      createPortfolio(payload) {
+        return request('/api/scripts/portfolio', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
       }
     },
     requests: {

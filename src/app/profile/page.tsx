@@ -608,6 +608,17 @@ export default async function ProfilePage({
             var cooldown  = document.getElementById('otpCooldown');
             var resendTimer = null;
 
+            // Fetch CSRF token before every mutating request
+            async function getCsrfToken() {
+              try {
+                var res = await fetch('/api/csrf-token', { credentials: 'include' });
+                var data = await res.json();
+                return data.csrfToken || '';
+              } catch (e) {
+                return '';
+              }
+            }
+
             function getCode() {
               return [0,1,2,3,4,5].map(function(i){
                 return (document.getElementById('otp-digit-'+i)||{}).value||'';
@@ -656,9 +667,14 @@ export default async function ProfilePage({
 
             // Open modal + auto-send OTP
             if (verifyBtn && modal) {
-              verifyBtn.addEventListener('click', function() {
+              verifyBtn.addEventListener('click', async function() {
                 modal.style.display = 'flex';
-                fetch('/api/otp/send', { method: 'POST', credentials: 'include' })
+                var csrfToken = await getCsrfToken();
+                fetch('/api/otp/send', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }
+                })
                   .then(function(r){ return r.json(); })
                   .then(function(d){
                     if (d.success) startCooldown(60);
@@ -671,15 +687,16 @@ export default async function ProfilePage({
             if (closeBtn && modal)  closeBtn.addEventListener('click', function(){ modal.style.display='none'; });
 
             if (confirmBtn) {
-              confirmBtn.addEventListener('click', function() {
+              confirmBtn.addEventListener('click', async function() {
                 var code = getCode();
                 if (code.length !== 6) { showErr('Please enter the full 6-digit code.'); return; }
                 confirmBtn.textContent = 'VERIFYING...';
                 confirmBtn.disabled = true;
+                var csrfToken = await getCsrfToken();
                 fetch('/api/otp/confirm', {
                   method: 'POST',
                   credentials: 'include',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
                   body: JSON.stringify({ otp: code })
                 })
                 .then(function(r){ return r.json(); })
@@ -702,8 +719,13 @@ export default async function ProfilePage({
             }
 
             if (resendBtn) {
-              resendBtn.addEventListener('click', function() {
-                fetch('/api/otp/send', { method: 'POST', credentials: 'include' })
+              resendBtn.addEventListener('click', async function() {
+                var csrfToken = await getCsrfToken();
+                fetch('/api/otp/send', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }
+                })
                   .then(function(r){ return r.json(); })
                   .then(function(d){
                     if (d.success) { showOk('New code sent!'); startCooldown(60); }
@@ -714,6 +736,7 @@ export default async function ProfilePage({
             }
           })();
         `}</Script>
+
       </>
     );
   } catch (criticalError: any) {

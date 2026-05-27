@@ -6,7 +6,9 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const { connectDB } = require('./config/db');
 const { captureError, initSentry } = require('./src/lib/sentry');
-const { generateCsrfToken, verifyCsrfToken } = require('./middleware/csrf');
+const csrfProtection = require('./middleware/csrf');
+const csrfRoutes = require('./routes/csrf');
+
 
 // Initialize Sentry for backend tracking
 initSentry();
@@ -99,7 +101,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-CSRF-Token'],
   maxAge: 86400 // 24 hours
 }));
 
@@ -117,33 +119,33 @@ app.use(express.json({ limit: '10kb' })); // Limit body size to 10kb
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
-// 4b. CSRF Protection — set CSRF cookie on every response
-app.use(generateCsrfToken);
-
 const { sanitizeMiddleware } = require('./utils/validation');
 app.use(sanitizeMiddleware); // Prevent XSS globally
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// CSRF token route definition
+app.use('/api', csrfRoutes);
+
 // 5. Routes
 // CSRF verification applied to all mutation API route groups
 app.use('/api/home', homeRoutes);
-app.use('/api/users', verifyCsrfToken, userRoutes);
-app.use('/api/scripts', verifyCsrfToken, scriptRoutes);
-app.use('/api/requests', verifyCsrfToken, requestRoutes);
+app.use('/api/users', csrfProtection, userRoutes);
+app.use('/api/scripts', csrfProtection, scriptRoutes);
+app.use('/api/requests', csrfProtection, requestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
-app.use('/api/moderation', verifyCsrfToken, moderationRoutes);
-app.use('/api/chat', verifyCsrfToken, chatRoutes);
-app.use('/api/tasks', verifyCsrfToken, tasksRoutes);
-app.use('/api/issues', verifyCsrfToken, issuesRoutes);
-app.use('/api/otp', verifyCsrfToken, otpRoutes);
+app.use('/api/moderation', csrfProtection, moderationRoutes);
+app.use('/api/chat', csrfProtection, chatRoutes);
+app.use('/api/tasks', csrfProtection, tasksRoutes);
+app.use('/api/issues', csrfProtection, issuesRoutes);
+app.use('/api/otp', csrfProtection, otpRoutes);
 app.use('/api/credits', creditsRoutes);
-app.use('/api/payments', verifyCsrfToken, paymentRoutes);
+app.use('/api/payments', csrfProtection, paymentRoutes);
 
 // Alias routes — mirror endpoints the frontend expects
-app.use('/api/projects', scriptRoutes); // /api/projects mirrors /api/scripts
+app.use('/api/projects', csrfProtection, scriptRoutes); // /api/projects mirrors /api/scripts
 
 // Top-level leaderboard endpoint
 app.get('/api/leaderboard', async (req, res) => {

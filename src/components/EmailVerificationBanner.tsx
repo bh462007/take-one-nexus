@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 
 export default function EmailVerificationBanner() {
   const [show, setShow] = useState(false);
@@ -41,11 +42,9 @@ export default function EmailVerificationBanner() {
     setError('');
 
     try {
-      const res = await fetch('/api/auth/verify-email', {
+      const res = await fetchWithCSRF('/api/auth/verify-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
-        credentials: 'include',
       });
       const data = await res.json();
 

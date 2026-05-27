@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 
 interface Issue {
   id: number;
@@ -50,9 +51,8 @@ export default function DeveloperIssuesPage() {
 
   const updateStatus = async (id: number, status: string) => {
     try {
-      const res = await fetch(`/api/issues/${id}`, {
+      const res = await fetchWithCSRF(`/api/issues/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
       const data = await res.json();
@@ -67,7 +67,7 @@ export default function DeveloperIssuesPage() {
   const deleteIssue = async (id: number) => {
     if (!confirm('Are you sure you want to delete this issue?')) return;
     try {
-      const res = await fetch(`/api/issues/${id}`, { method: 'DELETE' });
+      const res = await fetchWithCSRF(`/api/issues/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setIssues(issues.filter(issue => issue.id !== id));
