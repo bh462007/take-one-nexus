@@ -844,7 +844,9 @@ async function handleWorkSubmit(e) {
     }
 
     try {
-        const url = scriptId ? `/api/scripts/${scriptId}` : '/api/scripts';
+        const url = scriptId
+            ? `/api/scripts/${scriptId}`
+            : '/api/scripts/portfolio';
         const method = scriptId ? 'PUT' : 'POST';
         
         const res = await fetch(url, {
