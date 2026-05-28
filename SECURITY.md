@@ -42,6 +42,7 @@ We implement a stateless **Double-Submit Cookie Pattern** globally on all state-
 
 ### 3. Granular Rate Limiting
 Endpoint-specific rate limiters are applied on both the Next.js API router and Express middleware:
+**Persistence**: Rate limit counters are stored in Upstash Redis in production, ensuring limits survive Vercel serverless cold starts and are enforced consistently across all concurrent function instances. Local development uses an in-memory fallback. Configure via `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 - **Authentication**: Login requests are limited to 5 requests per 15 minutes. Registration is limited to 3 attempts per hour.
 - **Payments**: Order creation, verification, and cancellations are strictly restricted to 10 requests per 15 minutes to prevent order-flooding and brute-forcing.
 - **Portfolios**: Portfolio script uploads bypass the moderation queue but are limited to 20 uploads per hour.
