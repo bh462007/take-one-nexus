@@ -2,6 +2,8 @@
 
 First off, thank you for considering contributing to TAKE ONE Nexus! It's people like you that make this ecosystem such a great tool for filmmakers and creators.
 
+If this project has been useful to you, consider giving it a ⭐ on GitHub — it helps others discover the project and keeps us motivated!
+
 We welcome contributions of all kinds: bug fixes, feature additions, documentation improvements, and design tweaks.
 
 ---
@@ -10,18 +12,18 @@ We welcome contributions of all kinds: bug fixes, feature additions, documentati
 
 1. **Fork the repository** on GitHub.
 2. **Clone your fork** locally:
-   ```bash
+```bash
    git clone https://github.com/YOUR_USERNAME/take-one-nexus.git
    cd take-one-nexus
-   ```
+```
 3. **Add the original repository as an upstream remote**:
-   ```bash
+```bash
    git remote add upstream https://github.com/alokr25012-lab/take-one-nexus.git
-   ```
+```
 4. **Install dependencies**:
-   ```bash
+```bash
    npm install
-   ```
+```
 5. **Set up your environment variables** as detailed in the `README.md` (duplicate `.env.example` to `.env`).
    - *Note*: For local development, `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_SENTRY_DSN` are optional. If left blank, analytics and error tracking will be bypassed in dev mode.
    - *Note*: Rate limiting is active locally. If you encounter 429 errors during testing, you can disable it locally by setting `CSRF_DISABLED=true` (do not commit these changes).
@@ -59,9 +61,9 @@ We maintain a high standard for code quality to ensure scalability and maintaina
 - **Typography & Styling**: We use Vanilla CSS for static pages and Tailwind/CSS Modules for Next.js components. Adhere strictly to the cinematic tokens (e.g., `var(--neon)`, `var(--cyber-bg)`).
 - **Error Handling**: API endpoints must catch exceptions using `try-catch` blocks and return consistent JSON structures: `{ success: boolean, message: string, data?: any }`.
 - **Linting**: Before committing, ensure your code passes our linting rules:
-  ```bash
+```bash
   npm run lint
-  ```
+```
 
 ---
 
@@ -86,9 +88,9 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 1. **Keep it focused**: A PR should ideally do one thing. If you're fixing a bug and adding a feature, open two separate PRs.
 2. **Sync with upstream**: Before submitting, ensure your branch is up-to-date with `upstream/main`:
-   ```bash
+```bash
    git fetch upstream
    git rebase upstream/main
-   ```
+```
 3. **Write a clear description**: Detail what the PR does, why it's needed, and how to test it. Link any relevant issues using `Closes #123`.
 4. **Pass Checks**: Ensure your PR passes all automated checks (linting, build process) before requesting a review.
