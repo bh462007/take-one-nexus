@@ -58,8 +58,8 @@ export function getClientIP(req: RequestLike): string {
  *
  * e.g. buildRateLimitKey('login', '192.168.1.1') → 'login:192.168.1.1'
  */
-export function buildRateLimitKey(prefix: string, identifier: string): string {
-  return `${prefix}:${identifier}`;
+export function buildRateLimitKey(prefix: string, ...parts: string[]): string {
+  return [prefix, ...parts].filter(Boolean).join(':');
 }
 
 // ── CORE FUNCTION ──

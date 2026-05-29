@@ -21,7 +21,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  */
 export async function GET(request: NextRequest) {
   const ip = getClientIP(request);
-  const rl = checkRateLimit(buildRateLimitKey('verify-email', ip), RATE_LIMITS.verifyEmail);
+  const rl = await checkRateLimit(buildRateLimitKey('verify-email', ip), RATE_LIMITS.verifyEmail);
 
   if (!rl.success) {
     return NextResponse.json(
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit by email — 3 resends per hour
-    const rl = checkRateLimit(buildRateLimitKey('resend-verify', 'email', email), RATE_LIMITS.resendVerification);
+    const rl = await checkRateLimit(buildRateLimitKey('resend-verify', 'email', email), RATE_LIMITS.resendVerification);
     if (!rl.success) {
       return NextResponse.json(
         { success: false, message: 'Too many resend requests. Please wait before requesting another verification email.', retryAfter: rl.retryAfter },

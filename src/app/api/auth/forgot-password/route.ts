@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit by IP
-    const rlIp = checkRateLimit(buildRateLimitKey('forgot-password', ip), RATE_LIMITS.forgotPassword);
+    const rlIp = await checkRateLimit(buildRateLimitKey('forgot-password', ip), RATE_LIMITS.forgotPassword);
     if (!rlIp.success) {
       return NextResponse.json(
         { success: false, message: 'Too many reset requests from this connection. Please wait before trying again.', retryAfter: rlIp.retryAfter },
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit by email — prevents targeting a specific user
-    const rlEmail = checkRateLimit(buildRateLimitKey('forgot-password', 'email', email), RATE_LIMITS.forgotPassword);
+    const rlEmail = await checkRateLimit(buildRateLimitKey('forgot-password', 'email', email), RATE_LIMITS.forgotPassword);
     if (!rlEmail.success) {
       // Return success to prevent email enumeration (attacker shouldn't know email exists)
       return NextResponse.json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
