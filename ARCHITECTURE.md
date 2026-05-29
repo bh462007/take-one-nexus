@@ -124,17 +124,17 @@ All transactional emails are delivered via **Resend** using the custom domain `t
 
 ## 5. Rate Limiting
 
-**Backing Store**: Upstash Redis in production (`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`). Falls back to in-memory Map locally. The store abstraction lives in `utils/rateLimiterStore.js` and is consumed by both runtime implementations.
+**Backing Store**: Pure, high-performance in-memory sliding-window Map. Since rate limiting is active locally and in production on a per-instance basis, no external database or backing stores are required, eliminating latency overhead.
 
 Dual-layer rate limiting — Next.js and Express both protected independently.
 
 ### `src/lib/rate-limiter.ts` (Next.js API Routes)
-- Upstash Redis in production via shared `utils/rateLimiterStore.js`. Falls back to sliding-window in-memory counter locally.
+- Sliding-window in-memory rate limiter.
 - Key format: `prefix:ip` or `prefix:type:value`.
 - Fail-open: limiter errors never block legitimate traffic.
 
 ### `middleware/rateLimiter.js` (Express Routes)
-- - Upstash Redis in production via shared `utils/rateLimiterStore.js`. Falls back to in-memory locally. CommonJS module for Express compatibility.
+- Sliding-window in-memory rate limiter.
 - Applied as route-level middleware via `createRateLimiter({ limit, windowMs })`.
 
 **Configured limits:**
@@ -200,7 +200,7 @@ Pusher WebSockets drive the live creative interaction layers:
 |---|---|---|
 | ADR-001 | IST for Admin Analytics | All date grouping SQL conversions use `CONVERT_TZ` to `Asia/Kolkata`. |
 | ADR-002 | Preserve Legacy HTML Pages | Cinematic vanilla HTML pages kept to maintain high-performance animations. |
-| ADR-003 | Distributed Rate Limiter | Both Express (`middleware/rateLimiter.js`) and Next.js (`src/lib/rate-limiter.ts`) rate limiters share a common backing store (`utils/rateLimiterStore.js`). In production, Upstash Redis is used via `UPSTASH_REDIS_REST_URL` — counters persist across Vercel cold starts. Falls back to in-memory Map in local development when Redis env vars are absent. |
+| ADR-003 | In-Memory Rate Limiter | Both Express (`middleware/rateLimiter.js`) and Next.js (`src/lib/rate-limiter.ts`) rate limiters utilize a highly optimized, synchronous in-memory sliding-window backing store to eliminate latency and infrastructure overhead. |
 | ADR-004 | Fail-Open Rate Limiting | Limiter errors fail open. Platform availability > perfect limiter coverage. |
 | ADR-005 | PostHog vs. Sentry Separation | PostHog tracks behavior; Sentry tracks runtime exceptions. |
 | ADR-006 | Email-Only Verification Gate | Only chat routes are gated by email verification to keep profile pages accessible. |

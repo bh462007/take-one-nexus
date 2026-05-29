@@ -80,6 +80,16 @@ TAKE ONE Nexus uses a highly specific **cinematic dark UI**.
 - **Changelog:** Update the `FEATURE_LOG.md` when introducing significant features, database migrations, or architectural shifts.
 
 ---
+
+## 7. Environment & Infrastructure Constraints
+
+### 🚫 STRICT NO-NEW-ENV / NO-INFRASTRUCTURE POLICY
+To keep the codebase maintainable and prevent security/cost drift:
+- **No New Environment Variables**: Contributors are **strictly forbidden** from introducing or demanding new environment variables. All environment variables must already be present in `.env.example`.
+- **No External Backing Stores/Infrastructure**: Contributors are not allowed to integrate external databases, caching stores (such as Redis, Upstash, Memcached, etc.), or external cloud APIs requiring additional tokens or credentials.
+- **In-Memory & Self-Contained Only**: Any rate limiting, state tracking, or caching logic must be fully self-contained in-memory (e.g., using sliding-window `Map` objects) or leverage the central MySQL database.
+
+---
 *By following these rules, we ensure TAKE ONE Nexus remains a robust, maintainable, and professional open-source project.*
 ## Critical Fix Rules
 

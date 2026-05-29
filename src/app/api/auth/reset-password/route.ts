@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const ip = getClientIP(request);
 
   // Rate limit by IP — prevents brute force token guessing
-  const rl = await checkRateLimit(buildRateLimitKey('reset-password', ip), RATE_LIMITS.resetPassword);
+  const rl = checkRateLimit(buildRateLimitKey('reset-password', ip), RATE_LIMITS.resetPassword);
   if (!rl.success) {
     return NextResponse.json(
       { success: false, message: 'Too many reset attempts. Please wait before trying again.', retryAfter: rl.retryAfter },

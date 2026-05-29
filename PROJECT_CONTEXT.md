@@ -111,7 +111,7 @@ As the platform grows, we plan to decouple the monolithic architecture:
 1. **Persistent Collaboration**: Transitioning from ephemeral chat to persistent project hubs with centralized asset management.
 2. **CDN Optimization**: User uploaded media (avatars, posters) will be migrated to dedicated object storage (AWS S3/CloudFront).
 3. **Public API**: Implementing `/api/v1/` for external integrations and the upcoming mobile app.
-4. **Rate Limiting at Scale**: ✅ Implemented. Both Express and Next.js limiters now use Upstash Redis via `utils/rateLimiterStore.js`. Configure with `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Falls back to in-memory for local development.
+4. **Rate Limiting at Scale**: Both Express and Next.js limiters employ highly optimized sliding-window in-memory stores, eliminating backing database latency and infrastructure requirements.
 5. **Secure Payment Gateway Infrastructure**: Deploying PCI-compliant gateway endpoints utilizing Stripe and Razorpay. This system will introduce idempotent transaction processing to avoid double charges, custom ledger audit trails in MySQL, and highly secure, signature-validated webhook controllers.
 
 ## Critical Fixes: Current Enforcement

@@ -50,6 +50,13 @@ git checkout -b feature/ai-crew-matching
 
 We maintain a high standard for code quality to ensure scalability and maintainability.
 
+> [!CAUTION]
+> ### 🚫 Environment Variables & Infrastructure Constraints (STRICT POLICY)
+> - **No New Environment Variables**: Contributors are **strictly forbidden** from introducing or requiring new environment variables in the project. All PRs containing unauthorized environment additions will be immediately rejected.
+> - **No External Backing Stores/Infrastructure**: You are not allowed to introduce external databases, caching stores (like Redis, Upstash, etc.), third-party backing services, or new library integrations that require cloud credentials/tokens.
+> - **Strict Self-Containment**: All newly added features, rate-limiters, or storage mechanisms must rely solely on the existing MySQL/TiDB database structure (managed via Prisma) or run entirely in-memory.
+
+
 ### 🛡️ Security Guidelines (Mandatory)
 - **CSRF Token Handling**: All state-changing API endpoints must check for CSRF token parity. If adding new POST/PUT/PATCH/DELETE endpoints, ensure they go through the `verifyCsrfToken` middleware in `server.js`.
 - **Session Cookie Security**: In production, auth cookies enforce `domain: '.takeone-nexus.net.in'` and `sameSite: 'None'` to permit cross-subdomain session validation. In development, the cookie domain is omitted, and `sameSite: 'Lax'` is used to ensure compatibility with browsers on `localhost`. Maintain this conditional checks structure in both `users.js` and `csrf.js`.
