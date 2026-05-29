@@ -21,11 +21,27 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `🎉 Thank you for contributing to Take One Nexus!
+              body: `🎉 Thank you for contributing to **Take One Nexus**!
 
               Your contribution helps make the platform better for creators, filmmakers, and the community.
 
               We truly appreciate your time and effort in improving the project 🚀
 
-              Looking forward to more contributions from you!`
+              Looking forward to more contributions from you!
+              
+              ## 🌐 Connect With Us
+              
+              🔹 **Aarush Gupta**  
+              https://www.linkedin.com/in/aarushg-gupta/
+              
+              🔹 **Alok Rawat**  
+              https://www.linkedin.com/in/alok-rawat-1698172aa/
+              
+              🔹 **Take One Nexus (LinkedIn)**  
+              https://www.linkedin.com/company/take-one-nexus/
+              
+              🔹 **Instagram**  
+              https://www.instagram.com/__take__one
+              
+              ⭐ If you enjoyed contributing, don't forget to star the repository and stay connected for future updates and opportunities!`
             });
