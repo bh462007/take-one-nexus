@@ -20,7 +20,7 @@ const CALLBACK_URL = process.env.NODE_ENV === 'production'
 
 function createToken(user) {
   const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
-  const signed = jwt.sign(
+  return jwt.sign(
     {
       id: user.id,
       email: user.email,
@@ -31,7 +31,6 @@ function createToken(user) {
     secret,
     { expiresIn: '10d' }
   );
-  return signed;
 }
 
 function getCookieOptions() {
