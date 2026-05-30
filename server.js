@@ -166,8 +166,8 @@ app.use(csrfProtection);
 
 // 5. Routes
 app.use('/api/home', homeRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/scripts', scriptRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/notifications', notificationRoutes);
