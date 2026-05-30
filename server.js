@@ -281,11 +281,9 @@ app.get('/api/health', async (req, res) => {
 
   let prismaStatus = 'unknown';
   try {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    const prisma = require('./utils/prisma');
     await prisma.$queryRaw`SELECT 1`;
     prismaStatus = 'connected';
-    await prisma.$disconnect();
   } catch (err) {
     console.error('Prisma health check failed:', err.message);
     prismaStatus = 'error: ' + err.message;
