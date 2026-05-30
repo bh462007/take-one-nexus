@@ -97,3 +97,12 @@ To keep the codebase maintainable and prevent security/cost drift:
 - Never expose unpaid scripts in public reads, moderation queues, or leaderboard-derived counts.
 - Never authorize destructive moderation actions from client-side role checks alone.
 - Log script deletion as `SCRIPT_DELETED` in `moderation_logs`.
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+

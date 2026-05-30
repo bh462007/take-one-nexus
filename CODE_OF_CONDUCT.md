@@ -34,3 +34,12 @@ This Code of Conduct is adapted from the [Contributor Covenant](https://www.cont
 ## Platform Safety Note
 
 TAKE ONE moderators may remove scripts that violate policy or platform rules. Script deletion is handled through a backend-authorized flow and logged for accountability.
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+

@@ -208,3 +208,12 @@ Pusher WebSockets drive the live creative interaction layers:
 | ADR-008 | Razorpay Webhook Signatures | Verification must use crypto raw request verification to prevent signature spoofing. |
 | ADR-009 | Double-Submit CSRF Guard | Custom cookie/header matching replaces deprecated packages for stateless CSRF mitigation. |
 | ADR-010 | Subdomain Auth Coupling | Session tokens use apex domain cookie configurations to enable subdomain SSO. |
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+

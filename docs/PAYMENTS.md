@@ -83,3 +83,12 @@ To prevent script loss if a user closes the browser during verification:
 - Signature is verified using the Webhook Secret.
 - If verified, the draft is promoted to the main list asynchronously.
 - Webhook endpoints bypass the CSRF protection middleware because they are server-to-server and rely on cryptographic signature validation.
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+

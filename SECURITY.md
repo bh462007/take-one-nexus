@@ -57,3 +57,12 @@ Endpoint-specific rate limiters are applied on both the Next.js API router and E
 ### 5. Multi-Platform Ingestion Security
 - Telemetry, logging, and bug reporting modals run validation schemas to prevent abuse.
 - Administrative triage and moderation updates are restricted to verified accounts possessing the `Admin`, `Developer`, or elevated `secondary_role` privileges via `requireRole` check.
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+

@@ -50,7 +50,8 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ## [Unreleased / Open Source Prep] - 2026-05
 
 ### Added
-- **Open Source Documentation:** Complete overhaul of documentation to make the repository production-grade and friendly for GSSoC 2026 contributors. Added `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`, and `SECURITY.md`.
+- **NSoC'26 Integration:** Audited and updated the entire documentation workspace to properly acknowledge and integrate support for NSoC'26 (Nexus Summer of Code '26). Added `Open Source Programs` sections across core repo manuals.
+- **Open Source Documentation:** Complete overhaul of documentation to make the repository production-grade and friendly for NSoC'26 and GSSoC 2026 contributors. Added `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`, and `SECURITY.md`.
 - **GitHub Templates:** Added standard Issue and Pull Request templates in `.github`.
 
 ### Changed

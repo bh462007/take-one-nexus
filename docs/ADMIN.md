@@ -37,3 +37,12 @@ If an administrator is getting kicked back to `/`:
 1. Ensure the administrator account has its `secondary_role` set to `'admin'` or `'moderator'` in the database.
 2. Ensure the JWT payload contains `secondary_role` (older tokens created before version 2.0.0 will not contain this field and need a fresh login).
 3. Verify that the client is transmitting the `token` cookie. In local testing, ensure that you are using `localhost` for both servers, or correct proxy ports.
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+

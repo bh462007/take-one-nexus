@@ -60,6 +60,15 @@ For detailed setup details, consult the primary [README.md](../readme.md#🚀-ge
 
 ---
 
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+
+---
+
 <div align="center">
   <p><i>TAKE ONE Nexus Wiki • Designed for the Cinematic Future</i></p>
 </div>
+

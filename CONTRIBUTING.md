@@ -8,6 +8,14 @@ We welcome contributions of all kinds: bug fixes, feature additions, documentati
 
 ---
 
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26 and GSSoC 2026.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+
+---
+
 ## 🚀 Getting Started
 
 1. **Fork the repository** on GitHub.
@@ -107,5 +115,5 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 ## 📋 Issue Assignment Policy
 - Assigned contributors are expected to show progress regularly.
 - If there is no activity, update, draft PR, or communication for 7 days, the issue may be unassigned automatically.
-- This helps keep issues active and available for other contributors during GSSoC.
+- This helps keep issues active and available for other contributors during community-driven open-source initiatives like NSoC'26 and GSSoC 2026.
 - Contributors can request reassignment later if needed.

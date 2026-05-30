@@ -123,6 +123,15 @@ As the platform grows, we plan to decouple the monolithic architecture:
 
 ---
 
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26 and GSSoC 2026.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+
+---
+
 ## 🤝 Join the Production
 
-We are constantly improving. If you are participating in **GSSoC 2026**, this document is your foundation. Check out the [ARCHITECTURE.md](ARCHITECTURE.md) for deep technical details and [CONTRIBUTING.md](CONTRIBUTING.md) to start pushing code!
+We are constantly improving. If you are participating in **NSoC'26** or **GSSoC 2026**, this document is your foundation. Check out [ARCHITECTURE.md](ARCHITECTURE.md) for deep technical details and [CONTRIBUTING.md](CONTRIBUTING.md) to start pushing code!
+

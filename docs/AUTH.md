@@ -112,3 +112,12 @@ To help contributors quickly diagnose and resolve local cookie, CSRF, and routin
   [CSRF_DEBUG] ❌ CSRF Validation Failed for PUT /api/users/profile
   [CSRF_DEBUG] Error details: invalid csrf token
   ```
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+

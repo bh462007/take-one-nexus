@@ -195,7 +195,16 @@ TAKE ONE Nexus is optimized for deployment on **Vercel**.
 
 ---
 
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+
+---
+
 ## 👥 Maintainers & Credits
 
 Maintainership and Production of **Aarush Gupta** and **Alok Rawat**.
 All Rights Reserved.
+

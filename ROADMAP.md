@@ -36,3 +36,12 @@ Welcome to the TAKE ONE Nexus Roadmap! This document outlines our strategic visi
 - [ ] **Freelance Escrow Integration**: Safe, integrated payment gateways for freelance crew members.
 - [ ] **Film Festival Integration**: Direct submission API links to global film festivals.
 - [ ] **Hardware Synchronization**: Integrating with digital clapperboards and on-set devices.
+
+---
+
+## 🌐 Open Source Programs
+
+TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+
