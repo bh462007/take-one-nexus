@@ -129,33 +129,33 @@ function renderPortfolio(profile) {
     
     if (role.includes('Director')) {
         detailsHtml = `
-            <div className="portfolio-card-mini">
+            <div class="portfolio-card-mini">
                 <strong>Director's Vision</strong>
                 <p>${profile.bio ? profile.bio.substring(0, 100) + '...' : 'Building a vision...'}</p>
             </div>
-            <div className="portfolio-card-mini">
+            <div class="portfolio-card-mini">
                 <strong>Socials</strong>
                 <p>${socialLinks || 'No links added'}</p>
             </div>
         `;
     } else if (role.includes('Cinematographer') || role.includes('DP')) {
          detailsHtml = `
-            <div className="portfolio-card-mini">
+            <div class="portfolio-card-mini">
                 <strong>Camera Gear</strong>
                 <p>${profile.skills || 'Add gear to skills'}</p>
             </div>
-            <div className="portfolio-card-mini">
+            <div class="portfolio-card-mini">
                 <strong>Showreel</strong>
                 <p><a href="${profile.portfolio || '#'}" target="_blank">View Reel →</a></p>
             </div>
         `;
     } else {
         detailsHtml = `
-            <div className="portfolio-card-mini">
+            <div class="portfolio-card-mini">
                 <strong>Creator Stats</strong>
                 <p>${scripts.length} Projects · ${profile.credits} Credits</p>
             </div>
-            <div className="portfolio-card-mini">
+            <div class="portfolio-card-mini">
                 <strong>Bio</strong>
                 <p>${profile.bio ? profile.bio.substring(0, 60) + '...' : 'New Creator'}</p>
             </div>
