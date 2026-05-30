@@ -20,7 +20,7 @@
       placement: 'bottom'
     },
     {
-      targetSelector: 'header nav a[href="#explore"]',
+      targetSelector: '#navExploreLink',
       title: 'Discover Projects',
       body: 'Browse live pitches, explore screenplay synopses, and request to join production teams looking for talent.',
       placement: 'bottom'
@@ -116,12 +116,18 @@
     if (!target || !isElementVisible(target)) {
       // Safely skip steps where target is missing or hidden
       console.warn(`Tour step target not found or invisible: ${step.targetSelector}. Skipping...`);
+      console.log('Target element:', target);
+      if (target) {
+        console.log('Target dimensions:', target.offsetWidth, target.offsetHeight, target.getBoundingClientRect());
+      }
       showStep(index + 1);
       return;
     }
 
     // Update content
     tooltipEl.className = `nexus-tour-tooltip tour-pulse-glow placement-${step.placement}`;
+    tooltipEl.style.opacity = '1';
+    tooltipEl.style.visibility = 'visible';
     tooltipEl.innerHTML = `
       <div class="nexus-tour-header">
         <span class="nexus-tour-title">${step.title}</span>
@@ -146,13 +152,12 @@
     }
     document.getElementById('tourNextBtn').onclick = () => showStep(index + 1);
 
-    // Scroll element into view smoothly if not visible in viewport
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Let scroll settle then position spotlight and tooltip
-    setTimeout(() => {
-      positionElements(target, step.placement);
-    }, 300);
+    // No scrolling needed - all tour targets are in header/hero section
+    // Position spotlight and tooltip immediately
+    positionElements(target, step.placement);
+    // Force tooltip to be visible after positioning
+    tooltipEl.style.opacity = '1';
+    tooltipEl.style.visibility = 'visible';
   }
 
   function positionElements(target, placement) {
@@ -178,9 +183,9 @@
     let tooltipTop = 0;
     let tooltipLeft = 0;
 
-    const tooltipRect = tooltipEl.getBoundingClientRect();
-    const tooltipWidth = tooltipRect.width || 320;
-    const tooltipHeight = tooltipRect.height || 160;
+    // Use fixed dimensions to avoid issues with getBoundingClientRect during transitions
+    const tooltipWidth = 320;
+    const tooltipHeight = 160;
 
     const margin = 16;
 
@@ -205,6 +210,15 @@
     }
     if (tooltipLeft < 20) {
       tooltipLeft = 20;
+    }
+
+    // Ensure tooltip doesn't go off the top or bottom of viewport
+    const viewportHeight = window.innerHeight;
+    if (tooltipTop + tooltipHeight > scrollY + viewportHeight - 20) {
+      tooltipTop = scrollY + viewportHeight - tooltipHeight - 20;
+    }
+    if (tooltipTop < scrollY + 20) {
+      tooltipTop = scrollY + 20;
     }
 
     tooltipEl.style.top = `${tooltipTop}px`;
