@@ -183,9 +183,10 @@
     let tooltipTop = 0;
     let tooltipLeft = 0;
 
-    // Use fixed dimensions to avoid issues with getBoundingClientRect during transitions
-    const tooltipWidth = 320;
-    const tooltipHeight = 160;
+    // Get actual dimensions dynamically while avoiding transition scaling issues by using scrollHeight/innerWidth
+    const isMobile = window.innerWidth <= 768;
+    const tooltipWidth = isMobile ? 280 : 320;
+    const tooltipHeight = tooltipEl.scrollHeight || 160;
 
     const margin = 16;
 
