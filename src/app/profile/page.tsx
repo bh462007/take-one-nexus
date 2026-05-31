@@ -119,6 +119,7 @@ export default async function ProfilePage({
     // Display Name Logic
     const displayName = getCanonicalDisplayName(user);
     const credits = user?.credits || 0;
+    const availability = user?.availability || 'Available';
 
     return (
       <>
@@ -188,6 +189,24 @@ export default async function ProfilePage({
                 <div className="profile-screen-name">@{screenName}</div>
               )}
               <div className="profile-role" id="profileRole">{role}</div>
+              <div className="availability-status-wrap" style={{ margin: '8px 0' }}>
+                <span className={`status-badge status-${availability.toLowerCase().replace(' ', '-')}`} style={{
+                  fontSize: '9px',
+                  letterSpacing: '1.5px',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  border: '1px solid',
+                  borderColor: availability === 'Available' ? 'rgba(0, 255, 136, 0.3)' : availability === 'Busy' ? 'rgba(255, 166, 32, 0.3)' : 'rgba(255, 51, 102, 0.3)',
+                  background: availability === 'Available' ? 'rgba(0, 255, 136, 0.06)' : availability === 'Busy' ? 'rgba(255, 166, 32, 0.06)' : 'rgba(255, 51, 102, 0.06)',
+                  color: availability === 'Available' ? '#00FF88' : availability === 'Busy' ? '#FFA620' : '#FF3366',
+                  display: 'inline-block',
+                  boxShadow: availability === 'Available' ? '0 0 10px rgba(0, 255, 136, 0.1)' : availability === 'Busy' ? '0 0 10px rgba(255, 166, 32, 0.1)' : '0 0 10px rgba(255, 51, 102, 0.1)'
+                }}>
+                  {availability}
+                </span>
+              </div>
               <div className="profile-meta" id="profileMeta">
                 {[college, city].filter(Boolean).join(' · ') || 'Location Pending'}
               </div>
@@ -357,6 +376,14 @@ export default async function ProfilePage({
                       <option value="Real Name Only">Real Name Only</option>
                       <option value="Screen Name Only">Screen Name Only</option>
                       <option value="Both">Both (Name • Screen Name)</option>
+                    </select>
+                  </div>
+                  <div className="about-item">
+                    <label htmlFor="editAvailability">Crew Availability Status</label>
+                    <select id="editAvailability" className="profile-role-dropdown" defaultValue={availability}>
+                      <option value="Available">Available</option>
+                      <option value="Busy">Busy</option>
+                      <option value="Not Available">Not Available</option>
                     </select>
                   </div>
                   <div className="about-item full">

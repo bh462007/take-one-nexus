@@ -87,7 +87,7 @@ function getCookieOptions() {
 
 async function getProfileData(userId) {
   const [userRows] = await pool.query(
-    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at
+    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at, availability
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -494,10 +494,11 @@ router.get('/search', async (req, res) => {
   try {
     const role = String(req.query.role || '').trim();
     const city = String(req.query.city || '').trim();
+    const availability = String(req.query.availability || '').trim();
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified
+      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified, availability
       FROM users
       WHERE 1 = 1
     `;
@@ -511,6 +512,11 @@ router.get('/search', async (req, res) => {
     if (city) {
       sql += ` AND city LIKE ?`;
       params.push(`%${city}%`);
+    }
+
+    if (availability) {
+      sql += ` AND availability = ?`;
+      params.push(availability);
     }
 
     if (q) {
@@ -592,7 +598,8 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
       gender,
       screen_name,
       display_preference,
-      social_links
+      social_links,
+      availability
     } = req.body;
 
     if (name && typeof name === 'string' && !name.trim()) {
@@ -617,6 +624,7 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
         screen_name: typeof screen_name === 'string' ? screen_name.trim() : undefined,
         display_preference: typeof display_preference === 'string' ? display_preference.trim() : undefined,
         social_links: typeof social_links === 'string' ? social_links.trim() : undefined,
+        availability: typeof availability === 'string' ? availability.trim() : undefined,
       },
       include: {
         scripts: {
@@ -704,7 +712,7 @@ router.get('/public/:id', async (req, res) => {
     }
 
     const [userRows] = await pool.query(
-      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at
+      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, availability
        FROM users
        WHERE id = ?
        LIMIT 1`,

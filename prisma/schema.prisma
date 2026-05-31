@@ -45,6 +45,7 @@ model User {
   transactions        CreditTransaction[]
   completed_tasks     UserCompletedTask[]
   analytics_events    AnalyticsEvent[]
+  availability        String?                @default("Available") @db.VarChar(50)
 
   @@index([secondary_role], map: "idx_users_secondary_role")
   @@index([email_verified], map: "idx_users_email_verified")

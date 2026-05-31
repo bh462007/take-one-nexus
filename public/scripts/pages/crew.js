@@ -43,6 +43,7 @@ function personCard(person) {
   const meta = [person.city, person.college].filter(Boolean).join(' · ') || 'Location not added';
   const skills = person.skills || 'Skills not added yet';
   const name = (typeof UserUtils !== 'undefined') ? UserUtils.getDisplayName(person) : (person.name || 'Unnamed Creator');
+  const availability = person.availability || 'Available';
   
   const chatParams = new URLSearchParams({
     userId: String(person.id),
@@ -59,11 +60,31 @@ function personCard(person) {
        </span>`
     : '';
 
+  const availColor = availability === 'Available' ? '#00FF88' : availability === 'Busy' ? '#FFA620' : '#FF3366';
+  const availBg = availability === 'Available' ? 'rgba(0, 255, 136, 0.06)' : availability === 'Busy' ? 'rgba(255, 166, 32, 0.06)' : 'rgba(255, 51, 102, 0.06)';
+  const availBorder = availability === 'Available' ? 'rgba(0, 255, 136, 0.3)' : availability === 'Busy' ? 'rgba(255, 166, 32, 0.3)' : 'rgba(255, 51, 102, 0.3)';
+
+  const availabilityBadge = `<div style="margin: 6px 0;">
+    <span class="status-badge" style="
+      font-size: 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 10px;
+      border: 1px solid ${availBorder};
+      background: ${availBg};
+      color: ${availColor};
+      display: inline-block;
+    ">${availability}</span>
+  </div>`;
+
   return `
     <article class="crew-card">
       <div class="crew-avatar">${initials(person.name)}</div>
       <div class="crew-name" style="display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap;">${name}${verifiedBadge}</div>
       <div class="crew-role">${person.role || 'Crew Member'}</div>
+      ${availabilityBadge}
       <div class="crew-meta">${meta}</div>
       <div class="crew-bio">${person.bio || 'Profile is live. Reach out and start a collaboration conversation.'}</div>
       <div class="crew-skills">${skills}</div>
@@ -102,16 +123,18 @@ function renderPeople(people) {
 async function loadPeople() {
   const query = document.getElementById('crewSearchInput')?.value.trim() || '';
   const city = document.getElementById('citySearchInput')?.value.trim() || '';
+  const availability = document.getElementById('availabilitySearchInput')?.value || '';
 
   try {
     const response = await API.users.search({
       role: activeRole,
       city,
+      availability,
       q: query
     });
 
     const people = response.data || [];
-    if (!query && !city && !activeRole) {
+    if (!query && !city && !activeRole && !availability) {
       allPeople = people;
       renderRoleFilters();
     }
@@ -135,19 +158,28 @@ document.getElementById('roleFilterList')?.addEventListener('click', (event) => 
   loadPeople();
 });
 
-['crewSearchInput', 'citySearchInput'].forEach((id) => {
-  document.getElementById(id)?.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(loadPeople, 250);
-  });
+['crewSearchInput', 'citySearchInput', 'availabilitySearchInput'].forEach((id) => {
+  const element = document.getElementById(id);
+  if (!element) return;
+  
+  if (element.tagName === 'SELECT') {
+    element.addEventListener('change', loadPeople);
+  } else {
+    element.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(loadPeople, 250);
+    });
+  }
 });
 
 document.getElementById('clearCrewFilters')?.addEventListener('click', () => {
   activeRole = '';
   const crewInput = document.getElementById('crewSearchInput');
   const cityInput = document.getElementById('citySearchInput');
+  const availabilityInput = document.getElementById('availabilitySearchInput');
   if (crewInput) crewInput.value = '';
   if (cityInput) cityInput.value = '';
+  if (availabilityInput) availabilityInput.value = '';
   renderRoleFilters();
   loadPeople();
 });
