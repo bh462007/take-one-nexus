@@ -8,7 +8,8 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-"legacy:dev": "set PORT=5001 && nodemon -L --watch server.js --watch routes --watch config --ext js,json server.js",    "legacy:start": "node server.js",
+    "legacy:dev": "cross-env PORT=5001 nodemon -L --watch server.js --watch routes --watch config --ext js,json server.js",
+    "legacy:start": "node server.js",
     "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
     "db:init": "node database/init.js",
     "db:seed": "node database/seed.js"
@@ -63,6 +64,7 @@
     "@typescript-eslint/eslint-plugin": "^8.59.2",
     "@typescript-eslint/parser": "^8.59.2",
     "autoprefixer": "^10.5.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.6",
     "nodemon": "^3.1.9",

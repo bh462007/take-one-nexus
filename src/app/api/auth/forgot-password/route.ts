@@ -31,27 +31,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const email = (body?.email || '').trim().toLowerCase();
 
-    console.log('[NEXTJS AUTH] Forgot password request for email:', email);
-
     if (!email) {
       return NextResponse.json({ success: false, message: 'Email is required' }, { status: 400 });
     }
 
-    // Rate limit by IP (disabled for testing)
-    // const rlIp = checkRateLimit(buildRateLimitKey('forgot-password', ip), RATE_LIMITS.forgotPassword);
-    // if (!rlIp.success) {
-    //   return NextResponse.json(
-    //     { success: false, message: 'Too many reset requests from this connection. Please wait before trying again.', retryAfter: rlIp.retryAfter },
-    //     { status: 429, headers: { 'Retry-After': String(rlIp.retryAfter) } }
-    //   );
-    // }
+    // Rate limit by IP
+    const rlIp = checkRateLimit(buildRateLimitKey('forgot-password', ip), RATE_LIMITS.forgotPassword);
+    if (!rlIp.success) {
+      return NextResponse.json(
+        { success: false, message: 'Too many reset requests from this connection. Please wait before trying again.', retryAfter: rlIp.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(rlIp.retryAfter) } }
+      );
+    }
 
-    // Rate limit by email — prevents targeting a specific user (disabled for testing)
-    // const rlEmail = checkRateLimit(buildRateLimitKey('forgot-password', 'email', email), RATE_LIMITS.forgotPassword);
-    // if (!rlEmail.success) {
-    //   // Return success to prevent email enumeration (attacker shouldn't know email exists)
-    //   return NextResponse.json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
-    // }
+    // Rate limit by email — prevents targeting a specific user
+    const rlEmail = checkRateLimit(buildRateLimitKey('forgot-password', 'email', email), RATE_LIMITS.forgotPassword);
+    if (!rlEmail.success) {
+      // Return success to prevent email enumeration (attacker shouldn't know email exists)
+      return NextResponse.json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
+    }
 
     const user = await prisma.user.findUnique({
       where: { email },

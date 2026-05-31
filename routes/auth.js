@@ -1,12 +1,11 @@
 const express = require('express');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { Resend } = require('resend');
 const { createRateLimiter } = require('../middleware/rateLimiter');
 const { captureError } = require('../src/lib/sentry');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Initialize Resend
 if (!process.env.RESEND_API_KEY) {
@@ -251,10 +250,10 @@ router.post('/reset-password', async (req, res) => {
       });
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters'
+        message: 'Password must be at least 8 characters'
       });
     }
 
@@ -280,7 +279,7 @@ router.post('/reset-password', async (req, res) => {
 
     // Hash new password
     const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Update user password and clear reset token
     await prisma.user.update({
