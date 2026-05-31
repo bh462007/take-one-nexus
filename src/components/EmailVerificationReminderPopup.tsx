@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
+import { getCurrentUser, invalidateUserCache } from '@/utils/userSession';
+import { useEmailVerificationReminder } from '@/lib/useEmailVerificationReminder';
 
 interface EmailVerificationReminderPopupProps {
   trigger?: 'login' | 'register' | 'profile' | 'periodic';
@@ -12,6 +14,9 @@ export default function EmailVerificationReminderPopup({
   trigger = 'periodic',
   onVerifyNow 
 }: EmailVerificationReminderPopupProps) {
+  // Initialize trigger listeners directly within the popup component
+  useEmailVerificationReminder();
+
   const [show, setShow] = useState(false);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
@@ -42,19 +47,15 @@ export default function EmailVerificationReminderPopup({
   // Check user verification status
   const checkVerificationStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/users/me', { 
-        credentials: 'include',
-        cache: 'no-store'
-      });
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await getCurrentUser();
       
       if (data.success && data.user) {
-        setIsVerified(data.user.email_verified === true);
+        const verified = data.user.email_verified === true;
+        setIsVerified(verified);
         setEmail(data.user.email || '');
         
         // Only show popup if user is unverified and should see it
-        if (data.user.email_verified === false && shouldShowPopup()) {
+        if (!verified && shouldShowPopup()) {
           // Add small delay for better UX
           setTimeout(() => setShow(true), 1500);
         }
@@ -75,6 +76,8 @@ export default function EmailVerificationReminderPopup({
       const { trigger: eventTrigger } = event.detail;
       // Re-check verification status when triggered
       if (eventTrigger) {
+        // Invalidate cache first to force a fresh fetch
+        invalidateUserCache();
         checkVerificationStatus();
       }
     };
@@ -113,6 +116,8 @@ export default function EmailVerificationReminderPopup({
       } else if (res.ok) {
         setSent(true);
         setCooldown(60);
+        // Invalidate user cache to ensure subsequent status checks fetch fresh verified state
+        invalidateUserCache();
       } else {
         setError(data.message || 'Failed to send verification email.');
       }
@@ -151,18 +156,23 @@ export default function EmailVerificationReminderPopup({
   if (!show || isVerified) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(6, 8, 10, 0.92)',
-      backdropFilter: 'blur(8px)',
-      zIndex: 10000,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px',
-      animation: 'fadeIn 0.3s ease-out',
-    }}>
+    <div 
+      role="dialog" 
+      aria-modal="true" 
+      aria-labelledby="evrTitle"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(6, 8, 10, 0.92)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        animation: 'fadeIn 0.3s ease-out',
+      }}
+    >
       <div style={{
         background: 'var(--machine, #0E1218)',
         border: '1px solid rgba(255, 77, 26, 0.3)',
@@ -228,7 +238,7 @@ export default function EmailVerificationReminderPopup({
         </div>
 
         {/* Title */}
-        <h2 style={{
+        <h2 id="evrTitle" style={{
           fontFamily: 'Bebas Neue, sans-serif',
           fontSize: '28px',
           letterSpacing: '4px',

@@ -23,12 +23,18 @@ export function useEmailVerificationReminder() {
     const urlParams = new URLSearchParams(window.location.search);
     const authParam = urlParams.get('auth');
 
-    if (authParam === 'login') {
-      // Trigger after successful login (delay to allow login to complete)
-      setTimeout(() => triggerPopupCheck('login'), 2000);
-    } else if (authParam === 'register') {
-      // Trigger after successful registration
-      setTimeout(() => triggerPopupCheck('register'), 2000);
+    if (authParam === 'login' || authParam === 'register') {
+      // Consume the parameter so it doesn't trigger again on page refresh or navigation
+      try {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('auth');
+        window.history.replaceState({}, '', newUrl.pathname + newUrl.search);
+      } catch (e) {
+        console.error('Failed to clean auth URL parameter:', e);
+      }
+
+      // Trigger after successful login/registration
+      setTimeout(() => triggerPopupCheck(authParam as 'login' | 'register'), 2000);
     }
 
     // Check if on profile page

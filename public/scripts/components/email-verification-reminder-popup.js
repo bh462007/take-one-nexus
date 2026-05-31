@@ -47,8 +47,8 @@
     if (remindLaterBtn) remindLaterBtn.addEventListener('click', handleRemindLater);
     if (closeBtn) closeBtn.addEventListener('click', () => hidePopup());
 
-    // Check verification status
-    checkVerificationStatus();
+    // Check verification status (delayed slightly to prevent race conditions with page load / project.js initialization)
+    setTimeout(checkVerificationStatus, 2500);
 
     // Listen for trigger events
     window.addEventListener('email-verification-reminder', handleTriggerEvent);
