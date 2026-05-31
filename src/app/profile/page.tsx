@@ -401,7 +401,7 @@ export default async function ProfilePage({
               <div className="tab-pane" id="tab-portfolio">
                 <div className="section-head">
                   <h3>Creative Portfolio</h3>
-                  <div className="portfolio-badge">PRO PROFILE</div>
+                  {/* <div className="portfolio-badge">PRO PROFILE</div> */}
                 </div>
                 <div className="portfolio-container">
                   <div className="portfolio-intro">
