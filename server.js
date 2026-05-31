@@ -38,6 +38,7 @@ initSentry();
 
 const homeRoutes = require('./routes/home');
 const userRoutes = require('./routes/users');
+const authRoutes = require('./routes/auth');
 const scriptRoutes = require('./routes/scripts');
 const requestRoutes = require('./routes/requests');
 const notificationRoutes = require('./routes/notifications');
@@ -164,6 +165,7 @@ app.use('/api', csrfRoutes);
 // CSRF verification applied to all mutation API route groups
 app.use('/api/home', homeRoutes);
 app.use('/api/users', csrfProtection, userRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/scripts', csrfProtection, scriptRoutes);
 app.use('/api/requests', csrfProtection, requestRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -391,6 +393,8 @@ if (require.main === module || process.env.NODE_ENV !== 'production') {
     console.log('GET /api/requests/user/:id');
     console.log('POST /api/users/register');
     console.log('POST /api/users/login');
+    console.log('POST /api/auth/forgot-password');
+    console.log('POST /api/auth/reset-password');
     console.log('');
   });
 

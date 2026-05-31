@@ -14,6 +14,13 @@ import { captureError } from '@/lib/sentry';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Log if RESEND_API_KEY is configured
+if (!process.env.RESEND_API_KEY) {
+  console.warn('[NEXTJS AUTH] WARNING: RESEND_API_KEY not configured. Password reset emails will not be sent.');
+} else {
+  console.log('[NEXTJS AUTH] RESEND_API_KEY is configured');
+}
+
 /**
  * POST /api/auth/forgot-password
  * Generates a password reset token and sends reset email.
@@ -25,25 +32,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const email = (body?.email || '').trim().toLowerCase();
 
+    console.log('[NEXTJS AUTH] Forgot password request for email:', email);
+
     if (!email) {
       return NextResponse.json({ success: false, message: 'Email is required' }, { status: 400 });
     }
 
-    // Rate limit by IP
-    const rlIp = checkRateLimit(buildRateLimitKey('forgot-password', ip), RATE_LIMITS.forgotPassword);
-    if (!rlIp.success) {
-      return NextResponse.json(
-        { success: false, message: 'Too many reset requests from this connection. Please wait before trying again.', retryAfter: rlIp.retryAfter },
-        { status: 429, headers: { 'Retry-After': String(rlIp.retryAfter) } }
-      );
-    }
+    // Rate limit by IP (disabled for testing)
+    // const rlIp = checkRateLimit(buildRateLimitKey('forgot-password', ip), RATE_LIMITS.forgotPassword);
+    // if (!rlIp.success) {
+    //   return NextResponse.json(
+    //     { success: false, message: 'Too many reset requests from this connection. Please wait before trying again.', retryAfter: rlIp.retryAfter },
+    //     { status: 429, headers: { 'Retry-After': String(rlIp.retryAfter) } }
+    //   );
+    // }
 
-    // Rate limit by email — prevents targeting a specific user
-    const rlEmail = checkRateLimit(buildRateLimitKey('forgot-password', 'email', email), RATE_LIMITS.forgotPassword);
-    if (!rlEmail.success) {
-      // Return success to prevent email enumeration (attacker shouldn't know email exists)
-      return NextResponse.json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
-    }
+    // Rate limit by email — prevents targeting a specific user (disabled for testing)
+    // const rlEmail = checkRateLimit(buildRateLimitKey('forgot-password', 'email', email), RATE_LIMITS.forgotPassword);
+    // if (!rlEmail.success) {
+    //   // Return success to prevent email enumeration (attacker shouldn't know email exists)
+    //   return NextResponse.json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
+    // }
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -70,16 +79,30 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://takeone-nexus.net.in';
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
-    await resend.emails.send({
-      from: 'TAKE ONE Nexus <noreply@takeone-nexus.net.in>',
-      to: user.email,
-      subject: '🔐 Reset your TAKE ONE password',
-      html: buildResetPasswordTemplate({
-        userName: user.name,
-        resetUrl,
-        expiresInMinutes: 60,
-      }),
-    });
+    console.log('[NEXTJS AUTH] Sending reset email to:', user.email);
+    console.log('[NEXTJS AUTH] Reset URL:', resetUrl);
+
+    if (!process.env.RESEND_API_KEY) {
+      console.error('[NEXTJS AUTH] Cannot send email: RESEND_API_KEY not configured');
+    } else {
+      try {
+        const result = await resend.emails.send({
+          from: 'onboarding@resend.dev',
+          to: user.email,
+          subject: '🔐 Reset your TAKE ONE password',
+          html: buildResetPasswordTemplate({
+            userName: user.name,
+            resetUrl,
+            expiresInMinutes: 60,
+          }),
+        });
+        console.log('[NEXTJS AUTH] Email sent successfully:', result);
+      } catch (emailError) {
+        console.error('[NEXTJS AUTH] Email send failed:', emailError);
+        console.error('[NEXTJS AUTH] Error details:', JSON.stringify(emailError, null, 2));
+        captureError(emailError, { endpoint: 'POST /api/auth/forgot-password', action: 'send_reset_email' });
+      }
+    }
 
     return NextResponse.json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
   } catch (error) {
