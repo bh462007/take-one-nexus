@@ -282,6 +282,21 @@
   // Cleanup on page unload
   window.addEventListener('beforeunload', cleanup);
 
+  // Check if on profile page and trigger popup
+  function checkProfilePage() {
+    if (window.location.pathname === '/profile' || window.location.pathname === '/profile/') {
+      if (window.triggerEmailVerificationReminder) {
+        setTimeout(() => window.triggerEmailVerificationReminder('profile'), 1000);
+      }
+    }
+  }
+
+  // Listen for route changes (for SPA navigation)
+  window.addEventListener('popstate', checkProfilePage);
+  
+  // Initial profile page check
+  checkProfilePage();
+
   // Export trigger function for external use
   window.triggerEmailVerificationReminder = function(triggerType) {
     window.dispatchEvent(new CustomEvent('email-verification-reminder', {
