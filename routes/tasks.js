@@ -9,6 +9,13 @@ const Pusher = require('pusher');
 const prisma = new PrismaClient();
 const router = express.Router();
 
+const taskLimiter = createRateLimiter({
+  limit: 100, // 100 requests per 15 mins
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'tasks'
+});
+
+
 // Configure Pusher (only if credentials are provided)
 let pusher = null;
 if (process.env.PUSHER_APP_ID && process.env.NEXT_PUBLIC_PUSHER_KEY && process.env.PUSHER_SECRET) {
@@ -44,7 +51,7 @@ const adminTaskValidation = [
  * GET /api/tasks/admin/definitions
  * Admin-only: list platform task definitions from credit_tasks table.
  */
-router.get('/admin/definitions', authenticateUser, requireVerified, requireAdmin, async (req, res) => {
+router.get('/admin/definitions', authenticateUser, requireVerified, requireAdmin, taskLimiter, async (req, res) => {
   try {
     const tasks = await prisma.creditTask.findMany({
       orderBy: { created_at: 'desc' },
@@ -80,7 +87,7 @@ router.get('/admin/definitions', authenticateUser, requireVerified, requireAdmin
  * Admin-only: create platform task definitions.
  * Creates tasks in the credit_tasks table so they appear on the Leaderboard.
  */
-router.post('/admin/definitions', authenticateUser, requireVerified, requireAdmin, adminTaskValidation, async (req, res) => {
+router.post('/admin/definitions', authenticateUser, requireVerified, requireAdmin, taskLimiter, adminTaskValidation, async (req, res) => {
   try {
     const { title, description, credits, category, active = true } = req.body;
 
@@ -121,7 +128,7 @@ router.post('/admin/definitions', authenticateUser, requireVerified, requireAdmi
  * PUT /api/tasks/admin/definitions/:id
  * Admin-only: update platform task definitions.
  */
-router.put('/admin/definitions/:id', authenticateUser, requireVerified, requireAdmin, [
+router.put('/admin/definitions/:id', authenticateUser, requireVerified, requireAdmin, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid task ID'),
   ...adminTaskValidation
 ], async (req, res) => {
@@ -174,7 +181,7 @@ router.put('/admin/definitions/:id', authenticateUser, requireVerified, requireA
  * GET /api/tasks/admin/submissions
  * Admin-only: review task submissions.
  */
-router.get('/admin/submissions', authenticateUser, requireVerified, requireAdmin, async (req, res) => {
+router.get('/admin/submissions', authenticateUser, requireVerified, requireAdmin, taskLimiter, async (req, res) => {
   try {
     const submissions = await prisma.taskSubmission.findMany({
       orderBy: { created_at: 'desc' },
@@ -197,7 +204,7 @@ router.get('/admin/submissions', authenticateUser, requireVerified, requireAdmin
  * POST /api/tasks/admin/submissions/:id/approve
  * Admin-only: approve task and allot credits manually.
  */
-router.post('/admin/submissions/:id/approve', authenticateUser, requireVerified, requireAdmin, [
+router.post('/admin/submissions/:id/approve', authenticateUser, requireVerified, requireAdmin, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid submission ID'),
   body('credits').optional().isInt({ min: 0 }).withMessage('Credits must be zero or higher'),
   validateRequest
@@ -267,7 +274,7 @@ router.post('/admin/submissions/:id/approve', authenticateUser, requireVerified,
  * POST /api/tasks/admin/submissions/:id/reject
  * Admin-only: reject task submission.
  */
-router.post('/admin/submissions/:id/reject', authenticateUser, requireVerified, requireAdmin, [
+router.post('/admin/submissions/:id/reject', authenticateUser, requireVerified, requireAdmin, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid submission ID'),
   validateRequest
 ], async (req, res) => {
@@ -296,7 +303,7 @@ router.post('/admin/submissions/:id/reject', authenticateUser, requireVerified, 
  * GET /api/tasks/:conversationId
  * Get all tasks for a conversation
  */
-router.get('/:conversationId', authenticateUser, requireVerified, [
+router.get('/:conversationId', authenticateUser, requireVerified, taskLimiter, [
   param('conversationId').isNumeric().withMessage('Invalid conversation ID'),
   validateRequest
 ], async (req, res) => {
@@ -350,6 +357,7 @@ const taskCreateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 mins
   keyPrefix: 'task-create'
 });
+
 
 router.post('/', authenticateUser, requireVerified, taskCreateLimiter, taskCreateValidation, async (req, res) => {
   try {
@@ -429,7 +437,7 @@ const taskUpdateValidation = [
   validateRequest
 ];
 
-router.patch('/:id', authenticateUser, requireVerified, taskUpdateValidation, async (req, res) => {
+router.patch('/:id', authenticateUser, requireVerified, taskLimiter, taskUpdateValidation, async (req, res) => {
   try {
     const taskId = Number(req.params.id);
     const userId = Number(req.user.id);
@@ -502,7 +510,7 @@ router.patch('/:id', authenticateUser, requireVerified, taskUpdateValidation, as
  * DELETE /api/tasks/:id
  * Delete a task
  */
-router.delete('/:id', authenticateUser, requireVerified, [
+router.delete('/:id', authenticateUser, requireVerified, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid task ID'),
   validateRequest
 ], async (req, res) => {
@@ -563,7 +571,7 @@ router.delete('/:id', authenticateUser, requireVerified, [
  * POST /api/tasks/:id/approve
  * Approve a completed task and award credits
  */
-router.post('/:id/approve', authenticateUser, requireVerified, [
+router.post('/:id/approve', authenticateUser, requireVerified, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid task ID'),
   validateRequest
 ], async (req, res) => {

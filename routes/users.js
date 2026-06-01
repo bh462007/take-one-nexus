@@ -29,6 +29,25 @@ const registerLimiter = createRateLimiter({
   keyPrefix: 'register',
 });
 
+const analyticsTrackLimiter = createRateLimiter({
+  limit: 60, // 60 track events per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'analytics-track',
+});
+
+const authenticatedApiLimiter = createRateLimiter({
+  limit: 100, // 100 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'auth-api',
+});
+
+const profileUpdateLimiter = createRateLimiter({
+  limit: 30, // 30 profile updates per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'profile-update',
+});
+
+
 // Configure Pusher
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID || '',
@@ -74,7 +93,7 @@ function getCookieOptions() {
   const isVercelPreview = Boolean(process.env.VERCEL_URL?.includes('vercel.app'));
   return {
     httpOnly: true,
-    secure: isProd,
+    secure: true, // Always secure to protect tokens and satisfy CodeQL checks
     sameSite: isProd ? 'None' : 'Lax',
     path: '/',
     maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
@@ -542,7 +561,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.get('/admin/list', authenticateUser, async (req, res) => {
+router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req, res) => {
   try {
     const role = String(req.user.role || '').toLowerCase();
     const email = String(req.user.email || '').toLowerCase();
@@ -583,7 +602,7 @@ router.get('/admin/list', authenticateUser, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
+router.put('/:id', authenticateUser, requireSameUser, profileUpdateLimiter, async (req, res) => {
   try {
     const userId = Number(req.params.id);
     const {
@@ -825,7 +844,7 @@ const ALLOWED_EVENT_TYPES = new Set(['profile_view', 'portfolio_view', 'project_
  * Track an analytics event (profile_view, portfolio_view, project_engagement)
  * Public endpoint — protected by event_type whitelist and target user existence check.
  */
-router.post('/analytics/track', async (req, res) => {
+router.post('/analytics/track', analyticsTrackLimiter, async (req, res) => {
   try {
     const { user_id, event_type, target_id } = req.body;
 
@@ -871,7 +890,7 @@ router.post('/analytics/track', async (req, res) => {
  * GET /api/users/analytics/summary
  * Retrieve aggregated analytics summary for the currently logged-in user
  */
-router.get('/analytics/summary', authenticateUser, async (req, res) => {
+router.get('/analytics/summary', authenticateUser, authenticatedApiLimiter, async (req, res) => {
   try {
     const userId = Number(req.user.id);
 
