@@ -572,7 +572,14 @@ nav a:hover::after {
     letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--silver);
-      text-transform: uppercase;
+    margin-top: 4px;
+}
+
+.btn-edit-profile {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--neon);
@@ -581,6 +588,10 @@ nav a:hover::after {
     width: 100%;
     clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
     transition: all 0.3s;
+    margin-top: 16px;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
 }
 
 .btn-edit-profile:hover {
