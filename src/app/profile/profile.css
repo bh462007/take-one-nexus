@@ -27,7 +27,7 @@ body {
     background: var(--void);
     color: var(--cream);
     font-family: 'Space Mono', monospace;
-    cursor: none;
+    cursor: default;
     min-height: 100vh;
 }
 
@@ -58,15 +58,7 @@ body::after {
 
 /* ── CUSTOM CURSOR ── */
 .cur-dot {
-    width: 6px;
-    height: 6px;
-    background: var(--neon);
-    border-radius: 50%;
-    position: fixed;
-    pointer-events: none;
-    z-index: 9999;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 8px var(--neon), 0 0 16px var(--neon);
+    display: none;
 }
 
 /* ── HEADER ── */
@@ -152,7 +144,7 @@ nav a:hover::after {
     font-size: 8px;
     letter-spacing: 0.25em;
     text-transform: uppercase;
-    cursor: none;
+    cursor: pointer;
     transition: all 0.25s;
 }
 
@@ -416,7 +408,7 @@ nav a:hover::after {
     border: none;
     border-radius: 50%;
     font-size: 11px;
-    cursor: none;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -580,19 +572,12 @@ nav a:hover::after {
     letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--silver);
-    margin-top: 4px;
-}
-
-/* ── EDIT BUTTON ── */
-.btn-edit-profile {
-    font-size: 9px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
+      text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--neon);
     padding: 12px 24px;
-    cursor: none;
+    cursor: pointer;
     width: 100%;
     clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
     transition: all 0.3s;
@@ -657,7 +642,7 @@ nav a:hover::after {
     letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--silver);
-    cursor: none;
+    cursor: pointer;
     transition: all 0.3s;
     position: relative;
     opacity: 0.6;
@@ -751,19 +736,27 @@ nav a:hover::after {
 .btn-sm-button {
     background: transparent;
     font-family: 'Space Mono', monospace;
-    cursor: none;
+    cursor: pointer;
 }
 
 /* ── PROJECT GRID ── */
 .project-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 2px;
+    gap: 24px;
+}
+
+@media (max-width: 900px) {
+    .project-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
 }
 
 @media (max-width: 600px) {
     .project-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
 
     .profile-stats {
@@ -776,38 +769,43 @@ nav a:hover::after {
 }
 
 .project-card {
-    height: 180px;
+    height: 200px;
     border: 1px solid var(--border);
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 16px;
-    cursor: none;
+    padding: 20px;
     position: relative;
     overflow: hidden;
-    transition: all 0.4s;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     background-size: cover;
     background-position: center;
+    background-color: rgba(14, 18, 24, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .project-card::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(6, 8, 10, 0.95) 0%, transparent 65%);
+    background: linear-gradient(to top, rgba(6, 8, 10, 0.95) 0%, rgba(6, 8, 10, 0.4) 50%, transparent 100%);
+    transition: background 0.4s;
 }
 
 .project-card::after {
     content: '';
     position: absolute;
     inset: 0;
-    border: 1px solid transparent;
-    transition: border-color 0.4s;
+    border: 1px solid rgba(255, 77, 26, 0.1);
+    border-radius: 12px;
+    transition: border-color 0.4s, box-shadow 0.4s;
 }
 
 .project-card:hover {
-    transform: scale(1.03);
-    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(255, 77, 26, 0.12), 0 0 1px 1px var(--neon);
 }
 
 .project-card:hover::after {
@@ -815,31 +813,31 @@ nav a:hover::after {
 }
 
 .pc-genre {
-    font-size: 7px;
+    font-size: 7.5px;
     letter-spacing: 0.4em;
     text-transform: uppercase;
     color: var(--neon);
     position: relative;
     z-index: 1;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .pc-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 16px;
-    letter-spacing: 0.06em;
+    font-size: 18px;
+    letter-spacing: 0.08em;
     color: var(--cream);
     position: relative;
     z-index: 1;
-    line-height: 1.1;
+    line-height: 1.2;
 }
 
 .pc-num {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    font-size: 7px;
-    color: var(--dim);
+    top: 14px;
+    right: 14px;
+    font-size: 7.5px;
+    color: var(--silver);
     letter-spacing: 0.2em;
     z-index: 1;
 }
@@ -848,13 +846,29 @@ nav a:hover::after {
 .about-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2px;
+    gap: 20px;
+}
+
+@media (max-width: 600px) {
+    .about-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
 }
 
 .about-item {
     padding: 24px;
-    background: var(--machine);
+    background: rgba(14, 18, 24, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.about-item:hover {
+    border-color: rgba(255, 77, 26, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .about-item label {
@@ -863,31 +877,33 @@ nav a:hover::after {
     text-transform: uppercase;
     color: var(--neon);
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .about-item input,
 .about-item textarea {
     width: 100%;
-    background: none;
-    border: none;
-    border-bottom: 1px solid var(--border);
+    background: rgba(6, 8, 10, 0.3);
+    border: 1px solid rgba(255, 77, 26, 0.1);
+    border-radius: 6px;
     color: var(--cream);
     font-family: 'Space Mono', monospace;
-    font-size: 12px;
+    font-size: 13px;
     outline: none;
-    padding: 6px 0;
-    transition: border-color 0.3s;
+    padding: 10px 14px;
+    transition: all 0.3s ease;
 }
 
 .about-item input:focus,
 .about-item textarea:focus {
     border-color: var(--neon);
+    background: rgba(6, 8, 10, 0.5);
+    box-shadow: 0 0 12px rgba(255, 77, 26, 0.15);
 }
 
 .about-item textarea {
     resize: none;
-    min-height: 80px;
+    min-height: 100px;
 }
 
 .about-item.full {
@@ -895,14 +911,14 @@ nav a:hover::after {
 }
 
 .save-btn {
-    font-size: 9px;
+    font-size: 9.5px;
     letter-spacing: 0.25em;
     text-transform: uppercase;
     background: var(--neon);
     color: var(--void);
     border: none;
-    padding: 14px 32px;
-    cursor: none;
+    padding: 14px 36px;
+    cursor: pointer;
     margin-top: 20px;
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
     transition: all 0.3s;
@@ -911,28 +927,46 @@ nav a:hover::after {
 
 .save-btn:hover {
     background: var(--amber);
+    box-shadow: 0 0 35px rgba(255, 166, 32, 0.4);
 }
 
 /* ── COLLABORATE TAB ── */
 .collab-board {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2px;
+    gap: 24px;
+}
+
+@media (max-width: 768px) {
+    .collab-board {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
 }
 
 .collab-column {
     border: 1px solid var(--border);
-    background: rgba(6, 8, 10, 0.36);
-    min-height: 280px;
+    border-radius: 12px;
+    background: rgba(14, 18, 24, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    min-height: 320px;
+    padding: 8px;
+    transition: all 0.3s ease;
+}
+
+.collab-column:hover {
+    border-color: rgba(255, 77, 26, 0.3);
 }
 
 .collab-column-title {
-    padding: 16px 18px;
+    padding: 18px 20px 24px 20px;
     border-bottom: 1px solid var(--border);
     color: var(--neon);
-    font-size: 8px;
+    font-size: 9px;
     letter-spacing: 0.32em;
     text-transform: uppercase;
+    font-weight: 700;
 }
 
 .request-list {
@@ -1081,7 +1115,8 @@ nav a:hover::after {
     font-size: 8px;
     letter-spacing: 0.24em;
     text-transform: uppercase;
-    cursor: none;
+    cursor: pointer;
+    transition: all 0.3s;
 }
 
 .request-action.accept {
@@ -1092,11 +1127,6 @@ nav a:hover::after {
 .request-action.reject {
     border-color: rgba(255, 77, 26, 0.36);
     color: var(--neon);
-}
-
-.request-action:hover,
-.request-contact:hover {
-    filter: brightness(1.15);
 }
 
 @media (max-width: 900px) {
@@ -1208,7 +1238,7 @@ nav a:hover::after {
     font-size: 8px;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    cursor: none;
+    cursor: pointer;
     text-decoration: none;
     text-align: center;
 }
@@ -1412,14 +1442,24 @@ nav a:hover::after {
 .portfolio-role-details {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2px;
-    background: var(--border);
+    gap: 20px;
+    background: transparent;
 }
 
 .portfolio-card-mini {
-    background: var(--machine);
+    background: rgba(14, 18, 24, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     padding: 24px;
     border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.portfolio-card-mini:hover {
+    border-color: rgba(255, 77, 26, 0.35);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
 .portfolio-card-mini strong {
@@ -1598,7 +1638,7 @@ nav a:hover::after {
     border: none;
     color: var(--silver);
     font-size: 32px;
-    cursor: none;
+    cursor: pointer;
     line-height: 1;
     transition: color 0.3s;
 }
@@ -1692,7 +1732,7 @@ nav a:hover::after {
     border: 1px solid var(--border);
     color: var(--silver);
     font-size: 10px;
-    cursor: none;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;

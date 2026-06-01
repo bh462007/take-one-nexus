@@ -60,7 +60,15 @@ router.get('/admin/definitions', authenticateUser, requireVerified, requireAdmin
       }
     });
 
-    res.json({ success: true, data: tasks });
+    const mappedTasks = tasks.map(t => ({
+      ...t,
+      title: t.name,
+      credits: t.credits_rewarded,
+      active: t.is_active,
+      category: t.trigger_type.replace('ADMIN_', '').toLowerCase()
+    }));
+
+    res.json({ success: true, data: mappedTasks });
   } catch (error) {
     console.error('Admin task list error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load admin tasks' });
@@ -87,17 +95,78 @@ router.post('/admin/definitions', authenticateUser, requireVerified, requireAdmi
       }
     });
 
+    const mappedTask = {
+      ...creditTask,
+      title: creditTask.name,
+      credits: creditTask.credits_rewarded,
+      active: creditTask.is_active,
+      category: creditTask.trigger_type.replace('ADMIN_', '').toLowerCase()
+    };
+
     if (pusher) {
       await safePusherTrigger('admin-dashboard', 'update', {
         type: 'ADMIN_TASK_CREATED',
-        task: creditTask
+        task: mappedTask
       });
     }
 
-    res.status(201).json({ success: true, data: creditTask });
+    res.status(201).json({ success: true, data: mappedTask });
   } catch (error) {
     console.error('Admin task create error:', error.message);
     res.status(500).json({ success: false, message: 'Could not create task' });
+  }
+});
+
+/**
+ * PUT /api/tasks/admin/definitions/:id
+ * Admin-only: update platform task definitions.
+ */
+router.put('/admin/definitions/:id', authenticateUser, requireVerified, requireAdmin, [
+  param('id').isNumeric().withMessage('Invalid task ID'),
+  ...adminTaskValidation
+], async (req, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    const { title, description, credits, category, active = true } = req.body;
+
+    const taskExists = await prisma.creditTask.findUnique({
+      where: { id: taskId }
+    });
+
+    if (!taskExists) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const updatedTask = await prisma.creditTask.update({
+      where: { id: taskId },
+      data: {
+        name: title.trim(),
+        description: description?.trim() || null,
+        credits_rewarded: Number(credits),
+        is_active: Boolean(active),
+        trigger_type: `ADMIN_${category.trim().toUpperCase().replace(/\s+/g, '_')}`
+      }
+    });
+
+    const mappedTask = {
+      ...updatedTask,
+      title: updatedTask.name,
+      credits: updatedTask.credits_rewarded,
+      active: updatedTask.is_active,
+      category: updatedTask.trigger_type.replace('ADMIN_', '').toLowerCase()
+    };
+
+    if (pusher) {
+      await safePusherTrigger('admin-dashboard', 'update', {
+        type: 'ADMIN_TASK_UPDATED',
+        task: mappedTask
+      });
+    }
+
+    res.json({ success: true, data: mappedTask });
+  } catch (error) {
+    console.error('Admin task update error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not update task' });
   }
 });
 
