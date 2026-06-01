@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/db');
-const { authenticateUser } = require('../middleware/auth');
+const { authenticateUser, requireAdmin } = require('../middleware/auth');
 const { createRateLimiter } = require('../middleware/rateLimiter');
 const { captureError } = require('../src/lib/sentry');
 const Pusher = require('pusher');
@@ -123,9 +123,23 @@ router.post('/create-order', authenticateUser, paymentLimiter, createOrderValida
 
     const draftId = draftResult.insertId;
 
-    // 2. Setup Razorpay order parameters
-    const amount = 4900; // Rs 49.00 in paise
-    const currency = 'INR';
+    // 2. Setup Razorpay order parameters dynamically from the database
+    let amountVal = 49.00;
+    let currencyVal = 'INR';
+    try {
+      const sysConfig = await safeQuery(
+        "SELECT amount, currency FROM payment_systems WHERE code = 'SCRIPT_UPLOAD' AND is_active = 1 LIMIT 1"
+      );
+      if (sysConfig && sysConfig.length > 0) {
+        amountVal = parseFloat(sysConfig[0].amount);
+        currencyVal = sysConfig[0].currency;
+      }
+    } catch (dbErr) {
+      console.warn('[Payments] Could not query dynamic payment systems, falling back to default:', dbErr.message);
+    }
+
+    const amount = Math.round(amountVal * 100); // Convert to paise
+    const currency = currencyVal;
     let orderId = '';
 
     try {
@@ -404,5 +418,110 @@ router.get('/debug', authenticateUser, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/payments/admin/systems
+ * Secure: Requires Admin. Lists all payment systems, with auto-seeding.
+ */
+router.get('/admin/systems', authenticateUser, requireAdmin, async (req, res) => {
+  try {
+    // 1. Check if empty
+    const countResult = await safeQuery('SELECT COUNT(*) AS count FROM payment_systems');
+    if (countResult[0].count === 0) {
+      console.log('[Payments Admin] Seeding default payment system SCRIPT_UPLOAD...');
+      await safeQuery(
+        `INSERT INTO payment_systems (name, code, amount, currency, description, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+        [
+          'Script Upload Verification',
+          'SCRIPT_UPLOAD',
+          49.00,
+          'INR',
+          'Verification fee to process and promote script submissions to public listings.'
+        ]
+      );
+    }
+
+    // 2. Fetch all payment systems
+    const systems = await safeQuery('SELECT * FROM payment_systems ORDER BY id ASC');
+    return res.json({ success: true, data: systems });
+  } catch (error) {
+    console.error('[Payments Admin List Error]:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to retrieve payment systems' });
+  }
+});
+
+/**
+ * PUT /api/payments/admin/systems/:id
+ * Secure: Requires Admin. Updates the payment amount, active status, or description.
+ */
+router.put('/admin/systems/:id', authenticateUser, requireAdmin, async (req, res) => {
+  try {
+    const systemId = Number(req.params.id);
+    const { amount, is_active, description } = req.body;
+
+    if (amount === undefined || isNaN(Number(amount)) || Number(amount) < 0) {
+      return res.status(400).json({ success: false, message: 'A valid amount is required' });
+    }
+
+    // Update payment system
+    await safeQuery(
+      `UPDATE payment_systems 
+       SET amount = ?, 
+           is_active = ?, 
+           description = ?, 
+           updated_at = NOW() 
+       WHERE id = ?`,
+      [
+        Number(amount),
+        is_active !== undefined ? (is_active ? 1 : 0) : 1,
+        description || '',
+        systemId
+      ]
+    );
+
+    return res.json({ success: true, message: 'Payment system updated successfully' });
+  } catch (error) {
+    console.error('[Payments Admin Update Error]:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to update payment system' });
+  }
+});
+
+/**
+ * GET /api/payments/admin/systems/:code/transactions
+ * Secure: Requires Admin. Lists all successful transactions for a payment system.
+ */
+router.get('/admin/systems/:code/transactions', authenticateUser, requireAdmin, async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    if (code !== 'SCRIPT_UPLOAD') {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Fetch transactions
+    const transactions = await safeQuery(
+      `SELECT 
+        p.id, 
+        p.amount, 
+        p.currency, 
+        p.razorpay_payment_id, 
+        p.created_at, 
+        u.name AS user_name, 
+        u.email AS user_email,
+        COALESCE(s.title, d.title, 'Untitled Draft') AS script_title
+      FROM script_upload_payments p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN scripts s ON p.script_id = s.id
+      LEFT JOIN script_drafts d ON p.draft_id = d.id
+      WHERE p.status = 'successful'
+      ORDER BY p.created_at DESC`
+    );
+
+    return res.json({ success: true, data: transactions });
+  } catch (error) {
+    console.error('[Payments Admin Transactions Error]:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to retrieve transactions' });
+  }
+});
 
 module.exports = router;
