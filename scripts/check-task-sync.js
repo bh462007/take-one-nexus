@@ -4,10 +4,8 @@
  * This script checks both Task and CreditTask tables to verify
  * the synchronization bug between Admin Panel and Leaderboard.
  */
-
 require('dotenv').config();
 const { pool } = require('../config/db');
-
 async function checkTaskSync() {
   console.log('\n=== TASK SYNCHRONIZATION DIAGNOSTIC ===\n');
   
@@ -97,7 +95,6 @@ async function checkTaskSync() {
     await pool.end();
   }
 }
-
 checkTaskSync().catch(err => {
   console.error('Fatal error:', err);
   process.exit(1);

@@ -1,3 +1,5 @@
+let isOwner = false;
+
 /* Logic moved to common.js and ui.js */
 
 /* ── TAB SWITCHING ── */
@@ -165,7 +167,7 @@ function renderPortfolio(profile) {
     detailsWrap.innerHTML = detailsHtml;
 
     const authUser = API.auth.getUser();
-    const isOwner = authUser && profile.id === authUser.id;
+    isOwner = !!(authUser && profile.id === authUser.id);
 
     // 2. Render Featured Work Cards
     if (scripts.length === 0) {
@@ -275,6 +277,7 @@ async function loadProfile() {
     
     // If we have a targetId and it's not us, fetch public profile
     if (targetId && (!authUser || authUser.id !== parseInt(targetId))) {
+        isOwner = false;
         try {
             const res = await fetch(`/api/users/public/${targetId}`);
             const json = await res.json();
@@ -297,6 +300,7 @@ async function loadProfile() {
         return;
     }
 
+    isOwner = true;
     try {
         setProfileGate(false);
         const response = await API.users.getProfile(authUser.id);
