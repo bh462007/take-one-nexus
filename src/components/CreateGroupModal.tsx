@@ -21,12 +21,20 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
       const data = await res.json();
       if (data.success) {
-        const currentUser = JSON.parse(
-          localStorage.getItem('take_one_user') || '{}'
-        );
+        let currentUserId: number | undefined;
+        try {
+          const stored = localStorage.getItem('take_one_user');
+          if (stored) {
+            currentUserId = JSON.parse(stored).id;
+          }
+        } catch (err) {
+          console.error('Failed to retrieve current user from local storage:', err);
+        }
 
         setUsers(
-          data.data.filter((u: User) => u.id !== currentUser.id)
+          currentUserId
+            ? data.data.filter((u: User) => u.id !== currentUserId)
+            : data.data
         );
       }
     } catch (err) {
