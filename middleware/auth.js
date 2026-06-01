@@ -158,9 +158,11 @@ function requireVerified(req, res, next) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
-  // Allow access if email_verified is true OR missing (for legacy tokens)
-  // If explicitly false, block access
-  if (req.user.email_verified === false) {
+  // Only grant access when email_verified is explicitly true.
+  // The previous logic allowed access when the field was absent (undefined),
+  // which let users with old tokens that were issued before email verification
+  // was introduced bypass the verification requirement entirely.
+  if (req.user.email_verified !== true) {
     return res.status(403).json({
       success: false,
       message: 'Email verification required. Please check your inbox.',
