@@ -6,6 +6,7 @@ const { authenticateUser } = require('../middleware/auth');
 const { createRateLimiter } = require('../middleware/rateLimiter');
 const { captureError } = require('../src/lib/sentry');
 const Pusher = require('pusher');
+const { cleanupExpiredDrafts } = require('../utils/cleanupDrafts');
 
 const router = express.Router();
 
@@ -68,6 +69,11 @@ const createOrderValidation = [
 ];
 
 router.post('/create-order', authenticateUser, paymentLimiter, createOrderValidation, async (req, res) => {
+  // Fire-and-forget. Throttled to once per 6 hours in memory.
+  // Handles drafts from abandoned checkouts that never hit verify/cancel.
+  cleanupExpiredDrafts().catch(err =>
+    console.error('[DraftCleanup] Lazy trigger error:', err.message)
+  );
   const validationError = validatePayload(req, res);
   if (validationError) return;
   try {

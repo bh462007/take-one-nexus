@@ -405,6 +405,7 @@ if (require.main === module || process.env.NODE_ENV !== 'production') {
 module.exports = app;
 
 const { seedCreditTasks } = require('./utils/seedCreditTasks');
+const { cleanupExpiredDrafts } = require('./utils/cleanupDrafts');
 
 if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
   connectDB()
@@ -412,6 +413,7 @@ if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
       // Seed default credit tasks
       return seedCreditTasks();
     })
+    .then(() => cleanupExpiredDrafts(true))
     .catch((error) => {
       console.error('Database boot check failed:', error.message);
     });
