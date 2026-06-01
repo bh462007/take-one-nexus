@@ -817,20 +817,39 @@ router.get('/transactions', authenticateUser, async (req, res) => {
   }
 });
 
+// Allowed event types — reject anything outside this set to prevent abuse
+const ALLOWED_EVENT_TYPES = new Set(['profile_view', 'portfolio_view', 'project_engagement']);
+
 /**
  * POST /api/users/analytics/track
  * Track an analytics event (profile_view, portfolio_view, project_engagement)
+ * Public endpoint — protected by event_type whitelist and target user existence check.
  */
 router.post('/analytics/track', async (req, res) => {
   try {
     const { user_id, event_type, target_id } = req.body;
+
     if (!user_id || !event_type) {
       return res.status(400).json({ success: false, message: 'user_id and event_type are required' });
     }
 
+    // Reject unknown event types — prevents arbitrary data injection
+    if (!ALLOWED_EVENT_TYPES.has(event_type)) {
+      return res.status(400).json({ success: false, message: 'Invalid event_type' });
+    }
+
+    // Validate the target user actually exists to prevent inflating counts for non-existent users
+    const [targetRows] = await pool.query(
+      'SELECT id FROM users WHERE id = ? LIMIT 1',
+      [Number(user_id)]
+    );
+    if (targetRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Target user not found' });
+    }
+
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
     // Simple hash to protect visitor PII
-    const hashedIp = crypto.createHash('sha256').update(ip).digest('hex').substring(0, 16);
+    const hashedIp = crypto.createHash('sha256').update(String(ip)).digest('hex').substring(0, 16);
 
     await prisma.analyticsEvent.create({
       data: {
@@ -876,17 +895,39 @@ router.get('/analytics/summary', authenticateUser, async (req, res) => {
       take: 10
     });
 
-    // Create a mock dataset for charts representing the last 7 days of views
-    const mockDailyData = [];
+    // Real per-day aggregation for the last 7 days (profile_view events only)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [dailyRows] = await pool.query(
+      `SELECT DATE(created_at) AS day, COUNT(*) AS views
+       FROM analytics_events
+       WHERE user_id = ? AND event_type = 'profile_view' AND created_at >= ?
+       GROUP BY DATE(created_at)
+       ORDER BY day ASC`,
+      [userId, sevenDaysAgo]
+    );
+
+    // Build a full 7-day map so days with zero events still appear in the chart
+    const dailyMap = {};
+    dailyRows.forEach(row => {
+      // row.day is a Date object from mysql2 — convert to ISO date string key
+      const key = row.day instanceof Date
+        ? row.day.toISOString().slice(0, 10)
+        : String(row.day).slice(0, 10);
+      dailyMap[key] = Number(row.views);
+    });
+
+    const dailyData = [];
     const now = new Date();
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(now.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const key = d.toISOString().slice(0, 10);
       const label = d.toLocaleDateString('en-US', { weekday: 'short' });
-      mockDailyData.push({
-        label,
-        views: Math.floor(Math.random() * 15) + (i === 6 ? profileViews % 5 : 5)
-      });
+      dailyData.push({ label, views: dailyMap[key] || 0 });
     }
 
     res.json({
@@ -896,7 +937,7 @@ router.get('/analytics/summary', authenticateUser, async (req, res) => {
         portfolioViews,
         projectEngagements
       },
-      chartData: mockDailyData,
+      chartData: dailyData,
       recentActivity: recentEvents.map(e => ({
         id: e.id,
         event_type: e.event_type,
