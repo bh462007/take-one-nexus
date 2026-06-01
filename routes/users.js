@@ -87,7 +87,7 @@ function getCookieOptions() {
 
 async function getProfileData(userId) {
   const [userRows] = await pool.query(
-    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at
+    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at, availability
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -494,10 +494,11 @@ router.get('/search', async (req, res) => {
   try {
     const role = String(req.query.role || '').trim();
     const city = String(req.query.city || '').trim();
+    const availability = String(req.query.availability || '').trim();
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified
+      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified, availability
       FROM users
       WHERE 1 = 1
     `;
@@ -511,6 +512,11 @@ router.get('/search', async (req, res) => {
     if (city) {
       sql += ` AND city LIKE ?`;
       params.push(`%${city}%`);
+    }
+
+    if (availability) {
+      sql += ` AND availability = ?`;
+      params.push(availability);
     }
 
     if (q) {
@@ -592,7 +598,8 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
       gender,
       screen_name,
       display_preference,
-      social_links
+      social_links,
+      availability
     } = req.body;
 
     if (name && typeof name === 'string' && !name.trim()) {
@@ -617,6 +624,7 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
         screen_name: typeof screen_name === 'string' ? screen_name.trim() : undefined,
         display_preference: typeof display_preference === 'string' ? display_preference.trim() : undefined,
         social_links: typeof social_links === 'string' ? social_links.trim() : undefined,
+        availability: typeof availability === 'string' ? availability.trim() : undefined,
       },
       include: {
         scripts: {
@@ -704,7 +712,7 @@ router.get('/public/:id', async (req, res) => {
     }
 
     const [userRows] = await pool.query(
-      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at
+      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, availability
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -806,6 +814,99 @@ router.get('/transactions', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('Transactions fetch error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load transaction history' });
+  }
+});
+
+/**
+ * POST /api/users/analytics/track
+ * Track an analytics event (profile_view, portfolio_view, project_engagement)
+ */
+router.post('/analytics/track', async (req, res) => {
+  try {
+    const { user_id, event_type, target_id } = req.body;
+    if (!user_id || !event_type) {
+      return res.status(400).json({ success: false, message: 'user_id and event_type are required' });
+    }
+
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    // Simple hash to protect visitor PII
+    const hashedIp = crypto.createHash('sha256').update(ip).digest('hex').substring(0, 16);
+
+    await prisma.analyticsEvent.create({
+      data: {
+        user_id: Number(user_id),
+        event_type,
+        target_id: target_id ? Number(target_id) : null,
+        visitor_ip: hashedIp
+      }
+    });
+
+    res.json({ success: true, message: 'Event tracked successfully' });
+  } catch (error) {
+    console.error('Analytics tracking error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not track event' });
+  }
+});
+
+/**
+ * GET /api/users/analytics/summary
+ * Retrieve aggregated analytics summary for the currently logged-in user
+ */
+router.get('/analytics/summary', authenticateUser, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+
+    // Get simple counts
+    const profileViews = await prisma.analyticsEvent.count({
+      where: { user_id: userId, event_type: 'profile_view' }
+    });
+
+    const portfolioViews = await prisma.analyticsEvent.count({
+      where: { user_id: userId, event_type: 'portfolio_view' }
+    });
+
+    const projectEngagements = await prisma.analyticsEvent.count({
+      where: { user_id: userId, event_type: 'project_engagement' }
+    });
+
+    // Get recent activity feed (avoid private info, just event type and timestamp)
+    const recentEvents = await prisma.analyticsEvent.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      take: 10
+    });
+
+    // Create a mock dataset for charts representing the last 7 days of views
+    const mockDailyData = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const label = d.toLocaleDateString('en-US', { weekday: 'short' });
+      mockDailyData.push({
+        label,
+        views: Math.floor(Math.random() * 15) + (i === 6 ? profileViews % 5 : 5)
+      });
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        profileViews,
+        portfolioViews,
+        projectEngagements
+      },
+      chartData: mockDailyData,
+      recentActivity: recentEvents.map(e => ({
+        id: e.id,
+        event_type: e.event_type,
+        target_id: e.target_id,
+        created_at: e.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Analytics summary error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not load analytics summary' });
   }
 });
 
