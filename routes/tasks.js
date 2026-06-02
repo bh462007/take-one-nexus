@@ -183,17 +183,35 @@ router.put('/admin/definitions/:id', authenticateUser, requireVerified, requireA
  */
 router.get('/admin/submissions', authenticateUser, requireVerified, requireAdmin, taskLimiter, async (req, res) => {
   try {
-    const submissions = await prisma.taskSubmission.findMany({
-      orderBy: { created_at: 'desc' },
-      include: {
-        task: true,
-        user: {
-          select: { id: true, name: true, email: true, credits: true }
+    const page  = Math.max(1, Number(req.query.page)  || 1);
+    const limit = Math.min(Math.max(1, Number(req.query.limit) || 20), 100);
+    const skip  = (page - 1) * limit;
+
+    const [submissions, total] = await prisma.$transaction([
+      prisma.taskSubmission.findMany({
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          task: true,
+          user: {
+            select: { id: true, name: true, email: true, credits: true }
+          }
         }
+      }),
+      prisma.taskSubmission.count()
+    ]);
+
+    res.json({
+      success: true,
+      data: submissions,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       }
     });
-
-    res.json({ success: true, data: submissions });
   } catch (error) {
     console.error('Admin task submissions error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load task submissions' });
