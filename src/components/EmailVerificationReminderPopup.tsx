@@ -89,6 +89,23 @@ export default function EmailVerificationReminderPopup({
     };
   }, [checkVerificationStatus]);
 
+  // Manage custom cursor z-index when modal shows/hides
+  useEffect(() => {
+    if (show) {
+      // Ensure custom cursor elements are visible above modal
+      const cursorDot = document.getElementById('dot') || document.querySelector('.cur-dot');
+      const cursorCross = document.getElementById('cross') || document.querySelector('.cur-cross');
+      if (cursorDot) (cursorDot as HTMLElement).style.zIndex = '10002';
+      if (cursorCross) (cursorCross as HTMLElement).style.zIndex = '10002';
+    } else {
+      // Reset cursor z-index when modal is hidden
+      const cursorDot = document.getElementById('dot') || document.querySelector('.cur-dot');
+      const cursorCross = document.getElementById('cross') || document.querySelector('.cur-cross');
+      if (cursorDot) (cursorDot as HTMLElement).style.zIndex = '10001';
+      if (cursorCross) (cursorCross as HTMLElement).style.zIndex = '10001';
+    }
+  }, [show]);
+
   // Cooldown timer
   useEffect(() => {
     if (cooldown > 0) {

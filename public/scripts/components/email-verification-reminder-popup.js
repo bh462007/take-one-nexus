@@ -150,12 +150,22 @@
   function showPopup() {
     if (popupOverlay) {
       popupOverlay.style.display = 'flex';
+      // Ensure custom cursor elements are visible above modal
+      const cursorDot = document.getElementById('dot') || document.querySelector('.cur-dot');
+      const cursorCross = document.getElementById('cross') || document.querySelector('.cur-cross');
+      if (cursorDot) cursorDot.style.zIndex = '10002';
+      if (cursorCross) cursorCross.style.zIndex = '10002';
     }
   }
 
   function hidePopup() {
     if (popupOverlay) {
       popupOverlay.style.display = 'none';
+      // Reset cursor z-index
+      const cursorDot = document.getElementById('dot') || document.querySelector('.cur-dot');
+      const cursorCross = document.getElementById('cross') || document.querySelector('.cur-cross');
+      if (cursorDot) cursorDot.style.zIndex = '10001';
+      if (cursorCross) cursorCross.style.zIndex = '10001';
     }
   }
 
