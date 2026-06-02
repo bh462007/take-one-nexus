@@ -17,7 +17,7 @@ export default function EmailVerificationBanner() {
     const check = async () => {
       try {
         const data = await getCurrentUser();
-        if (data.success && data.user && data.user.email_verified === false) {
+        if (data.success && data.user && data.user.email_verified !== true) {
           setEmail(data.user.email || '');
           setShow(true);
         }

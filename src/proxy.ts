@@ -84,9 +84,9 @@ export async function proxy(request: NextRequest) {
       const isVerifiedRoute = VERIFIED_ONLY_ROUTES.some(r => pathname.startsWith(r));
       if (isVerifiedRoute && !isAdminEmail) {
         const emailVerified = payload.email_verified as boolean | undefined;
-        // If field is explicitly false (not just absent), gate the route
-        // Older tokens without the field are allowed through (banner handles it)
-        if (emailVerified === false) {
+        // Only grant access when email_verified is explicitly true.
+        // Legacy tokens lacking the field (undefined/null) are also blocked.
+        if (emailVerified !== true) {
           const url = new URL('/', request.url);
           url.searchParams.set('verify', 'required');
           return NextResponse.redirect(url);
