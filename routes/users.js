@@ -77,7 +77,7 @@ function createToken(user) {
       // secondary_role is critical — requireAdmin/requireSecondaryRole checks this field.
       // Without it, admin subdomain access always fails, causing the redirect loop.
       secondary_role: user.secondary_role || null,
-      email_verified: user.email_verified ?? null
+      email_verified: user.email_verified === 1 || user.email_verified === true
     },
     secret,
     { expiresIn: '10d' }
@@ -146,6 +146,7 @@ async function getProfileData(userId) {
   return {
     ...userRows[0],
     name: formatDisplayName(userRows[0].name),
+    email_verified: userRows[0].email_verified === 1 || userRows[0].email_verified === true,
     scripts: scriptRows
   };
 }
@@ -412,7 +413,7 @@ router.post('/login', loginLimiter, loginValidation, async (req, res) => {
         display_preference: user.display_preference || 'Show Real Name Only',
         social_links: user.social_links || null,
         credits: user.credits || 0,
-        email_verified: user.email_verified ?? true
+        email_verified: user.email_verified === 1 || user.email_verified === true
       },
       token: token
     });
@@ -494,6 +495,23 @@ router.get('/me', authenticateUser, async (req, res) => {
         success: false,
         message: 'User not found'
       });
+    }
+
+    // Auto cookie update if database says verified but token says unverified
+    if (profile.email_verified === true && req.user.email_verified !== true) {
+      try {
+        const updatedUser = {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role,
+          secondary_role: req.user.secondary_role || null,
+          email_verified: true
+        };
+        const token = createToken(updatedUser);
+        res.cookie('token', token, getCookieOptions());
+      } catch (tokenErr) {
+        console.error('[AUTH_DEBUG] Failed to auto-update verification cookie:', tokenErr.message);
+      }
     }
 
     res.json({
@@ -973,4 +991,6 @@ router.get('/analytics/summary', authenticateUser, authenticatedApiLimiter, asyn
   }
 });
 
+router.createToken = createToken;
+router.getCookieOptions = getCookieOptions;
 module.exports = router;

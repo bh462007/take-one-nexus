@@ -83,10 +83,10 @@ export async function proxy(request: NextRequest) {
       // Admin/developer emails bypass this check (always trusted)
       const isVerifiedRoute = VERIFIED_ONLY_ROUTES.some(r => pathname.startsWith(r));
       if (isVerifiedRoute && !isAdminEmail) {
-        const emailVerified = payload.email_verified as boolean | undefined;
-        // Only grant access when email_verified is explicitly true.
+        const emailVerified = payload.email_verified;
+        // Grant access when email_verified is explicitly true or 1 (from legacy database integer formats).
         // Legacy tokens lacking the field (undefined/null) are also blocked.
-        if (emailVerified !== true) {
+        if (emailVerified !== true && emailVerified !== 1) {
           const url = new URL('/', request.url);
           url.searchParams.set('verify', 'required');
           return NextResponse.redirect(url);
