@@ -29,7 +29,14 @@ function authenticateUser(req, res, next) {
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
+    // JWT_SECRET must be set explicitly. The fallback string was public in the
+    // repository; any deployment that omits the variable would silently use it
+    // and be vulnerable to token forgery. Throw early so the misconfiguration
+    // surfaces immediately rather than allowing forged tokens through.
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
     const decoded = jwt.verify(token, secret);
     
     // Attach user to request
