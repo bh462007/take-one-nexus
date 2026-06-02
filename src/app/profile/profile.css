@@ -58,8 +58,18 @@ body::after {
 
 /* ── CUSTOM CURSOR ── */
 .cur-dot {
-    display: none;
+    width: 6px;
+    height: 6px;
+    background: var(--neon);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 10001;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px var(--neon), 0 0 16px var(--neon);
+    transition: opacity 0.2s ease;
 }
+
 
 /* ── HEADER ── */
 header {
