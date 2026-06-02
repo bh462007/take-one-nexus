@@ -1,8 +1,16 @@
 require('dotenv').config();
 
-// 0. Validate critical environment variables in non-production environments
+// 0. Validate critical environment variables
 const isProd = process.env.NODE_ENV === 'production';
-if (!isProd) {
+if (isProd) {
+  if (!process.env.JWT_SECRET) {
+    console.error('\n==================================================');
+    console.error('❌ CRITICAL CONFIGURATION ERROR: JWT_SECRET IS MISSING');
+    console.error('Production environment requires JWT_SECRET to be configured.');
+    console.error('==================================================\n');
+    process.exit(1);
+  }
+} else {
   const hasDB = process.env.DATABASE_URL || process.env.DB_HOST;
   const missing = [];
   if (!process.env.JWT_SECRET) missing.push('JWT_SECRET');

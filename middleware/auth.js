@@ -64,6 +64,13 @@ function authenticateUser(req, res, next) {
     }
     console.error(`[AUTH_FAILURE] Token verification failed:`, error.message);
     
+    if (error.message === 'JWT_SECRET is not configured') {
+      return res.status(500).json({
+        success: false,
+        message: 'Authentication system is not configured. Please contact the administrator.'
+      });
+    }
+    
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,

@@ -58,7 +58,10 @@ const pusher = new Pusher({
 });
 
 function createToken(user) {
-  const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
   
   // Ensure primary admin/dev email always has the Developer role in the session token
   let role = user.role || '';

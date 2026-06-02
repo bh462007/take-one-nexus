@@ -18,7 +18,8 @@ function getOptionalUserId(req) {
   }
   if (!token) return null;
   try {
-    const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return null;
     const decoded = jwt.verify(token, secret);
     if (decoded.exp && Date.now() >= decoded.exp * 1000) {
       return null;

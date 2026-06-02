@@ -46,7 +46,11 @@ export async function proxy(request: NextRequest) {
     }
 
     try {
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new Error('JWT_SECRET is not configured');
+      }
+      const secret = new TextEncoder().encode(jwtSecret);
       const { payload } = await jwtVerify(token, secret);
 
       const userEmail = (payload.email as string || '').toLowerCase();
