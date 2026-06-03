@@ -9,6 +9,7 @@ async function ensureReportsTable() {
     CREATE TABLE IF NOT EXISTS moderation_reports (
       id INT UNSIGNED NOT NULL AUTO_INCREMENT,
       reporter_id INT UNSIGNED NOT NULL,
+      moderator_id INT UNSIGNED DEFAULT NULL,
       target_type VARCHAR(40) NOT NULL,
       target_id INT UNSIGNED DEFAULT NULL,
       reason VARCHAR(160) NOT NULL,
@@ -20,13 +21,43 @@ async function ensureReportsTable() {
       PRIMARY KEY (id),
       KEY idx_reports_status (status, created_at),
       KEY idx_reports_reporter (reporter_id),
+      KEY idx_reports_moderator (moderator_id),
       CONSTRAINT fk_reports_reporter
         FOREIGN KEY (reporter_id)
         REFERENCES users(id)
         ON DELETE CASCADE
+        ON UPDATE CASCADE,
+      CONSTRAINT fk_reports_moderator
+        FOREIGN KEY (moderator_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
         ON UPDATE CASCADE
     )
   `);
+
+  try {
+    await pool.query(`
+      ALTER TABLE moderation_reports
+      ADD COLUMN moderator_id INT UNSIGNED DEFAULT NULL
+    `);
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') {
+      console.error('Error adding moderator_id to moderation_reports:', err.message);
+    }
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE moderation_reports
+      ADD CONSTRAINT fk_reports_moderator
+      FOREIGN KEY (moderator_id)
+      REFERENCES users(id)
+      ON DELETE SET NULL
+      ON UPDATE CASCADE
+    `);
+  } catch (err) {
+    // Ignore if constraint already exists
+  }
 }
 
 router.post('/reports', authenticateUser, requireVerified, async (req, res) => {
@@ -95,11 +126,15 @@ router.get('/reports', authenticateUser, requireRole(['Moderator', 'Admin', 'Dev
         moderation_reports.details,
         moderation_reports.status,
         moderation_reports.moderator_notes,
+        moderation_reports.moderator_id,
         moderation_reports.created_at,
-        users.name AS reporter_name,
-        users.email AS reporter_email
+        reporter.name AS reporter_name,
+        reporter.email AS reporter_email,
+        moderator.name AS moderator_name,
+        moderator.email AS moderator_email
        FROM moderation_reports
-       JOIN users ON users.id = moderation_reports.reporter_id
+       JOIN users reporter ON reporter.id = moderation_reports.reporter_id
+       LEFT JOIN users moderator ON moderator.id = moderation_reports.moderator_id
        ${where}
        ORDER BY moderation_reports.created_at DESC
        LIMIT 80`,
