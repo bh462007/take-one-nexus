@@ -99,12 +99,7 @@ function requireRole(allowedRoles) {
     const isAuthorized = allowedRoles.some(role => role.toLowerCase() === userRole);
 
     // Special case for lead dev email override
-    const email = String(req.user.email || '').toLowerCase();
-    const isAdminOverride = 
-      email === 'aarushgupta289@gmail.com' || 
-      email === 'alok.r25012@csds.rishihood.edu.in';
-
-    if (!isAuthorized && !isAdminOverride) {
+    if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Requires one of these roles: ${allowedRoles.join(', ')}`
@@ -127,19 +122,13 @@ function requireSecondaryRole(allowedRoles) {
 
     const primaryRole = String(req.user.role || '').toLowerCase();
     const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
-    const email = String(req.user.email || '').toLowerCase();
-
-    // Admin email override always passes
-    const isAdminOverride =
-      email === 'aarushgupta289@gmail.com' ||
-      email === 'alok.r25012@csds.rishihood.edu.in';
 
     const isAuthorized = allowedRoles.some(role => {
       const r = role.toLowerCase();
       return primaryRole === r || secondaryRole === r;
     });
 
-    if (!isAuthorized && !isAdminOverride) {
+    if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Requires one of: ${allowedRoles.join(', ')}`

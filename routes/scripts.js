@@ -120,11 +120,8 @@ async function getFreshUser(userId) {
 
 function hasElevatedScriptDeleteAccess(user) {
   const roles = [user?.role, user?.secondary_role].map((role) => String(role || '').toLowerCase());
-  const email = String(user?.email || '').toLowerCase();
   return roles.includes('admin') ||
-    roles.includes('moderator') ||
-    email === 'aarushgupta289@gmail.com' ||
-    email === 'alok.r25012@csds.rishihood.edu.in';
+    roles.includes('moderator');
 }
 
 router.get('/', async (req, res) => {

@@ -71,11 +71,10 @@ function splitCollegeCity(value) {
 
 function isAdmin(user) {
     if (!user) return false;
-    const ADMIN_EMAILS = [
-        'aarushgupta289@gmail.com',
-        'alok.r25012@csds.rishihood.edu.in'
-    ];
-    return ADMIN_EMAILS.includes(user.email) || normalizeRole(user.role) === 'admin';
+    return (
+        normalizeRole(user.role) === 'admin' ||
+        normalizeRole(user.secondary_role) === 'admin'
+    );
 }
 
 function getAvatarUrl(name, gender, customAvatar) {
