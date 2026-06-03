@@ -138,9 +138,10 @@ router.patch('/reports/:id', authenticateUser, requireRole(['Moderator', 'Admin'
     const [result] = await pool.query(
       `UPDATE moderation_reports
        SET status = ?,
-           moderator_notes = ?
+           moderator_notes = ?,
+           moderator_id = ?
        WHERE id = ?`,
-      [status, notes || null, Number(req.params.id)]
+      [status, notes || null, req.user.id, Number(req.params.id)]
     );
 
     if (result.affectedRows === 0) {
