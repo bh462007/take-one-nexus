@@ -64,10 +64,7 @@ function createToken(user) {
   }
   
   // Ensure primary admin/dev email always has the Developer role in the session token
-  let role = user.role || '';
-  if (user.email?.toLowerCase() === 'aarushgupta289@gmail.com') {
-    role = 'Developer';
-  }
+  const role = user.role || '';
 
   return jwt.sign(
     {
@@ -585,13 +582,14 @@ router.get('/search', async (req, res) => {
 router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req, res) => {
   try {
     const role = String(req.user.role || '').toLowerCase();
-    const email = String(req.user.email || '').toLowerCase();
+    const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
+    // Mirrors existing requireAdmin behavior while preserving
+    // developer/moderator access already granted by this route.
     const isAuthorized =
       role === 'developer' ||
       role === 'admin' ||
       role === 'moderator' ||
-      email === 'aarushgupta289@gmail.com' ||
-      email === 'alok.r25012@csds.rishihood.edu.in';
+      secondaryRole === 'admin';
 
     if (!isAuthorized) {
       return res.status(403).json({
