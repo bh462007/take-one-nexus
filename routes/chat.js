@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticateUser, requireVerified } = require('../middleware/auth');
+const { authenticateUser } = require('../middleware/auth');
 const { body, param, query } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
 const { PrismaClient } = require('@prisma/client');
@@ -84,7 +84,7 @@ function transformConversation(c, userId) {
  * GET /api/chat/conversations
  * Get all conversations for the logged-in user
  */
-router.get('/conversations', authenticateUser, requireVerified, async (req, res) => {
+router.get('/conversations', authenticateUser, async (req, res) => {
   try {
     const userId = Number(req.user?.id);
     
@@ -122,7 +122,7 @@ router.get('/conversations', authenticateUser, requireVerified, async (req, res)
  * GET /api/chat/unread-count
  * Get unread message count for the logged-in user
  */
-router.get('/unread-count', authenticateUser, requireVerified, async (req, res) => {
+router.get('/unread-count', authenticateUser, async (req, res) => {
   try {
     const userId = Number(req.user.id);
     const count = await prisma.message.count({
@@ -155,7 +155,7 @@ const directConvValidation = [
   validateRequest
 ];
 
-router.post('/conversations/direct', authenticateUser, requireVerified, directConvValidation, async (req, res) => {
+router.post('/conversations/direct', authenticateUser, directConvValidation, async (req, res) => {
   try {
     const senderId = Number(req.user.id);
     const recipientId = Number(req.body.recipientId);
@@ -233,7 +233,7 @@ const groupConvValidation = [
   validateRequest
 ];
 
-router.post('/conversations/group', authenticateUser, requireVerified, groupConvValidation, async (req, res) => {
+router.post('/conversations/group', authenticateUser, groupConvValidation, async (req, res) => {
   try {
     const senderId = Number(req.user.id);
     const { name, userIds } = req.body;
@@ -272,7 +272,7 @@ router.post('/conversations/group', authenticateUser, requireVerified, groupConv
  * GET /api/chat/messages/:conversationId
  * Get message history for a conversation
  */
-router.get('/messages/:conversationId', authenticateUser, requireVerified, [
+router.get('/messages/:conversationId', authenticateUser, [
   param('conversationId').isNumeric().withMessage('Invalid conversation ID'),
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('before').optional().isNumeric(),
@@ -375,7 +375,7 @@ const messageValidation = [
   validateRequest
 ];
 
-router.post('/messages', authenticateUser, requireVerified, messageValidation, async (req, res) => {
+router.post('/messages', authenticateUser, messageValidation, async (req, res) => {
   try {
     const { conversationId, content, recipientId } = req.body;
     const senderId = Number(req.user?.id);
@@ -526,7 +526,7 @@ router.post('/messages', authenticateUser, requireVerified, messageValidation, a
  * POST /api/chat/typing
  * Notify others that user is typing
  */
-router.post('/typing', authenticateUser, requireVerified, [
+router.post('/typing', authenticateUser, [
   body('conversationId').isNumeric(),
   body('isTyping').isBoolean(),
   validateRequest
@@ -557,7 +557,7 @@ router.post('/typing', authenticateUser, requireVerified, [
  * DELETE /api/chat/conversations/:id
  * Remove user from a conversation (effectively deleting it for them)
  */
-router.delete('/conversations/:id', authenticateUser, requireVerified, [
+router.delete('/conversations/:id', authenticateUser, [
   param('id').isNumeric(),
   validateRequest
 ], async (req, res) => {
@@ -584,7 +584,7 @@ router.delete('/conversations/:id', authenticateUser, requireVerified, [
  * POST /api/chat/conversations/:id/leave
  * Leave a group conversation
  */
-router.post('/conversations/:id/leave', authenticateUser, requireVerified, [
+router.post('/conversations/:id/leave', authenticateUser, [
   param('id').isNumeric(),
   validateRequest
 ], async (req, res) => {
@@ -621,7 +621,7 @@ router.post('/conversations/:id/leave', authenticateUser, requireVerified, [
  * POST /api/chat/conversations/:id/clear
  * Clear all messages in a conversation
  */
-router.post('/conversations/:id/clear', authenticateUser, requireVerified, [
+router.post('/conversations/:id/clear', authenticateUser, [
   param('id').isNumeric(),
   validateRequest
 ], async (req, res) => {
@@ -658,7 +658,7 @@ router.post('/conversations/:id/clear', authenticateUser, requireVerified, [
  * PATCH /api/chat/conversations/:id/avatar
  * Update group conversation avatar
  */
-router.patch('/conversations/:id/avatar', authenticateUser, requireVerified, [
+router.patch('/conversations/:id/avatar', authenticateUser, [
   param('id').isNumeric(),
   body('avatarUrl').trim().notEmpty().withMessage('avatarUrl is required'),
   validateRequest

@@ -8,7 +8,6 @@ import { jwtVerify } from 'jose';
  * (messaging is gated behind verification to prevent spam)
  */
 const VERIFIED_ONLY_ROUTES = [
-  '/chat',
   '/leaderboard',
   '/crew.htm',
   '/project.htm',
