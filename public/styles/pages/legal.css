@@ -23,17 +23,30 @@ body {
 }
 
 header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 20px;
-  padding: 18px 6vw;
-  border-bottom: 1px solid var(--border);
-  background: rgba(6, 8, 10, 0.94);
-  backdrop-filter: blur(12px);
+  padding: 0 30px;
+  height: 64px;
+  width: 90%;
+  max-width: 1100px;
+  margin: 20px auto;
+  border-radius: 50px;
+  background: rgba(12, 14, 18, 0.7);
+  border: 1px solid rgba(255, 77, 26, 0.25);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  position: sticky;
+  top: 20px;
+  z-index: 100;
+}
+
+header:hover {
+  border-color: rgba(255, 77, 26, 0.4);
+  box-shadow: 0 8px 32px rgba(255, 77, 26, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .logo {
