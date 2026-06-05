@@ -147,12 +147,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             toggle.setAttribute('aria-expanded', isOpen);
         });
 
-        // Close when a nav link is clicked
-        headerEl.querySelectorAll('nav a').forEach(link => {
-            link.addEventListener('click', () => {
+        // Close when a nav link is clicked (using event delegation since links are re-rendered dynamically)
+        headerEl.addEventListener('click', (e) => {
+            if (e.target.closest('nav a')) {
                 headerEl.classList.remove('nav-open');
                 toggle.setAttribute('aria-expanded', 'false');
-            });
+            }
         });
 
         // Close on outside click

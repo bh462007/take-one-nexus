@@ -9,11 +9,6 @@ import TaskModal from '@/components/TaskModal';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 import './chat.css';
 
-// ── SKELETON COMPONENT ──
-const Skeleton = ({ className }: { className: string }) => (
-  <div className={`animate-pulse bg-gray-800/50 rounded ${className}`}></div>
-);
-
 
 interface User {
   id: number;
@@ -712,15 +707,16 @@ export default function ChatPage() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+    const timeouts = typingTimeoutRef.current;
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       // Clean up all typing timeouts
-      Object.values(typingTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
+      Object.values(timeouts).forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = () => {
       if (showMenu) setShowMenu(false);
     };
     window.addEventListener('click', handleClickOutside);
@@ -753,6 +749,7 @@ export default function ChatPage() {
 
     setNewMessage('');
     setMessages(prev => [...prev, optimisticMessage]);
+    setSending(true);
     
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
@@ -794,6 +791,8 @@ export default function ChatPage() {
       console.error('Failed to send message', err);
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
       setStatusText('Connection lost. Message failed to send.');
+    } finally {
+      setSending(false);
     }
   };
 
