@@ -287,6 +287,18 @@ nav a:hover::after { width: 100%; }
   animation: badgePulse 2s infinite;
 }
 
+.conv-meta-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conv-mute-icon {
+  color: var(--dim);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
 @keyframes badgePulse {
   0% { box-shadow: 0 0 0px var(--glow); }
   50% { box-shadow: 0 0 10px var(--glow); }
@@ -932,6 +944,28 @@ nav a:hover::after { width: 100%; }
   display: flex;
   flex-direction: column;
   gap: 32px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 77, 26, 0.4) rgba(255, 255, 255, 0.03);
+}
+
+.details-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.details-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 3px;
+}
+
+.details-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 77, 26, 0.4);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.details-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 77, 26, 0.7);
+  box-shadow: 0 0 6px rgba(255, 77, 26, 0.3);
 }
 
 .details-main-info {
@@ -940,16 +974,36 @@ nav a:hover::after { width: 100%; }
   align-items: center;
   text-align: center;
   gap: 12px;
+  margin-top: 60px;
+}
+
+.details-avatar-wrapper {
+  width: 120px;
+  height: 120px;
+  min-width: 120px;
+  min-height: 120px;
+  max-width: 120px;
+  max-height: 120px;
+  border-radius: 8px;
+  border: 2px solid var(--neon);
+  background: rgba(255, 77, 26, 0.05);
+  box-shadow: 0 0 20px rgba(255, 77, 26, 0.3);
+  margin: 0 auto 8px auto;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 16px;
+  flex-shrink: 0;
 }
 
 .details-avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 8px;
-  border: 2px solid var(--neon);
-  object-fit: cover;
-  box-shadow: 0 0 20px rgba(255, 77, 26, 0.3);
-  margin-bottom: 8px;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .details-main-info h4 {

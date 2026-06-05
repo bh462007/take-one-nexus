@@ -269,6 +269,7 @@ model UserCompletedTask {
   user             User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
   task             CreditTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
 
+  @@unique([user_id, task_id])
   @@index([user_id])
   @@index([task_id])
   @@map("user_completed_tasks")

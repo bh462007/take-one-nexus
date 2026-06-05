@@ -86,7 +86,7 @@ export default function ChatPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
-  const [isMuted, setIsMuted] = useState(false);
+  const [mutedConvIds, setMutedConvIds] = useState<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -118,6 +118,8 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -428,9 +430,14 @@ export default function ChatPage() {
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    if (!activeConv) return;
+    setMutedConvIds(prev => {
+      const next = new Set(prev);
+      if (next.has(activeConv.id)) next.delete(activeConv.id);
+      else next.add(activeConv.id);
+      return next;
+    });
     setShowMenu(false);
-    // In a real app, this would call an API
   };
 
 
@@ -716,11 +723,15 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = () => {
-      if (showMenu) setShowMenu(false);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!showMenu) return;
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (menuBtnRef.current?.contains(target)) return;
+      setShowMenu(false);
     };
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
   useEffect(() => {
@@ -871,7 +882,18 @@ export default function ChatPage() {
                     </div>
                     <div className="conv-meta">
                       {lastTime && <div className="conv-time">{lastTime}</div>}
-                      {conv.unread ? <div className="unread-badge">{conv.unread > 9 ? '9+' : conv.unread}</div> : null}
+                      <div className="conv-meta-icons">
+                        {mutedConvIds.has(conv.id) && (
+                          <svg className="conv-mute-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            <path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path>
+                            <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path>
+                            <path d="M18 8a6 6 0 0 0-9.33-5"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        )}
+                        {conv.unread ? <div className="unread-badge">{conv.unread > 9 ? '9+' : conv.unread}</div> : null}
+                      </div>
                     </div>
                   </button>
                 );
@@ -965,9 +987,10 @@ export default function ChatPage() {
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                       </button>
                       <button 
-                        className="header-action-btn" 
+                        ref={menuBtnRef}
+                        className={`header-action-btn ${showMenu ? 'active' : ''}`} 
                         title="More Options"
-                        onClick={() => setShowMenu(!showMenu)}
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                       >
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                       </button>
@@ -975,9 +998,10 @@ export default function ChatPage() {
                   ) : (
                     <>
                       <button 
+                        ref={menuBtnRef}
                         className={`header-action-btn ${showMenu ? 'active' : ''}`} 
                         title="More Options"
-                        onClick={() => setShowMenu(!showMenu)}
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                       >
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                       </button>
@@ -1007,11 +1031,11 @@ export default function ChatPage() {
                 )}
 
                 {showMenu && (
-                  <div className="chat-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                  <div ref={menuRef} className="chat-dropdown-menu" onClick={(e) => e.stopPropagation()}>
                     {activeConv.is_group ? (
                       <>
                         <button onClick={() => { setShowDetails(true); setShowMenu(false); }}>Group Info</button>
-                        <button onClick={() => toggleMute()}>{isMuted ? 'Unmute Group' : 'Mute Group'}</button>
+                        <button onClick={() => toggleMute()}>{mutedConvIds.has(activeConv.id) ? 'Unmute Group' : 'Mute Group'}</button>
                         <button onClick={() => handleClearChat(activeConv.id)}>Clear Chat</button>
                         <button className="danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
                       </>
@@ -1022,7 +1046,7 @@ export default function ChatPage() {
                           else setShowDetails(true); 
                           setShowMenu(false); 
                         }}>View Profile</button>
-                        <button onClick={() => toggleMute()}>{isMuted ? 'Unmute Signal' : 'Mute Signal'}</button>
+                        <button onClick={() => toggleMute()}>{mutedConvIds.has(activeConv.id) ? 'Unmute Signal' : 'Mute Signal'}</button>
                         <button onClick={() => handleClearChat(activeConv.id)}>Clear History</button>
                         <button className="danger" onClick={() => handleDeleteConversation(activeConv.id)}>Delete Transmission</button>
                       </>
@@ -1242,12 +1266,15 @@ export default function ChatPage() {
                   </header>
                   <div className="details-content">
                     <div className="details-main-info">
-                      <img 
-                        src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
-                        alt="" 
-                        className="details-avatar" 
-                        loading="lazy" decoding="async"
-                      />
+                      <div className="details-avatar-wrapper">
+                        <img 
+                          src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
+                          alt="" 
+                          className="details-avatar" 
+                          loading="lazy" decoding="async"
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                        />
+                      </div>
                       <h4>{activeConv.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}</h4>
                       {!activeConv.is_group && <span className="details-role">{activeRecipient?.role || 'Crew Member'}</span>}
                       
