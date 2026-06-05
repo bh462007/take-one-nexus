@@ -416,9 +416,14 @@ module.exports = app;
 
 const { seedCreditTasks } = require('./utils/seedCreditTasks');
 const { cleanupExpiredDrafts } = require('./utils/cleanupDrafts');
+const { initializeModerationTable } = require('./utils/dbInit');
 
 if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
   connectDB()
+    .then(() => {
+      // Initialize database tables
+      return initializeModerationTable();
+    })
     .then(() => {
       // Seed default credit tasks
       return seedCreditTasks();
