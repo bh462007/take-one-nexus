@@ -139,9 +139,6 @@ router.get('/', async (req, res) => {
         scripts.work_type,
         scripts.media_links,
         scripts.role_data,
-        scripts.payment_status,
-        scripts.payment_id,
-        scripts.payment_verified,
         users.name AS author_name,
         users.screen_name,
         users.display_preference
@@ -182,9 +179,6 @@ router.get('/search', async (req, res) => {
         scripts.work_type,
         scripts.media_links,
         scripts.role_data,
-        scripts.payment_status,
-        scripts.payment_id,
-        scripts.payment_verified,
         users.name AS author_name,
         users.screen_name,
         users.display_preference
