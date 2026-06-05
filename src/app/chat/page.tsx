@@ -9,11 +9,6 @@ import TaskModal from '@/components/TaskModal';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 import './chat.css';
 
-// ── SKELETON COMPONENT ──
-const Skeleton = ({ className }: { className: string }) => (
-  <div className={`animate-pulse bg-gray-800/50 rounded ${className}`}></div>
-);
-
 
 interface User {
   id: number;
@@ -719,10 +714,11 @@ export default function ChatPage() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+    const timeouts = typingTimeoutRef.current;
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       // Clean up all typing timeouts
-      Object.values(typingTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
+      Object.values(timeouts).forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
@@ -764,6 +760,7 @@ export default function ChatPage() {
 
     setNewMessage('');
     setMessages(prev => [...prev, optimisticMessage]);
+    setSending(true);
     
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
@@ -805,6 +802,8 @@ export default function ChatPage() {
       console.error('Failed to send message', err);
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
       setStatusText('Connection lost. Message failed to send.');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -823,7 +822,7 @@ export default function ChatPage() {
           {user?.role && ['admin', 'developer', 'moderator'].includes(user.role.toLowerCase()) && (
             <a href="/admin" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
           )}
-          <button onClick={() => window.location.href = '/profile'} className="nav-cta" style={{ border: 'none', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif" }}>
+          <button onClick={() => window.location.href = '/profile'} className="nav-cta">
             My Signal
           </button>
         </nav>
@@ -834,7 +833,7 @@ export default function ChatPage() {
           <div className="sidebar-header">
             <div className="sidebar-title-row">
               <h2>Transmissions</h2>
-              <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta" style={{ border: 'none', cursor: 'pointer', padding: '6px 12px', height: 'auto' }} aria-label="Create Group">+</button>
+              <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta group-add-btn" aria-label="Create Group">+</button>
             </div>
             <div className="sidebar-search-wrap">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>

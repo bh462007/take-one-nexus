@@ -64,13 +64,13 @@ const Navbar = {
         // Add Login/Logout button
         if (user) {
             html += `
-                <button id="loginBtn" class="nav-cta" style="background: var(--neon); border: none; padding: 9px 20px; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;">
+                <button id="loginBtn" class="nav-cta">
                     Logout
                 </button>
             `;
         } else {
             html += `
-                <button id="loginBtn" class="nav-cta" style="background: var(--neon); border: none; padding: 9px 20px; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;">
+                <button id="loginBtn" class="nav-cta">
                     Join Now
                 </button>
             `;
@@ -136,5 +136,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Navbar auto-init failed:', err);
             Navbar.render(null);
         }
+    }
+
+    // ── HAMBURGER TOGGLE ──
+    const toggle = document.getElementById('navToggle');
+    const headerEl = document.querySelector('header');
+    if (toggle && headerEl) {
+        toggle.addEventListener('click', () => {
+            const isOpen = headerEl.classList.toggle('nav-open');
+            toggle.setAttribute('aria-expanded', isOpen);
+        });
+
+        // Close when a nav link is clicked (using event delegation since links are re-rendered dynamically)
+        headerEl.addEventListener('click', (e) => {
+            if (e.target.closest('nav a')) {
+                headerEl.classList.remove('nav-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!headerEl.contains(e.target)) {
+                headerEl.classList.remove('nav-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
     }
 });
