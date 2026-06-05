@@ -1243,12 +1243,15 @@ export default function ChatPage() {
                   </header>
                   <div className="details-content">
                     <div className="details-main-info">
-                      <img 
-                        src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
-                        alt="" 
-                        className="details-avatar" 
-                        loading="lazy" decoding="async"
-                      />
+                      <div className="details-avatar-wrapper">
+                        <img 
+                          src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
+                          alt="" 
+                          className="details-avatar" 
+                          loading="lazy" decoding="async"
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                        />
+                      </div>
                       <h4>{activeConv.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}</h4>
                       {!activeConv.is_group && <span className="details-role">{activeRecipient?.role || 'Crew Member'}</span>}
                       

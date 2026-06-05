@@ -242,7 +242,7 @@ router.post('/conversations/group', authenticateUser, requireVerified, groupConv
       return res.status(400).json({ success: false, message: 'Invalid group data' });
     }
 
-    const allUserIds = [...new Set([senderId, ...userIds.map(id => Number(id))])];
+    const uniqueMemberIds = [...new Set(userIds.map(id => Number(id)))].filter(id => id !== senderId);
     
     const conversation = await prisma.conversation.create({
       data: {
@@ -251,7 +251,7 @@ router.post('/conversations/group', authenticateUser, requireVerified, groupConv
         members: {
           create: [
             { user_id: senderId, role: 'Director' },
-            ...userIds.map(id => ({ user_id: Number(id), role: 'Member' }))
+            ...uniqueMemberIds.map(id => ({ user_id: id, role: 'Member' }))
           ]
         }
       },
