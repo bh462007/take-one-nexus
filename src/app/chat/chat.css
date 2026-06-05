@@ -265,6 +265,18 @@ nav a:hover::after { width: 100%; }
   animation: badgePulse 2s infinite;
 }
 
+.conv-meta-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conv-mute-icon {
+  color: var(--dim);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
 @keyframes badgePulse {
   0% { box-shadow: 0 0 0px var(--glow); }
   50% { box-shadow: 0 0 10px var(--glow); }
