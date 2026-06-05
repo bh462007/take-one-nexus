@@ -3,10 +3,6 @@ import { cache } from 'react';
 import * as jose from 'jose';
 import prisma from '@/lib/prisma';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long'
-);
-
 export const getCurrentUser = cache(async function getCurrentUser() {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
@@ -14,7 +10,12 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   if (!token) return null;
 
   try {
-    const { payload } = await jose.jwtVerify(token, JWT_SECRET);
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+    const secretKey = new TextEncoder().encode(jwtSecret);
+    const { payload } = await jose.jwtVerify(token, secretKey);
     if (!payload.id) return null;
 
     const user = await prisma.user.findUnique({

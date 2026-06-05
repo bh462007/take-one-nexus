@@ -64,9 +64,10 @@ body::after {
     border-radius: 50%;
     position: fixed;
     pointer-events: none;
-    z-index: 9999;
+    z-index: 10001;
     transform: translate(-50%, -50%);
     box-shadow: 0 0 8px var(--neon), 0 0 16px var(--neon);
+    transition: opacity 0.2s ease;
 }
 
 /* ── HEADER ── */

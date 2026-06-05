@@ -7,6 +7,7 @@ import GlobalIssueReporter from '@/components/GlobalIssueReporter';
 import CookieConsentBanner from '@/components/CookieConsentBanner';
 import PostHogProvider from '@/components/PostHogProvider';
 import EmailVerificationBanner from '@/components/EmailVerificationBanner';
+import EmailVerificationReminderPopup from '@/components/EmailVerificationReminderPopup';
 
 const spaceMono = Space_Mono({
   weight: ['400', '700'],
@@ -69,6 +70,7 @@ export default function RootLayout({
           <div className="cur-cross" id="cross"></div>
           <div className="scroll-progress" id="scrollProgress"></div>
           <EmailVerificationBanner />
+          <EmailVerificationReminderPopup />
           {children}
           <GlobalIssueReporter />
           <CookieConsentBanner />

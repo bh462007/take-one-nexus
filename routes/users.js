@@ -29,6 +29,25 @@ const registerLimiter = createRateLimiter({
   keyPrefix: 'register',
 });
 
+const analyticsTrackLimiter = createRateLimiter({
+  limit: 60, // 60 track events per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'analytics-track',
+});
+
+const authenticatedApiLimiter = createRateLimiter({
+  limit: 100, // 100 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'auth-api',
+});
+
+const profileUpdateLimiter = createRateLimiter({
+  limit: 30, // 30 profile updates per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'profile-update',
+});
+
+
 // Configure Pusher
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID || '',
@@ -39,13 +58,13 @@ const pusher = new Pusher({
 });
 
 function createToken(user) {
-  const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
   
   // Ensure primary admin/dev email always has the Developer role in the session token
-  let role = user.role || '';
-  if (user.email?.toLowerCase() === 'aarushgupta289@gmail.com') {
-    role = 'Developer';
-  }
+  const role = user.role || '';
 
   return jwt.sign(
     {
@@ -55,7 +74,7 @@ function createToken(user) {
       // secondary_role is critical — requireAdmin/requireSecondaryRole checks this field.
       // Without it, admin subdomain access always fails, causing the redirect loop.
       secondary_role: user.secondary_role || null,
-      email_verified: user.email_verified ?? null
+      email_verified: user.email_verified === 1 || user.email_verified === true
     },
     secret,
     { expiresIn: '10d' }
@@ -74,7 +93,7 @@ function getCookieOptions() {
   const isVercelPreview = Boolean(process.env.VERCEL_URL?.includes('vercel.app'));
   return {
     httpOnly: true,
-    secure: isProd,
+    secure: true, // Always secure to protect tokens and satisfy CodeQL checks
     sameSite: isProd ? 'None' : 'Lax',
     path: '/',
     maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
@@ -87,7 +106,7 @@ function getCookieOptions() {
 
 async function getProfileData(userId) {
   const [userRows] = await pool.query(
-    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at
+    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at, availability
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -124,6 +143,7 @@ async function getProfileData(userId) {
   return {
     ...userRows[0],
     name: formatDisplayName(userRows[0].name),
+    email_verified: userRows[0].email_verified === 1 || userRows[0].email_verified === true,
     scripts: scriptRows
   };
 }
@@ -390,7 +410,7 @@ router.post('/login', loginLimiter, loginValidation, async (req, res) => {
         display_preference: user.display_preference || 'Show Real Name Only',
         social_links: user.social_links || null,
         credits: user.credits || 0,
-        email_verified: user.email_verified ?? true
+        email_verified: user.email_verified === 1 || user.email_verified === true
       },
       token: token
     });
@@ -474,6 +494,23 @@ router.get('/me', authenticateUser, async (req, res) => {
       });
     }
 
+    // Auto cookie update if database says verified but token says unverified
+    if (profile.email_verified === true && req.user.email_verified !== true) {
+      try {
+        const updatedUser = {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role,
+          secondary_role: req.user.secondary_role || null,
+          email_verified: true
+        };
+        const token = createToken(updatedUser);
+        res.cookie('token', token, getCookieOptions());
+      } catch (tokenErr) {
+        console.error('[AUTH_DEBUG] Failed to auto-update verification cookie:', tokenErr.message);
+      }
+    }
+
     res.json({
       success: true,
       user: profile,
@@ -494,10 +531,11 @@ router.get('/search', async (req, res) => {
   try {
     const role = String(req.query.role || '').trim();
     const city = String(req.query.city || '').trim();
+    const availability = String(req.query.availability || '').trim();
     const q = String(req.query.q || '').trim();
 
     let sql = `
-      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified
+      SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified, availability
       FROM users
       WHERE 1 = 1
     `;
@@ -511,6 +549,11 @@ router.get('/search', async (req, res) => {
     if (city) {
       sql += ` AND city LIKE ?`;
       params.push(`%${city}%`);
+    }
+
+    if (availability) {
+      sql += ` AND availability = ?`;
+      params.push(availability);
     }
 
     if (q) {
@@ -536,16 +579,17 @@ router.get('/search', async (req, res) => {
   }
 });
 
-router.get('/admin/list', authenticateUser, async (req, res) => {
+router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req, res) => {
   try {
     const role = String(req.user.role || '').toLowerCase();
-    const email = String(req.user.email || '').toLowerCase();
+    const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
+    // Mirrors existing requireAdmin behavior while preserving
+    // developer/moderator access already granted by this route.
     const isAuthorized =
       role === 'developer' ||
       role === 'admin' ||
       role === 'moderator' ||
-      email === 'aarushgupta289@gmail.com' ||
-      email === 'alok.r25012@csds.rishihood.edu.in';
+      secondaryRole === 'admin';
 
     if (!isAuthorized) {
       return res.status(403).json({
@@ -577,7 +621,7 @@ router.get('/admin/list', authenticateUser, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
+router.put('/:id', authenticateUser, requireSameUser, profileUpdateLimiter, async (req, res) => {
   try {
     const userId = Number(req.params.id);
     const {
@@ -592,7 +636,8 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
       gender,
       screen_name,
       display_preference,
-      social_links
+      social_links,
+      availability
     } = req.body;
 
     if (name && typeof name === 'string' && !name.trim()) {
@@ -617,6 +662,7 @@ router.put('/:id', authenticateUser, requireSameUser, async (req, res) => {
         screen_name: typeof screen_name === 'string' ? screen_name.trim() : undefined,
         display_preference: typeof display_preference === 'string' ? display_preference.trim() : undefined,
         social_links: typeof social_links === 'string' ? social_links.trim() : undefined,
+        availability: typeof availability === 'string' ? availability.trim() : undefined,
       },
       include: {
         scripts: {
@@ -704,7 +750,7 @@ router.get('/public/:id', async (req, res) => {
     }
 
     const [userRows] = await pool.query(
-      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at
+      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, availability
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -809,4 +855,140 @@ router.get('/transactions', authenticateUser, async (req, res) => {
   }
 });
 
+// Allowed event types — reject anything outside this set to prevent abuse
+const ALLOWED_EVENT_TYPES = new Set(['profile_view', 'portfolio_view', 'project_engagement']);
+
+/**
+ * POST /api/users/analytics/track
+ * Track an analytics event (profile_view, portfolio_view, project_engagement)
+ * Public endpoint — protected by event_type whitelist and target user existence check.
+ */
+router.post('/analytics/track', analyticsTrackLimiter, async (req, res) => {
+  try {
+    const { user_id, event_type, target_id } = req.body;
+
+    if (!user_id || !event_type) {
+      return res.status(400).json({ success: false, message: 'user_id and event_type are required' });
+    }
+
+    // Reject unknown event types — prevents arbitrary data injection
+    if (!ALLOWED_EVENT_TYPES.has(event_type)) {
+      return res.status(400).json({ success: false, message: 'Invalid event_type' });
+    }
+
+    // Validate the target user actually exists to prevent inflating counts for non-existent users
+    const [targetRows] = await pool.query(
+      'SELECT id FROM users WHERE id = ? LIMIT 1',
+      [Number(user_id)]
+    );
+    if (targetRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Target user not found' });
+    }
+
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    // Simple hash to protect visitor PII
+    const hashedIp = crypto.createHash('sha256').update(String(ip)).digest('hex').substring(0, 16);
+
+    await prisma.analyticsEvent.create({
+      data: {
+        user_id: Number(user_id),
+        event_type,
+        target_id: target_id ? Number(target_id) : null,
+        visitor_ip: hashedIp
+      }
+    });
+
+    res.json({ success: true, message: 'Event tracked successfully' });
+  } catch (error) {
+    console.error('Analytics tracking error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not track event' });
+  }
+});
+
+/**
+ * GET /api/users/analytics/summary
+ * Retrieve aggregated analytics summary for the currently logged-in user
+ */
+router.get('/analytics/summary', authenticateUser, authenticatedApiLimiter, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+
+    // Get simple counts
+    const profileViews = await prisma.analyticsEvent.count({
+      where: { user_id: userId, event_type: 'profile_view' }
+    });
+
+    const portfolioViews = await prisma.analyticsEvent.count({
+      where: { user_id: userId, event_type: 'portfolio_view' }
+    });
+
+    const projectEngagements = await prisma.analyticsEvent.count({
+      where: { user_id: userId, event_type: 'project_engagement' }
+    });
+
+    // Get recent activity feed (avoid private info, just event type and timestamp)
+    const recentEvents = await prisma.analyticsEvent.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      take: 10
+    });
+
+    // Real per-day aggregation for the last 7 days (profile_view events only)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [dailyRows] = await pool.query(
+      `SELECT DATE(created_at) AS day, COUNT(*) AS views
+       FROM analytics_events
+       WHERE user_id = ? AND event_type = 'profile_view' AND created_at >= ?
+       GROUP BY DATE(created_at)
+       ORDER BY day ASC`,
+      [userId, sevenDaysAgo]
+    );
+
+    // Build a full 7-day map so days with zero events still appear in the chart
+    const dailyMap = {};
+    dailyRows.forEach(row => {
+      // row.day is a Date object from mysql2 — convert to ISO date string key
+      const key = row.day instanceof Date
+        ? row.day.toISOString().slice(0, 10)
+        : String(row.day).slice(0, 10);
+      dailyMap[key] = Number(row.views);
+    });
+
+    const dailyData = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const key = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString('en-US', { weekday: 'short' });
+      dailyData.push({ label, views: dailyMap[key] || 0 });
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        profileViews,
+        portfolioViews,
+        projectEngagements
+      },
+      chartData: dailyData,
+      recentActivity: recentEvents.map(e => ({
+        id: e.id,
+        event_type: e.event_type,
+        target_id: e.target_id,
+        created_at: e.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Analytics summary error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not load analytics summary' });
+  }
+});
+
+router.createToken = createToken;
+router.getCookieOptions = getCookieOptions;
 module.exports = router;

@@ -150,6 +150,34 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
   CONSTRAINT fk_moderation_logs_moderator FOREIGN KEY (moderator_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS moderation_reports (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  reporter_id INT UNSIGNED NOT NULL,
+  moderator_id INT UNSIGNED DEFAULT NULL,
+  target_type VARCHAR(40) NOT NULL,
+  target_id INT UNSIGNED DEFAULT NULL,
+  reason VARCHAR(160) NOT NULL,
+  details TEXT DEFAULT NULL,
+  status VARCHAR(40) NOT NULL DEFAULT 'open',
+  moderator_notes TEXT DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_reports_status (status, created_at),
+  KEY idx_reports_reporter (reporter_id),
+  KEY idx_reports_moderator (moderator_id),
+  CONSTRAINT fk_reports_reporter
+    FOREIGN KEY (reporter_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_reports_moderator
+    FOREIGN KEY (moderator_id)
+    REFERENCES users(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS tasks (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   conversation_id INT UNSIGNED DEFAULT NULL,

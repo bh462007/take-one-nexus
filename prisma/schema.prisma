@@ -44,10 +44,26 @@ model User {
   memberships         ConversationMember[]
   transactions        CreditTransaction[]
   completed_tasks     UserCompletedTask[]
+  analytics_events    AnalyticsEvent[]
+  availability        String?                @default("Available") @db.VarChar(50)
 
   @@index([secondary_role], map: "idx_users_secondary_role")
   @@index([email_verified], map: "idx_users_email_verified")
   @@map("users")
+}
+
+model AnalyticsEvent {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  user_id     Int      @db.UnsignedInt
+  event_type  String   @db.VarChar(50)
+  target_id   Int?     @db.UnsignedInt
+  visitor_ip  String?  @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([event_type])
+  @@map("analytics_events")
 }
 
 model Script {
@@ -314,3 +330,18 @@ model ScriptUploadPayment {
   @@index([draft_id], map: "idx_payments_draft_id")
   @@map("script_upload_payments")
 }
+
+model PaymentSystem {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  name        String   @unique(map: "uq_payment_systems_name") @db.VarChar(100)
+  code        String   @unique(map: "uq_payment_systems_code") @db.VarChar(50)
+  amount      Decimal  @default(49.00) @db.Decimal(10, 2)
+  currency    String   @default("INR") @db.VarChar(10)
+  description String?  @db.Text
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@map("payment_systems")
+}
+

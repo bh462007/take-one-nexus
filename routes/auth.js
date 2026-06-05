@@ -20,6 +20,16 @@ const forgotPasswordLimiter = createRateLimiter({
   keyPrefix: 'forgot-password'
 });
 
+// Rate limiter for reset password.
+// Without this, an attacker can enumerate reset tokens via brute force at
+// unlimited speed. The window and limit mirror the forgot-password limiter
+// for consistent protection across the password-reset flow.
+const resetPasswordLimiter = createRateLimiter({
+  limit: 5,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  keyPrefix: 'reset-password'
+});
+
 /**
  * Helper function to generate secure reset token
  */
@@ -239,7 +249,7 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
  * POST /api/auth/reset-password
  * Resets user password using valid token
  */
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
   try {
     const { token, password } = req.body;
 

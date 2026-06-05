@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
+import { getCurrentUser } from '@/utils/userSession';
 
 export default function EmailVerificationBanner() {
   const [show, setShow] = useState(false);
@@ -15,10 +16,8 @@ export default function EmailVerificationBanner() {
     // Check if user is logged in and unverified by reading the cookie via API
     const check = async () => {
       try {
-        const res = await fetch('/api/users/me', { credentials: 'include' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.success && data.user && data.user.email_verified === false) {
+        const data = await getCurrentUser();
+        if (data.success && data.user && data.user.email_verified !== true) {
           setEmail(data.user.email || '');
           setShow(true);
         }
@@ -125,7 +124,7 @@ export default function EmailVerificationBanner() {
               ? `Verification uplink transmitted to ${email}.`
               : error
               ? error
-              : 'Messaging, projects, and leaderboard are locked until email signal is confirmed.'}
+              : 'Crew discovery, projects, and leaderboard are locked until email signal is confirmed.'}
           </div>
         </div>
       </div>

@@ -1,3 +1,5 @@
+let isOwner = false;
+
 /* Logic moved to common.js and ui.js */
 
 /* ── TAB SWITCHING ── */
@@ -165,7 +167,7 @@ function renderPortfolio(profile) {
     detailsWrap.innerHTML = detailsHtml;
 
     const authUser = API.auth.getUser();
-    const isOwner = authUser && profile.id === authUser.id;
+    isOwner = !!(authUser && profile.id === authUser.id);
 
     // 2. Render Featured Work Cards
     if (scripts.length === 0) {
@@ -257,6 +259,7 @@ function populateProfile(profile) {
     if (document.getElementById('editScreenName')) document.getElementById('editScreenName').value = profile.screen_name || '';
     if (document.getElementById('editDisplayPreference')) document.getElementById('editDisplayPreference').value = profile.display_preference || 'Show Real Name Only';
     if (document.getElementById('editSocialLinks')) document.getElementById('editSocialLinks').value = profile.social_links || '';
+    if (document.getElementById('editAvailability')) document.getElementById('editAvailability').value = profile.availability || 'Available';
 
     renderSkillBadges(profile.skills);
     renderProjects(profile.scripts || []);
@@ -274,6 +277,7 @@ async function loadProfile() {
     
     // If we have a targetId and it's not us, fetch public profile
     if (targetId && (!authUser || authUser.id !== parseInt(targetId))) {
+        isOwner = false;
         try {
             const res = await fetch(`/api/users/public/${targetId}`);
             const json = await res.json();
@@ -296,6 +300,7 @@ async function loadProfile() {
         return;
     }
 
+    isOwner = true;
     try {
         setProfileGate(false);
         const response = await API.users.getProfile(authUser.id);
@@ -545,7 +550,8 @@ async function saveProfile() {
         skills: document.getElementById('editSkills')?.value.trim() || '',
         screen_name: document.getElementById('editScreenName')?.value.trim() || '',
         display_preference: document.getElementById('editDisplayPreference')?.value || 'Show Real Name Only',
-        social_links: document.getElementById('editSocialLinks')?.value.trim() || ''
+        social_links: document.getElementById('editSocialLinks')?.value.trim() || '',
+        availability: document.getElementById('editAvailability')?.value || 'Available'
     };
 
     if (!payload.name) {
@@ -568,7 +574,8 @@ async function saveProfile() {
                 role: response.data.role || '',
                 college: response.data.college || '',
                 city: response.data.city || '',
-                gender: response.data.gender || 'Prefer not to say'
+                gender: response.data.gender || 'Prefer not to say',
+                availability: response.data.availability || 'Available'
             });
             if (typeof showToast === 'function') showToast('Profile saved permanently ✦');
         }

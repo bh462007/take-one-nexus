@@ -1,8 +1,16 @@
 require('dotenv').config();
 
-// 0. Validate critical environment variables in non-production environments
+// 0. Validate critical environment variables
 const isProd = process.env.NODE_ENV === 'production';
-if (!isProd) {
+if (isProd) {
+  if (!process.env.JWT_SECRET) {
+    console.error('\n==================================================');
+    console.error('❌ CRITICAL CONFIGURATION ERROR: JWT_SECRET IS MISSING');
+    console.error('Production environment requires JWT_SECRET to be configured.');
+    console.error('==================================================\n');
+    process.exit(1);
+  }
+} else {
   const hasDB = process.env.DATABASE_URL || process.env.DB_HOST;
   const missing = [];
   if (!process.env.JWT_SECRET) missing.push('JWT_SECRET');
@@ -161,25 +169,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 // CSRF token route definition
 app.use('/api', csrfRoutes);
 
+// Global CSRF Protection — applies to all subsequent mutating routes (POST, PUT, DELETE, PATCH)
+app.use(csrfProtection);
+
 // 5. Routes
-// CSRF verification applied to all mutation API route groups
 app.use('/api/home', homeRoutes);
-app.use('/api/users', csrfProtection, userRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/scripts', csrfProtection, scriptRoutes);
-app.use('/api/requests', csrfProtection, requestRoutes);
+app.use('/api/scripts', scriptRoutes);
+app.use('/api/requests', requestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
-app.use('/api/moderation', csrfProtection, moderationRoutes);
-app.use('/api/chat', csrfProtection, chatRoutes);
-app.use('/api/tasks', csrfProtection, tasksRoutes);
-app.use('/api/issues', csrfProtection, issuesRoutes);
-app.use('/api/otp', csrfProtection, otpRoutes);
+app.use('/api/moderation', moderationRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/issues', issuesRoutes);
+app.use('/api/otp', otpRoutes);
 app.use('/api/credits', creditsRoutes);
-app.use('/api/payments', csrfProtection, paymentRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Alias routes — mirror endpoints the frontend expects
-app.use('/api/projects', csrfProtection, scriptRoutes); // /api/projects mirrors /api/scripts
+app.use('/api/projects', scriptRoutes); // /api/projects mirrors /api/scripts
 
 // Top-level leaderboard endpoint
 app.get('/api/leaderboard', async (req, res) => {
@@ -405,6 +415,7 @@ if (require.main === module || process.env.NODE_ENV !== 'production') {
 module.exports = app;
 
 const { seedCreditTasks } = require('./utils/seedCreditTasks');
+const { cleanupExpiredDrafts } = require('./utils/cleanupDrafts');
 
 if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
   connectDB()
@@ -412,6 +423,7 @@ if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
       // Seed default credit tasks
       return seedCreditTasks();
     })
+    .then(() => cleanupExpiredDrafts(true))
     .catch((error) => {
       console.error('Database boot check failed:', error.message);
     });

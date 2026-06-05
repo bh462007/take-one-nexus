@@ -9,14 +9,34 @@ const Pusher = require('pusher');
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// Configure Pusher
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID || '',
-  key: process.env.NEXT_PUBLIC_PUSHER_KEY || '',
-  secret: process.env.PUSHER_SECRET || '',
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || '',
-  useTLS: true
+const taskLimiter = createRateLimiter({
+  limit: 100, // 100 requests per 15 mins
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'tasks'
 });
+
+
+// Configure Pusher (only if credentials are provided)
+let pusher = null;
+if (process.env.PUSHER_APP_ID && process.env.NEXT_PUBLIC_PUSHER_KEY && process.env.PUSHER_SECRET) {
+  pusher = new Pusher({
+    appId: process.env.PUSHER_APP_ID,
+    key: process.env.NEXT_PUBLIC_PUSHER_KEY,
+    secret: process.env.PUSHER_SECRET,
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'ap2',
+    useTLS: true
+  });
+}
+
+// Helper function to safely trigger Pusher events
+async function safePusherTrigger(channel, event, data) {
+  if (!pusher) return;
+  try {
+    await pusher.trigger(channel, event, data);
+  } catch (error) {
+    console.warn('[PUSHER] Failed to trigger event:', error.message);
+  }
+}
 
 const adminTaskValidation = [
   body('title').trim().notEmpty().withMessage('Task title is required').isLength({ max: 255 }),
@@ -29,21 +49,33 @@ const adminTaskValidation = [
 
 /**
  * GET /api/tasks/admin/definitions
- * Admin-only: list platform task definitions.
+ * Admin-only: list platform task definitions from credit_tasks table.
  */
-router.get('/admin/definitions', authenticateUser, requireVerified, requireAdmin, async (req, res) => {
+router.get('/admin/definitions', authenticateUser, requireVerified, requireAdmin, taskLimiter, async (req, res) => {
   try {
-    const tasks = await prisma.task.findMany({
-      where: { conversation_id: null },
+    const tasks = await prisma.creditTask.findMany({
       orderBy: { created_at: 'desc' },
       include: {
-        submissions: {
-          select: { id: true, status: true, credits_awarded: true, user_id: true, created_at: true }
+        completed_by: {
+          select: { 
+            id: true, 
+            user_id: true, 
+            credits_awarded: true, 
+            completed_at: true 
+          }
         }
       }
     });
 
-    res.json({ success: true, data: tasks });
+    const mappedTasks = tasks.map(t => ({
+      ...t,
+      title: t.name,
+      credits: t.credits_rewarded,
+      active: t.is_active,
+      category: t.trigger_type.replace('ADMIN_', '').toLowerCase()
+    }));
+
+    res.json({ success: true, data: mappedTasks });
   } catch (error) {
     console.error('Admin task list error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load admin tasks' });
@@ -53,33 +85,39 @@ router.get('/admin/definitions', authenticateUser, requireVerified, requireAdmin
 /**
  * POST /api/tasks/admin/definitions
  * Admin-only: create platform task definitions.
+ * Creates tasks in the credit_tasks table so they appear on the Leaderboard.
  */
-router.post('/admin/definitions', authenticateUser, requireVerified, requireAdmin, adminTaskValidation, async (req, res) => {
+router.post('/admin/definitions', authenticateUser, requireVerified, requireAdmin, taskLimiter, adminTaskValidation, async (req, res) => {
   try {
     const { title, description, credits, category, active = true } = req.body;
 
-    const task = await prisma.task.create({
+    // Create task in credit_tasks table (for Leaderboard)
+    const creditTask = await prisma.creditTask.create({
       data: {
-        creator_id: Number(req.user.id),
-        title: title.trim(),
+        name: title.trim(),
         description: description?.trim() || null,
-        credits: Number(credits),
-        reward_credits: Number(credits),
-        category: category.trim(),
-        active: Boolean(active),
-        status: active ? 'Active' : 'Inactive',
-        approval_status: 'Pending'
+        credits_rewarded: Number(credits),
+        is_active: Boolean(active),
+        trigger_type: `ADMIN_${category.trim().toUpperCase().replace(/\s+/g, '_')}`
       }
     });
 
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger('admin-dashboard', 'update', {
+    const mappedTask = {
+      ...creditTask,
+      title: creditTask.name,
+      credits: creditTask.credits_rewarded,
+      active: creditTask.is_active,
+      category: creditTask.trigger_type.replace('ADMIN_', '').toLowerCase()
+    };
+
+    if (pusher) {
+      await safePusherTrigger('admin-dashboard', 'update', {
         type: 'ADMIN_TASK_CREATED',
-        task
+        task: mappedTask
       });
     }
 
-    res.status(201).json({ success: true, data: task });
+    res.status(201).json({ success: true, data: mappedTask });
   } catch (error) {
     console.error('Admin task create error:', error.message);
     res.status(500).json({ success: false, message: 'Could not create task' });
@@ -87,22 +125,93 @@ router.post('/admin/definitions', authenticateUser, requireVerified, requireAdmi
 });
 
 /**
- * GET /api/tasks/admin/submissions
- * Admin-only: review task submissions.
+ * PUT /api/tasks/admin/definitions/:id
+ * Admin-only: update platform task definitions.
  */
-router.get('/admin/submissions', authenticateUser, requireVerified, requireAdmin, async (req, res) => {
+router.put('/admin/definitions/:id', authenticateUser, requireVerified, requireAdmin, taskLimiter, [
+  param('id').isNumeric().withMessage('Invalid task ID'),
+  ...adminTaskValidation
+], async (req, res) => {
   try {
-    const submissions = await prisma.taskSubmission.findMany({
-      orderBy: { created_at: 'desc' },
-      include: {
-        task: true,
-        user: {
-          select: { id: true, name: true, email: true, credits: true }
-        }
+    const taskId = Number(req.params.id);
+    const { title, description, credits, category, active = true } = req.body;
+
+    const taskExists = await prisma.creditTask.findUnique({
+      where: { id: taskId }
+    });
+
+    if (!taskExists) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const updatedTask = await prisma.creditTask.update({
+      where: { id: taskId },
+      data: {
+        name: title.trim(),
+        description: description?.trim() || null,
+        credits_rewarded: Number(credits),
+        is_active: Boolean(active),
+        trigger_type: `ADMIN_${category.trim().toUpperCase().replace(/\s+/g, '_')}`
       }
     });
 
-    res.json({ success: true, data: submissions });
+    const mappedTask = {
+      ...updatedTask,
+      title: updatedTask.name,
+      credits: updatedTask.credits_rewarded,
+      active: updatedTask.is_active,
+      category: updatedTask.trigger_type.replace('ADMIN_', '').toLowerCase()
+    };
+
+    if (pusher) {
+      await safePusherTrigger('admin-dashboard', 'update', {
+        type: 'ADMIN_TASK_UPDATED',
+        task: mappedTask
+      });
+    }
+
+    res.json({ success: true, data: mappedTask });
+  } catch (error) {
+    console.error('Admin task update error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not update task' });
+  }
+});
+
+/**
+ * GET /api/tasks/admin/submissions
+ * Admin-only: review task submissions.
+ */
+router.get('/admin/submissions', authenticateUser, requireVerified, requireAdmin, taskLimiter, async (req, res) => {
+  try {
+    const page  = Math.max(1, Number(req.query.page)  || 1);
+    const limit = Math.min(Math.max(1, Number(req.query.limit) || 20), 100);
+    const skip  = (page - 1) * limit;
+
+    const [submissions, total] = await prisma.$transaction([
+      prisma.taskSubmission.findMany({
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          task: true,
+          user: {
+            select: { id: true, name: true, email: true, credits: true }
+          }
+        }
+      }),
+      prisma.taskSubmission.count()
+    ]);
+
+    res.json({
+      success: true,
+      data: submissions,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error('Admin task submissions error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load task submissions' });
@@ -113,7 +222,7 @@ router.get('/admin/submissions', authenticateUser, requireVerified, requireAdmin
  * POST /api/tasks/admin/submissions/:id/approve
  * Admin-only: approve task and allot credits manually.
  */
-router.post('/admin/submissions/:id/approve', authenticateUser, requireVerified, requireAdmin, [
+router.post('/admin/submissions/:id/approve', authenticateUser, requireVerified, requireAdmin, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid submission ID'),
   body('credits').optional().isInt({ min: 0 }).withMessage('Credits must be zero or higher'),
   validateRequest
@@ -158,14 +267,14 @@ router.post('/admin/submissions/:id/approve', authenticateUser, requireVerified,
       })
     ]);
 
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger(`user-${submission.user_id}`, 'credit-update', {
+    if (pusher) {
+      await safePusherTrigger(`user-${submission.user_id}`, 'credit-update', {
         credits: updatedUser.credits,
         change: credits,
         reason: submission.task.title
       });
-      pusher.trigger('global-events', 'leaderboard-update', {});
-      pusher.trigger('admin-dashboard', 'update', {
+      await safePusherTrigger('global-events', 'leaderboard-update', {});
+      await safePusherTrigger('admin-dashboard', 'update', {
         type: 'ADMIN_TASK_APPROVED',
         submissionId,
         transactionId: transaction.id
@@ -183,7 +292,7 @@ router.post('/admin/submissions/:id/approve', authenticateUser, requireVerified,
  * POST /api/tasks/admin/submissions/:id/reject
  * Admin-only: reject task submission.
  */
-router.post('/admin/submissions/:id/reject', authenticateUser, requireVerified, requireAdmin, [
+router.post('/admin/submissions/:id/reject', authenticateUser, requireVerified, requireAdmin, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid submission ID'),
   validateRequest
 ], async (req, res) => {
@@ -194,8 +303,8 @@ router.post('/admin/submissions/:id/reject', authenticateUser, requireVerified, 
       data: { status: 'rejected', credits_awarded: 0 }
     });
 
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger('admin-dashboard', 'update', {
+    if (pusher) {
+      await safePusherTrigger('admin-dashboard', 'update', {
         type: 'ADMIN_TASK_REJECTED',
         submissionId
       });
@@ -212,7 +321,7 @@ router.post('/admin/submissions/:id/reject', authenticateUser, requireVerified, 
  * GET /api/tasks/:conversationId
  * Get all tasks for a conversation
  */
-router.get('/:conversationId', authenticateUser, requireVerified, [
+router.get('/:conversationId', authenticateUser, requireVerified, taskLimiter, [
   param('conversationId').isNumeric().withMessage('Invalid conversation ID'),
   validateRequest
 ], async (req, res) => {
@@ -267,6 +376,7 @@ const taskCreateLimiter = createRateLimiter({
   keyPrefix: 'task-create'
 });
 
+
 router.post('/', authenticateUser, requireVerified, taskCreateLimiter, taskCreateValidation, async (req, res) => {
   try {
     const { conversationId, title, description, priority, assigneeId, dueDate, rewardCredits } = req.body;
@@ -316,8 +426,8 @@ router.post('/', authenticateUser, requireVerified, taskCreateLimiter, taskCreat
     });
 
     // Trigger Pusher update
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger(`conversation-${conversationId}`, 'task-update', {
+    if (pusher) {
+      await safePusherTrigger(`conversation-${conversationId}`, 'task-update', {
         type: 'TASK_CREATED',
         task
       });
@@ -345,7 +455,7 @@ const taskUpdateValidation = [
   validateRequest
 ];
 
-router.patch('/:id', authenticateUser, requireVerified, taskUpdateValidation, async (req, res) => {
+router.patch('/:id', authenticateUser, requireVerified, taskLimiter, taskUpdateValidation, async (req, res) => {
   try {
     const taskId = Number(req.params.id);
     const userId = Number(req.user.id);
@@ -400,8 +510,8 @@ router.patch('/:id', authenticateUser, requireVerified, taskUpdateValidation, as
     });
 
     // Trigger Pusher update
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger(`conversation-${task.conversation_id}`, 'task-update', {
+    if (pusher) {
+      await safePusherTrigger(`conversation-${task.conversation_id}`, 'task-update', {
         type: 'TASK_UPDATED',
         task: updatedTask
       });
@@ -418,7 +528,7 @@ router.patch('/:id', authenticateUser, requireVerified, taskUpdateValidation, as
  * DELETE /api/tasks/:id
  * Delete a task
  */
-router.delete('/:id', authenticateUser, requireVerified, [
+router.delete('/:id', authenticateUser, requireVerified, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid task ID'),
   validateRequest
 ], async (req, res) => {
@@ -461,8 +571,8 @@ router.delete('/:id', authenticateUser, requireVerified, [
     });
 
     // Trigger Pusher update
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger(`conversation-${task.conversation_id}`, 'task-update', {
+    if (pusher) {
+      await safePusherTrigger(`conversation-${task.conversation_id}`, 'task-update', {
         type: 'TASK_DELETED',
         taskId
       });
@@ -479,7 +589,7 @@ router.delete('/:id', authenticateUser, requireVerified, [
  * POST /api/tasks/:id/approve
  * Approve a completed task and award credits
  */
-router.post('/:id/approve', authenticateUser, requireVerified, [
+router.post('/:id/approve', authenticateUser, requireVerified, taskLimiter, [
   param('id').isNumeric().withMessage('Invalid task ID'),
   validateRequest
 ], async (req, res) => {
@@ -540,15 +650,15 @@ router.post('/:id/approve', authenticateUser, requireVerified, [
     ]);
 
     // Trigger Pusher update for conversation
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger(`conversation-${task.conversation_id}`, 'task-update', {
+    if (pusher) {
+      await safePusherTrigger(`conversation-${task.conversation_id}`, 'task-update', {
         type: 'TASK_UPDATED',
         task: updatedTask
       });
 
       // Trigger update for specific user's credits if assigned
       if (task.assignee_id && task.reward_credits > 0) {
-        pusher.trigger(`user-${task.assignee_id}`, 'credit-update', {
+        await safePusherTrigger(`user-${task.assignee_id}`, 'credit-update', {
           credits: updatedUser.credits,
           change: task.reward_credits,
           reason: task.title
@@ -556,7 +666,7 @@ router.post('/:id/approve', authenticateUser, requireVerified, [
       }
       
       // Global leaderboard update trigger
-      pusher.trigger('global-events', 'leaderboard-update', {});
+      await safePusherTrigger('global-events', 'leaderboard-update', {});
     }
 
     res.json({ 

@@ -21,7 +21,21 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
       const data = await res.json();
       if (data.success) {
-        setUsers(data.data);
+        let currentUserId: number | undefined;
+        try {
+          const stored = localStorage.getItem('take_one_user');
+          if (stored) {
+            currentUserId = JSON.parse(stored).id;
+          }
+        } catch (err) {
+          console.error('Failed to retrieve current user from local storage:', err);
+        }
+
+        setUsers(
+          currentUserId
+            ? data.data.filter((u: User) => u.id !== currentUserId)
+            : data.data
+        );
       }
     } catch (err) {
       console.error(err);
@@ -37,7 +51,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
       setSelectedIds([]);
       fetchUsers('');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   useEffect(() => {
@@ -45,7 +59,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
       if (isOpen) fetchUsers(search);
     }, 300);
     return () => clearTimeout(timeoutId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, isOpen]);
 
 
@@ -67,7 +81,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
       <div className="bg-black border border-orange-500/30 p-6 rounded shadow-[0_0_50px_rgba(255,77,26,0.15)] max-w-md w-full relative">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-orange-500 transition-colors">✕</button>
         <h2 className="text-2xl text-white font-bebas tracking-widest mb-6 border-b border-orange-500/20 pb-4">Create Transmission Group</h2>
-        
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-sm text-white">
           <div>
             <label className="block text-xs uppercase tracking-widest text-orange-500 mb-2">Group Name</label>
@@ -76,7 +90,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
           <div>
             <label className="block text-xs uppercase tracking-widest text-orange-500 mb-2">Search Members to Add</label>
             <input value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-gray-900 border border-gray-800 rounded p-3 text-white mb-2 focus:border-orange-500 focus:outline-none transition-all" placeholder="Search by name..." />
-            
+
             <div className="max-h-48 overflow-y-auto border border-gray-800 rounded bg-gray-950">
               {loading && <div className="p-4 text-orange-500/50 text-center text-xs uppercase tracking-widest">Scanning Nexus...</div>}
               {!loading && users.map(u => (

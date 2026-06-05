@@ -25,7 +25,9 @@ The JWT payload stores basic user identity and authorization scopes to minimize 
 ### Signature Verification
 - In production, tokens are cryptographically signed using the `JWT_SECRET` environment variable (minimum 32 characters).
 - If the token is modified or signed with a different key, verification throws a `JsonWebTokenError` and the session is rejected.
-- **Lead Developer Override**: The authentication system includes hardcoded email overrides for project maintainers (`aarushgupta289@gmail.com` and `alok.r25012@csds.rishihood.edu.in`) that automatically grant Developer/Admin privileges in development and staging environments.
+- Admin and Developer access is controlled exclusively through the `role` and
+`secondary_role` fields in the JWT payload. These are populated from the
+database at login and validated by middleware on every authenticated request.
 
 ---
 

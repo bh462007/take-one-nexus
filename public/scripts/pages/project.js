@@ -1597,6 +1597,11 @@ loginForm?.addEventListener('submit', async (e) => {
       closeTakeOneModal(loginModal);
       loginForm.reset();
       updateUIAfterLogin(response.user);
+      
+      // Trigger email verification reminder popup after login
+      if (window.triggerEmailVerificationReminder) {
+        setTimeout(() => window.triggerEmailVerificationReminder('login'), 1500);
+      }
     }
   } catch (err) {
     const errorDiv = document.createElement('div');
@@ -1711,6 +1716,11 @@ registerForm?.addEventListener('submit', async (e) => {
       closeTakeOneModal(registerModal);
       registerForm.reset();
       updateUIAfterLogin(response.user);
+      
+      // Trigger email verification reminder popup after registration
+      if (window.triggerEmailVerificationReminder) {
+        setTimeout(() => window.triggerEmailVerificationReminder('register'), 1500);
+      }
     }
   } catch (err) {
     const errorDiv = document.createElement('div');

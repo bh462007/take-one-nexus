@@ -20,7 +20,7 @@ const isVercelPreview = Boolean(process.env.VERCEL_URL?.includes('vercel.app'));
 const rawCsrfProtection = csrf({
   cookie: {
     httpOnly: false,       // Must be readable by JS for double-submit pattern
-    secure: isProd,        // HTTPS only in production
+    secure: true,        // Always secure to protect CSRF tokens and satisfy CodeQL checks
     sameSite: isProd ? 'None' : 'Lax', // None required for cross-subdomain; Lax safe for localhost
     // Only pin the domain on the custom production domain.
     // On Vercel previews, leave domain undefined so the browser uses the
@@ -30,6 +30,17 @@ const rawCsrfProtection = csrf({
 });
 
 const csrfProtection = (req, res, next) => {
+  // If the request is authenticated via Bearer token, bypass CSRF validation.
+  // Bearer tokens are not subject to CSRF because browsers do not automatically
+  // attach them to cross-origin requests.
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    if (!isProd) {
+      console.log(`[CSRF_DEBUG] Bypassing CSRF for Bearer token authenticated request: ${req.method} ${req.originalUrl}`);
+    }
+    return next();
+  }
+
   if (!isProd) {
     console.log(`[CSRF_DEBUG] Incoming Request: ${req.method} ${req.originalUrl}`);
     console.log(`[CSRF_DEBUG] CSRF Cookie Present: ${Boolean(req.cookies?.['_csrf'] || req.cookies?.['csrf'])}`);

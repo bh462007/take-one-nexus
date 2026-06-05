@@ -119,6 +119,7 @@ export default async function ProfilePage({
     // Display Name Logic
     const displayName = getCanonicalDisplayName(user);
     const credits = user?.credits || 0;
+    const availability = user?.availability || 'Available';
 
     return (
       <>
@@ -188,6 +189,24 @@ export default async function ProfilePage({
                 <div className="profile-screen-name">@{screenName}</div>
               )}
               <div className="profile-role" id="profileRole">{role}</div>
+              <div className="availability-status-wrap" style={{ margin: '8px 0' }}>
+                <span className={`status-badge status-${availability.toLowerCase().replace(' ', '-')}`} style={{
+                  fontSize: '9px',
+                  letterSpacing: '1.5px',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  border: '1px solid',
+                  borderColor: availability === 'Available' ? 'rgba(0, 255, 136, 0.3)' : availability === 'Busy' ? 'rgba(255, 166, 32, 0.3)' : 'rgba(255, 51, 102, 0.3)',
+                  background: availability === 'Available' ? 'rgba(0, 255, 136, 0.06)' : availability === 'Busy' ? 'rgba(255, 166, 32, 0.06)' : 'rgba(255, 51, 102, 0.06)',
+                  color: availability === 'Available' ? '#00FF88' : availability === 'Busy' ? '#FFA620' : '#FF3366',
+                  display: 'inline-block',
+                  boxShadow: availability === 'Available' ? '0 0 10px rgba(0, 255, 136, 0.1)' : availability === 'Busy' ? '0 0 10px rgba(255, 166, 32, 0.1)' : '0 0 10px rgba(255, 51, 102, 0.1)'
+                }}>
+                  {availability}
+                </span>
+              </div>
               <div className="profile-meta" id="profileMeta">
                 {[college, city].filter(Boolean).join(' · ') || 'Location Pending'}
               </div>
@@ -269,6 +288,7 @@ export default async function ProfilePage({
                 {isOwner && <button className="ctab"        data-tab="about">About</button>}
                 <button className="ctab"        data-tab="collab">{isOwner ? 'Collaborate' : 'Status'}</button>
                 <button className="ctab"        data-tab="portfolio">Portfolio</button>
+                {isOwner && <button className="ctab"        data-tab="analytics">Analytics</button>}
                 {isOwner && (
                   <button className="ctab"        data-tab="notifications">
                     Notifications <span className="tab-count" id="notificationCount">0</span>
@@ -358,6 +378,14 @@ export default async function ProfilePage({
                       <option value="Both">Both (Name • Screen Name)</option>
                     </select>
                   </div>
+                  <div className="about-item">
+                    <label htmlFor="editAvailability">Crew Availability Status</label>
+                    <select id="editAvailability" className="profile-role-dropdown" defaultValue={availability}>
+                      <option value="Available">Available</option>
+                      <option value="Busy">Busy</option>
+                      <option value="Not Available">Not Available</option>
+                    </select>
+                  </div>
                   <div className="about-item full">
                     <label htmlFor="editSocialLinks">Social Links (Instagram, LinkedIn, etc.)</label>
                     <input type="text" id="editSocialLinks" defaultValue={user?.social_links || ''} placeholder="Instagram: @rk_visuals, LinkedIn: rk-sharma..." />
@@ -401,7 +429,7 @@ export default async function ProfilePage({
               <div className="tab-pane" id="tab-portfolio">
                 <div className="section-head">
                   <h3>Creative Portfolio</h3>
-                  <div className="portfolio-badge">PRO PROFILE</div>
+                  {/* <div className="portfolio-badge">PRO PROFILE</div> */}
                 </div>
                 <div className="portfolio-container">
                   <div className="portfolio-intro">
@@ -426,6 +454,54 @@ export default async function ProfilePage({
                   </div>
                 </div>
               </div>
+
+              {/* ── ANALYTICS TAB ── */}
+              {isOwner && (
+                <div className="tab-pane" id="tab-analytics">
+                  <div className="section-head">
+                    <h3>Portfolio Analytics Dashboard</h3>
+                    <div className="portfolio-badge">REAL-TIME TELEMETRY</div>
+                  </div>
+                  <div className="analytics-dashboard">
+                    {/* Summary Cards */}
+                    <div className="analytics-summary-cards">
+                      <div className="analytics-card">
+                        <div className="ac-title">Profile Views</div>
+                        <div className="ac-value" id="analyticProfileViews">0</div>
+                        <div className="ac-desc">Total times your profile has been viewed</div>
+                      </div>
+                      <div className="analytics-card">
+                        <div className="ac-title">Portfolio Views</div>
+                        <div className="ac-value" id="analyticPortfolioViews">0</div>
+                        <div className="ac-desc">Views on your professional portfolio items</div>
+                      </div>
+                      <div className="analytics-card">
+                        <div className="ac-title">Project Engagement</div>
+                        <div className="ac-value" id="analyticProjectEngagement">0</div>
+                        <div className="ac-desc">Clicks and link visits on your scripts</div>
+                      </div>
+                    </div>
+
+                    {/* Chart and Feed Section */}
+                    <div className="analytics-details-layout">
+                      <div className="analytics-chart-panel">
+                        <h4>Traffic Graph (Last 7 Days)</h4>
+                        <div className="traffic-chart-container" id="trafficChart">
+                          {/* Built dynamically via SVG in client script */}
+                          <div className="chart-loading">Initializing holographic projections...</div>
+                        </div>
+                      </div>
+
+                      <div className="analytics-feed-panel">
+                        <h4>Recent Visitor Activity</h4>
+                        <div className="analytics-feed-list" id="analyticsFeed">
+                          <div className="collab-empty">No visitor signals detected yet.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ── NOTIFICATIONS TAB ── */}
               <div className="tab-pane" id="tab-notifications">
@@ -734,6 +810,152 @@ export default async function ProfilePage({
                   .catch(function(){ showErr('Connection error. Try again.'); });
               });
             }
+          })();
+        `}</Script>
+
+        {/* ── ANALYTICS TRACKING AND GRAPH SCRIPT ── */}
+        <Script id="analytics-init" strategy="afterInteractive">{`
+          (async function() {
+            var userId = ${user.id};
+            var isOwner = ${isOwner ? 'true' : 'false'};
+
+            // Fetch CSRF token for mutations
+            async function getCsrfToken() {
+              try {
+                var res = await fetch('/api/csrf-token', { credentials: 'include' });
+                var data = await res.json();
+                return data.csrfToken || '';
+              } catch (e) {
+                return '';
+              }
+            }
+
+            // Track page view event immediately
+            if (!isOwner) {
+              var csrf = await getCsrfToken();
+              fetch('/api/users/analytics/track', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+                body: JSON.stringify({
+                  user_id: userId,
+                  event_type: 'profile_view'
+                })
+              }).catch(function(e){ console.error('Failed to track view', e); });
+            }
+
+            // If we are the profile owner, load the summary dashboard data
+            if (isOwner) {
+              async function loadAnalytics() {
+                try {
+                  var res = await fetch('/api/users/analytics/summary', { credentials: 'include' });
+                  var data = await res.json();
+                  if (data.success) {
+                    // Update metric cards
+                    document.getElementById('analyticProfileViews').textContent = data.summary.profileViews || 0;
+                    document.getElementById('analyticPortfolioViews').textContent = data.summary.portfolioViews || 0;
+                    document.getElementById('analyticProjectEngagement').textContent = data.summary.projectEngagements || 0;
+
+                    // Update Feed
+                    var feedEl = document.getElementById('analyticsFeed');
+                    if (data.recentActivity && data.recentActivity.length > 0) {
+                      feedEl.innerHTML = data.recentActivity.map(function(act) {
+                        var timeStr = new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        var dateStr = new Date(act.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                        var actionText = act.event_type === 'profile_view' ? 'Anonymous viewer visited your profile' :
+                                         act.event_type === 'portfolio_view' ? 'Someone opened your portfolio reel' :
+                                         'User interacted with one of your featured scripts';
+                        return '<div class="analytics-feed-item">' +
+                                 '<div class="afi-text">' + actionText + '</div>' +
+                                 '<div class="afi-time">' + dateStr + ' ' + timeStr + '</div>' +
+                               '</div>';
+                      }).join('');
+                    } else {
+                      feedEl.innerHTML = '<div class="collab-empty">No visitor signals detected yet.</div>';
+                    }
+
+                    // Render dynamic SVG chart (zero-dependency)
+                    var chartEl = document.getElementById('trafficChart');
+                    if (chartEl && data.chartData && data.chartData.length > 0) {
+                      var maxVal = Math.max.apply(Math, data.chartData.map(function(o){ return o.views; })) || 1;
+                      var svgWidth = 450;
+                      var svgHeight = 160;
+                      var padding = 25;
+                      var chartH = svgHeight - padding * 2;
+                      var chartW = svgWidth - padding * 2;
+                      
+                      var points = data.chartData.map(function(d, idx) {
+                        var x = padding + (idx * (chartW / 6));
+                        var y = padding + chartH - ((d.views / maxVal) * chartH);
+                        return { x: x, y: y, label: d.label, val: d.views };
+                      });
+
+                      var polyPoints = points.map(function(p){ return p.x + ',' + p.y; }).join(' ');
+                      var fillPoints = (padding) + ',' + (svgHeight - padding) + ' ' + polyPoints + ' ' + (padding + chartW) + ',' + (svgHeight - padding);
+
+                      var svgHtml = '<svg viewBox="0 0 ' + svgWidth + ' ' + svgHeight + '" width="100%" height="100%">' +
+                        // Grid lines
+                        '<line x1="' + padding + '" y1="' + padding + '" x2="' + (padding+chartW) + '" y2="' + padding + '" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4" />' +
+                        '<line x1="' + padding + '" y1="' + (padding + chartH/2) + '" x2="' + (padding+chartW) + '" y2="' + (padding + chartH/2) + '" stroke="rgba(255,255,255,0.05)" stroke-dasharray="4" />' +
+                        '<line x1="' + padding + '" y1="' + (svgHeight - padding) + '" x2="' + (padding+chartW) + '" y2="' + (svgHeight - padding) + '" stroke="rgba(255,255,255,0.15)" />' +
+                        // Area fill
+                        '<polygon points="' + fillPoints + '" fill="url(#gradient)" opacity="0.15" />' +
+                        // Glow line
+                        '<polyline points="' + polyPoints + '" fill="none" stroke="var(--neon)" stroke-width="3" style="filter: drop-shadow(0 0 4px var(--neon))" />' +
+                        // Gradient definition
+                        '<defs>' +
+                          '<linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                            '<stop offset="0%" stop-color="var(--neon)" />' +
+                            '<stop offset="100%" stop-color="transparent" />' +
+                          '</linearGradient>' +
+                        '</defs>';
+
+                      // Add circles and text labels
+                      points.forEach(function(p) {
+                        svgHtml += '<circle cx="' + p.x + '" cy="' + p.y + '" r="4" fill="var(--neon)" />' +
+                                   '<text x="' + p.x + '" y="' + (svgHeight - 8) + '" fill="var(--silver)" font-size="9" text-anchor="middle" font-family="Space Mono, monospace">' + p.label + '</text>' +
+                                   '<text x="' + p.x + '" y="' + (p.y - 8) + '" fill="var(--neon)" font-size="9" text-anchor="middle" font-family="Space Mono, monospace" font-weight="700">' + p.val + '</text>';
+                      });
+
+                      svgHtml += '</svg>';
+                      chartEl.innerHTML = svgHtml;
+                    }
+                  }
+                } catch (e) {
+                  console.error('Error fetching analytics summary', e);
+                }
+              }
+
+              // Load analytics when the page is ready
+              loadAnalytics();
+
+              // Switch Tab custom binding support for Analytics Tab
+              var analyticsBtn = document.querySelector(\'.ctab[data-tab="analytics"]\');
+              if (analyticsBtn) {
+                analyticsBtn.addEventListener(\'click\', function() {
+                  loadAnalytics();
+                });
+              }
+            }
+
+            // Bind click listeners on the Featured Work / Scripts to track portfolio views and engagements
+            document.querySelectorAll(\'.project-card, .portfolio-item-card\').forEach(function(card) {
+              card.addEventListener(\'click\', async function() {
+                if (!isOwner) {
+                  var csrf = await getCsrfToken();
+                  fetch(\'/api/users/analytics/track\', {
+                    method: \'POST\',
+                    credentials: \'include\',
+                    headers: { \'Content-Type\': \'application/json\', \'X-CSRF-Token\': csrf },
+                    body: JSON.stringify({
+                      user_id: userId,
+                      event_type: card.classList.contains(\'portfolio-item-card\') ? \'portfolio_view\' : \'project_engagement\',
+                      target_id: card.getAttribute(\'data-id\') || null
+                    })
+                  }).catch(function(e){});
+                }
+              });
+            });
           })();
         `}</Script>
 
