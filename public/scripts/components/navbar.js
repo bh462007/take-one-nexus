@@ -23,6 +23,7 @@ const Navbar = {
         this.config.forEach(item => {
             let label = item.label;
             let href = item.href;
+            let additionalAttrs = '';
 
             // Role-based renaming for Upload/Workspace
             if (item.id === 'navUploadLink' && user) {
@@ -46,11 +47,16 @@ const Navbar = {
                 href = '/crew';
             }
 
+            // Handle Profile link for unauthenticated users
+            if (item.label === 'Profile' && !user) {
+                additionalAttrs = 'id="navProfileLink" data-requires-auth="true"';
+            }
+
             // Avoid duplication (e.g. if a role is named 'Crew')
             if (addedLabels.has(label.toUpperCase())) return;
             addedLabels.add(label.toUpperCase());
 
-            html += `<a href="${href}" ${item.id ? `id="${item.id}"` : ''}>${label}</a>`;
+            html += `<a href="${href}" ${item.id ? `id="${item.id}"` : ''} ${additionalAttrs}>${label}</a>`;
         });
 
         // Add Admin Panel for admins, developers, and moderators
@@ -123,6 +129,41 @@ const Navbar = {
         }
 
         btn.addEventListener('click', openAuthModalSafely);
+    },
+
+    handleProtectedLinks() {
+        // Handle clicks on protected links (like Profile) for unauthenticated users
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[data-requires-auth="true"]');
+            if (!link) return;
+
+            e.preventDefault();
+            
+            // Show toast notification
+            if (typeof showToast === 'function') {
+                showToast('Please log in to access your profile ✦');
+            }
+
+            // Open login modal
+            const modal = document.getElementById('loginModal');
+            if (!modal) {
+                console.error('Login modal not found');
+                return;
+            }
+
+            try {
+                if (typeof window.openTakeOneModal === 'function') {
+                    window.openTakeOneModal(modal);
+                } else if (typeof openModal === 'function') {
+                    openModal(modal);
+                } else {
+                    modal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                }
+            } catch (error) {
+                console.error('Failed to open login modal:', error);
+            }
+        });
     }
 };
 
@@ -137,6 +178,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             Navbar.render(null);
         }
     }
+
+    // Initialize protected links handler
+    Navbar.handleProtectedLinks();
 
     // ── HAMBURGER TOGGLE ──
     const toggle = document.getElementById('navToggle');
