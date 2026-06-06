@@ -102,11 +102,16 @@ const allowedOrigins = [
   'https://www.takeone-nexus.net.in',
   'https://admin.takeone-nexus.net.in',    // Admin panel subdomain
   'https://scripts.takeone-nexus.net.in',  // Scripts moderation subdomain
-  // Vercel preview deployments — explicitly listed so credentials + cookies are
-  // accepted without relying solely on the wildcard .vercel.app catch-all below
+  // Vercel preview deployments — explicitly whitelisted trusted deployments only
   'https://take-one-nexus.vercel.app',
   'https://admin-take-one.vercel.app',
 ];
+
+// Allow custom origins from environment variable (comma-separated)
+if (process.env.ALLOWED_ORIGINS) {
+  const customOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean);
+  allowedOrigins.push(...customOrigins);
+}
 
 if (!isProd) {
   allowedOrigins.push(
@@ -131,13 +136,9 @@ app.use(cors({
     ) {
       return callback(null, true);
     }
-    
-    // Check for Vercel preview deployments
-    if (origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
 
-    console.warn(`[SECURITY] CORS blocked origin: ${origin}`);
+    // SECURITY: Reject all other origins - removed unsafe .vercel.app wildcard
+    console.warn(`[SECURITY] CORS blocked unauthorized origin: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
