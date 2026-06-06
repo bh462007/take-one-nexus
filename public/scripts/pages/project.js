@@ -284,12 +284,12 @@ function showTransmissionLost(reason, retryFn) {
   overlay.id = '__txLostOverlay';
   overlay.style.cssText = `
     position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0, 0, 0, 0.92);
+    background: rgba(0, 0, 0, 0.85);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     font-family: 'Space Mono', monospace;
     animation: __txFadeIn 0.4s ease forwards;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(4px);
   `;
 
   overlay.innerHTML = `
@@ -318,6 +318,16 @@ function showTransmissionLost(reason, retryFn) {
           transparent 3px
         );
         animation: __txScanline 8s linear infinite;
+      }
+      #__txRetryBtn:hover {
+        background: rgba(255,77,26,0.15);
+        border-color: #ff4d1a;
+        box-shadow: 0 0 20px rgba(255,77,26,0.4), 0 0 40px rgba(255,77,26,0.2);
+        transform: scale(1.05);
+      }
+      #__txDismissBtn:hover {
+        color: rgba(255,255,255,0.5);
+        text-shadow: 0 0 10px rgba(255,255,255,0.3);
       }
     </style>
 
@@ -367,6 +377,7 @@ function showTransmissionLost(reason, retryFn) {
           font-size: 9px; letter-spacing: 0.2em;
           text-transform: uppercase; cursor: pointer;
           padding: 8px;
+          transition: all 0.2s ease;
         ">DISMISS</button>
       </div>
     </div>
