@@ -32,6 +32,11 @@ const LOCAL_ASSET_ROOTS = [
   path.resolve(__dirname, '..', 'uploads')
 ];
 
+// Restrict deletion to uploads directory only to prevent deletion of core application assets
+const DELETION_SAFE_ROOTS = [
+  path.resolve(__dirname, '..', 'uploads')
+];
+
 async function safeQuery(sql, params = []) {
   try {
     const [rows] = await pool.query(sql, params);
@@ -82,12 +87,49 @@ function toSafeLocalPath(assetPath) {
   ) || null;
 }
 
+// Strict path validation for deletion operations - only allows uploads directory
+function toSafeDeletionPath(assetPath) {
+  if (/^https?:\/\//i.test(assetPath) || assetPath.startsWith('data:')) return null;
+
+  const cleanPath = assetPath.split('?')[0].split('#')[0];
+  
+  // Additional check: prevent path traversal attempts
+  const hasTraversal = cleanPath.includes('..') || cleanPath.includes('~');
+  if (hasTraversal) return null;
+  
+  let candidates;
+  // Handle absolute paths starting with /uploads/ specially
+  if (cleanPath.startsWith('/uploads/')) {
+    // Resolve directly against uploads directory
+    candidates = [path.resolve(__dirname, '..', 'uploads', cleanPath.replace(/^\/+uploads\/+/, ''))];
+  } else if (cleanPath.startsWith('/')) {
+    // Other absolute paths resolve against public (will be rejected by root check)
+    candidates = [path.resolve(__dirname, '..', 'public', cleanPath.replace(/^\/+/, ''))];
+  } else {
+    // Relative paths resolve normally
+    candidates = [path.resolve(__dirname, '..', cleanPath)];
+  }
+
+  // Normalize paths for comparison
+  const normalizedCandidates = candidates.map(c => path.normalize(c));
+  
+  return normalizedCandidates.find((candidate) => {
+    // Ensure the path is within one of the deletion-safe roots
+    const isWithinSafeRoot = DELETION_SAFE_ROOTS.some((root) => {
+      const normalizedRoot = path.normalize(root);
+      return candidate === normalizedRoot || candidate.startsWith(`${normalizedRoot}${path.sep}`);
+    });
+    
+    return isWithinSafeRoot;
+  }) || null;
+}
+
 async function deleteLocalAssets(script) {
   const deleted = [];
   const failed = [];
 
   for (const asset of parseAssetCandidates(script)) {
-    const localPath = toSafeLocalPath(asset);
+    const localPath = toSafeDeletionPath(asset);
     if (!localPath) continue;
 
     try {
