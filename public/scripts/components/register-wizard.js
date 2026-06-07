@@ -55,6 +55,56 @@
 
   let currentStep = 1;
 
+  const passwordInput = document.getElementById('registerPassword');
+    if(passwordInput){
+      passwordInput.addEventListener('input', updatePasswordStrength);
+    }
+    function updatePasswordStrength() {
+      const passwordContainer = document.getElementById('passwordStrength');
+      const password = passwordInput.value;
+
+      if(!password.length){
+        passwordContainer.style.display = 'none';
+        return;
+      }
+      passwordContainer.style.display = 'block';
+      const strengthFill = document.getElementById('strengthFill');
+      const strengthText = document.getElementById('strengthText');
+      const ruleLength = document.getElementById('ruleLength');
+      const ruleUpper = document.getElementById('ruleUpper');
+      const ruleNumber = document.getElementById('ruleNumber');
+      const ruleSpecial = document.getElementById('ruleSpecial');
+
+      const hasLength = password.length >= 8;
+      const hasUpper = /[A-Z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+      let score = 0;
+      if (hasLength) score++;
+      if (hasUpper) score++;
+      if (hasNumber) score++;
+      if (hasSpecial) score++;
+
+      ruleLength.textContent = `${hasLength ? '✓' : '✗'} 8+ characters`;
+      ruleUpper.textContent = `${hasUpper ? '✓' : '✗'} Uppercase letter`;
+      ruleNumber.textContent = `${hasNumber ? '✓' : '✗'} Number`;
+      ruleSpecial.textContent = `${hasSpecial ? '✓' : '✗'} Special character`;
+
+      if(score<=1){
+        strengthFill.style.width = '25%';
+        strengthText.textContent = 'Weak';
+        strengthFill.style.background = 'repeating-linear-gradient(90deg,#ff7a18 0,#ff7a18 18px,transparent 18px,transparent 22px)';}
+      else if(score<=3){
+        strengthFill.style.width = '60%';
+        strengthText.textContent = 'Medium';
+        strengthFill.style.background = 'repeating-linear-gradient(90deg,#ff9d2f 0,#ff9d2f 18px,transparent 18px,transparent 22px)';}
+      else{ 
+        strengthFill.style.width = '100%';
+        strengthText.textContent = 'Strong';
+        strengthFill.style.background = 'repeating-linear-gradient(90deg,#ffb347 0,#ffb347 18px,transparent 18px,transparent 22px)';}
+    }
+
   // Define creator vs crew roles for smart filtering
   const CREATOR_ROLES = ['Director', 'Writer', 'Producer'];
   const CREW_ROLES = ['Cinematographer / DP', 'Editor', 'Sound Designer', 'Designer', 'Actor', 'Lighting Crew', 'Set Support', 'Other'];
