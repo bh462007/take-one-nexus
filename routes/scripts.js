@@ -117,7 +117,7 @@ function toSafeDeletionPath(assetPath) {
     // Ensure the path is within one of the deletion-safe roots
     const isWithinSafeRoot = DELETION_SAFE_ROOTS.some((root) => {
       const normalizedRoot = path.normalize(root);
-      return candidate === normalizedRoot || candidate.startsWith(`${normalizedRoot}${path.sep}`);
+      return candidate.startsWith(`${normalizedRoot}${path.sep}`);
     });
     
     return isWithinSafeRoot;
