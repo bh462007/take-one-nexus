@@ -34,7 +34,7 @@ const LOCAL_ASSET_ROOTS = [
 
 // Restrict deletion to uploads directory only to prevent deletion of core application assets
 const DELETION_SAFE_ROOTS = [
-  path.resolve(__dirname, '..', 'uploads')
+  path.resolve(__dirname, '..', 'public', 'assets', 'uploads')
 ];
 
 async function safeQuery(sql, params = []) {
@@ -101,7 +101,7 @@ function toSafeDeletionPath(assetPath) {
   // Handle absolute paths starting with /uploads/ specially
   if (cleanPath.startsWith('/uploads/')) {
     // Resolve directly against uploads directory
-    candidates = [path.resolve(__dirname, '..', 'uploads', cleanPath.replace(/^\/+uploads\/+/, ''))];
+    candidates = [path.resolve(__dirname, '..', 'public', 'assets', 'uploads', cleanPath.replace(/^\/+uploads\/+/, ''))];
   } else if (cleanPath.startsWith('/')) {
     // Other absolute paths resolve against public (will be rejected by root check)
     candidates = [path.resolve(__dirname, '..', 'public', cleanPath.replace(/^\/+/, ''))];
