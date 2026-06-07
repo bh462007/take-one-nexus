@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/db');
 const { authenticateUser, requireRole } = require('../middleware/auth');
+const { PrismaClient } = require('@prisma/client');
 const {
   getEmailStatus,
   sendSmtpTestEmail,
@@ -8,6 +9,7 @@ const {
 } = require('../config/mailer');
 
 const router = express.Router();
+const prisma = new PrismaClient();
 
 // NOTE: Pusher instance was removed from this file as it is not utilized 
 // within the email, stats, or analytics administration routers.
@@ -194,6 +196,42 @@ router.get('/stats', authenticateUser, requireRole(['Admin', 'Developer', 'Moder
   } catch (error) {
     console.error('Stats error:', error.message);
     res.status(500).json({ success: false, message: 'Could not load stats' });
+  }
+});
+
+/**
+ * @route   POST /analytics/cleanup
+ * @desc    Delete analytics events older than retention period
+ * @access  Private (Admin, Developer)
+ */
+router.post('/analytics/cleanup', authenticateUser, requireRole(['Admin', 'Developer']), async (req, res) => {
+  try {
+    const retentionDays = parseInt(process.env.ANALYTICS_RETENTION_DAYS || '90', 10);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    const result = await prisma.analyticsEvent.deleteMany({
+      where: {
+        created_at: {
+          lt: cutoffDate
+        }
+      }
+    });
+
+    console.log(`[Analytics Cleanup] Deleted ${result.count} analytics events older than ${retentionDays} days`);
+
+    res.json({
+      success: true,
+      message: `Deleted ${result.count} analytics events older than ${retentionDays} days`,
+      deleted_count: result.count,
+      cutoff_date: cutoffDate.toISOString()
+    });
+  } catch (error) {
+    console.error('Analytics cleanup error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Could not cleanup analytics data'
+    });
   }
 });
 

@@ -68,16 +68,65 @@ Where analytics collection is required, the following anonymization practices ar
 
 ---
 
-## Data Retention
+## Hash Truncation Strategy
 
-Analytics data should be retained only for as long as necessary to support:
+### Current Implementation
 
-- Product improvement
-- Performance monitoring
-- Security investigations
-- Operational reporting
+The platform uses a truncated SHA-256 hash for visitor identification:
 
-Retention periods should be reviewed periodically.
+- **Algorithm**: SHA-256
+- **Truncation**: First 16 hexadecimal characters (64 bits)
+- **Purpose**: Anonymize IP addresses while maintaining visitor uniqueness
+- **Implementation**: `crypto.createHash('sha256').update(String(ip)).digest('hex').substring(0, 16)`
+
+### Collision Probability Analysis
+
+- **Theoretical Collision Risk**: With 64 bits of entropy, the birthday paradox suggests a 50% collision probability after approximately 4.2 billion unique values
+- **Practical Assessment**: For a platform with thousands to millions of visitors, 64 bits provides sufficient uniqueness
+- **Storage Efficiency**: 16 characters vs 64 characters for full SHA-256 (75% reduction)
+- **Privacy Protection**: Truncation prevents reconstruction of original IP addresses
+
+### Recommendation
+
+**Status**: Current 16-character truncation is appropriate for the platform's scale and privacy requirements.
+
+**Justification**:
+- Sufficient uniqueness for current and projected user base
+- Strong privacy protection through irreversible truncation
+- Efficient storage and indexing
+- No changes required unless platform scales to billions of unique visitors
+
+---
+
+## Data Retention Policy
+
+### Current State
+
+- **Retention Period**: No explicit retention policy (data retained indefinitely)
+- **Impact**: Unbounded storage growth, potential privacy concerns over time
+
+### Recommended Retention Periods
+
+| Data Type | Retention Period | Rationale |
+|-----------|-----------------|-----------|
+| Raw analytics events (profile_view, portfolio_view, project_engagement) | 90 days | Sufficient for trend analysis and debugging |
+| Aggregated daily/weekly metrics | 1 year | Supports long-term product decisions |
+| User-level analytics summaries | 1 year | Balances user insights with privacy |
+| Performance metrics | 6 months | Operational monitoring window |
+
+### Data Lifecycle Management
+
+1. **Automatic Cleanup**: Implement scheduled cleanup jobs to delete expired data
+2. **Archival**: Consider archiving aggregated metrics before deletion
+3. **User Control**: Provide mechanism for users to request analytics data deletion
+4. **Audit Trail**: Log data deletion activities for compliance
+
+### Implementation Priority
+
+- **High**: Add retention period configuration
+- **High**: Implement automatic cleanup job
+- **Medium**: Add user-facing data deletion request
+- **Low**: Implement archival system
 
 ---
 
@@ -110,6 +159,16 @@ When adding analytics-related features:
 2. Avoid storing personal information.
 3. Document newly introduced analytics events.
 4. Review privacy implications before deployment.
+5. Consider retention periods for new data types.
+
+---
+
+## Review Schedule
+
+This analytics strategy should be reviewed:
+- **Quarterly**: Assess data growth and storage metrics
+- **Annually**: Full review of hash truncation and retention policies
+- **On Scale Events**: When user base grows by 10x or reaches new milestone
 
 ---
 
