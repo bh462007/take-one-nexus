@@ -306,10 +306,9 @@ export default function ChatPage() {
   const handlePricingProceed = async () => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch('/api/community/create-order', {
+      const res = await fetchWithCSRF('/api/community/create-order', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({
@@ -327,10 +326,9 @@ export default function ChatPage() {
       if (json.is_founder) {
         // Founder role bypass payment verification
         try {
-          const verifyRes = await fetch('/api/community/verify-payment', {
+          const verifyRes = await fetchWithCSRF('/api/community/verify-payment', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
               'Authorization': token ? `Bearer ${token}` : ''
             },
             body: JSON.stringify({
@@ -370,10 +368,9 @@ export default function ChatPage() {
         order_id: json.order.id,
         handler: async function (response: any) {
           try {
-            const verifyRes = await fetch('/api/community/verify-payment', {
+            const verifyRes = await fetchWithCSRF('/api/community/verify-payment', {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
                 'Authorization': token ? `Bearer ${token}` : ''
               },
               body: JSON.stringify({
@@ -420,10 +417,9 @@ export default function ChatPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch('/api/community/instantiate', {
+      const res = await fetchWithCSRF('/api/community/instantiate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({
