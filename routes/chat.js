@@ -234,38 +234,10 @@ const groupConvValidation = [
 ];
 
 router.post('/conversations/group', authenticateUser, groupConvValidation, async (req, res) => {
-  try {
-    const senderId = Number(req.user.id);
-    const { name, userIds } = req.body;
-    
-    if (!name || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid group data' });
-    }
-
-    const uniqueMemberIds = [...new Set(userIds.map(id => Number(id)))].filter(id => id !== senderId);
-    
-    const conversation = await prisma.conversation.create({
-      data: {
-        name: name,
-        is_group: true,
-        members: {
-          create: [
-            { user_id: senderId, role: 'Director' },
-            ...uniqueMemberIds.map(id => ({ user_id: id, role: 'Member' }))
-          ]
-        }
-      },
-      include: getConversationInclude()
-    });
-
-    res.status(201).json({
-      success: true,
-      data: transformConversation(conversation, senderId)
-    });
-  } catch (error) {
-    console.error('Group conversation error:', error.message);
-    res.status(500).json({ success: false, message: 'Could not create group conversation' });
-  }
+  return res.status(403).json({
+    success: false,
+    message: "Group creation is available only inside Communities."
+  });
 });
 
 /**

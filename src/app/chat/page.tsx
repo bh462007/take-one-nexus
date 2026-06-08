@@ -132,6 +132,8 @@ export default function ChatPage() {
   const [customMembersCount, setCustomMembersCount] = useState(50);
   const [newCommunityName, setNewCommunityName] = useState('');
   const [newCommunityDesc, setNewCommunityDesc] = useState('');
+  const [communityCreationStep, setCommunityCreationStep] = useState(1);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
 
   // Invites & Groups
   const [inviteEmail, setInviteEmail] = useState('');
@@ -301,18 +303,7 @@ export default function ChatPage() {
     }
   };
 
-  const handlePayment = async () => {
-    if (!newCommunityName.trim()) {
-      alert('Please enter a community name');
-      return;
-    }
-
-    const loaded = await loadRazorpayScript();
-    if (!loaded) {
-      alert('Razorpay SDK failed to load. Are you online?');
-      return;
-    }
-
+  const handlePricingProceed = async () => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
       const res = await fetch('/api/community/create-order', {
@@ -330,6 +321,43 @@ export default function ChatPage() {
       const json = await res.json();
       if (!res.ok || !json.success) {
         alert(json.message || 'Failed to create order');
+        return;
+      }
+
+      if (json.is_founder) {
+        // Founder role bypass payment verification
+        try {
+          const verifyRes = await fetch('/api/community/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({
+              razorpay_order_id: json.order.id,
+              razorpay_payment_id: 'founder_bypass',
+              razorpay_signature: 'founder_bypass'
+            })
+          });
+
+          const verifyJson = await verifyRes.json();
+          if (verifyJson.success) {
+            setActiveOrderId(json.order.id);
+            setCommunityCreationStep(2);
+          } else {
+            alert(verifyJson.message || 'Payment verification failed');
+          }
+        } catch (verifyErr: any) {
+          console.error('Founder bypass verification error:', verifyErr);
+          alert('Error performing Founder bypass verification.');
+        }
+        return;
+      }
+
+      // Normal user flow: load Razorpay
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        alert('Razorpay SDK failed to load. Are you online?');
         return;
       }
 
@@ -351,21 +379,14 @@ export default function ChatPage() {
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                name: newCommunityName,
-                description: newCommunityDesc
+                razorpay_signature: response.razorpay_signature
               })
             });
 
             const verifyJson = await verifyRes.json();
             if (verifyJson.success) {
-              alert('Payment verified! Community created.');
-              setIsCommunityModalOpen(false);
-              setNewCommunityName('');
-              setNewCommunityDesc('');
-              await fetchMyCommunity();
-              setShowCommunityDashboard(true);
-              await fetchDashboardStats();
+              setActiveOrderId(json.order.id);
+              setCommunityCreationStep(2);
             } else {
               alert(verifyJson.message || 'Payment verification failed');
             }
@@ -386,8 +407,49 @@ export default function ChatPage() {
       const paymentObject = new (window as any).Razorpay(options);
       paymentObject.open();
     } catch (err) {
-      console.error('Payment initialization failed:', err);
-      alert('Payment initialization failed.');
+      console.error('Order initialization failed:', err);
+      alert('Order initialization failed.');
+    }
+  };
+
+  const handleInstantiateCommunity = async () => {
+    if (!newCommunityName.trim()) {
+      alert('Please enter a community name');
+      return;
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/instantiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          razorpay_order_id: activeOrderId,
+          name: newCommunityName,
+          description: newCommunityDesc
+        })
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        alert('Community established and launched!');
+        setIsCommunityModalOpen(false);
+        setCommunityCreationStep(1);
+        setNewCommunityName('');
+        setNewCommunityDesc('');
+        setActiveOrderId(null);
+        await fetchMyCommunity();
+        setShowCommunityDashboard(true);
+        await fetchDashboardStats();
+      } else {
+        alert(json.message || 'Failed to instantiate community.');
+      }
+    } catch (err) {
+      console.error('Instantiation error:', err);
+      alert('Error establishing community.');
     }
   };
 
@@ -1913,94 +1975,126 @@ export default function ChatPage() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(8px)' }}>
           <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '500px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)' }}>Establish Crew Community</h2>
-              <button onClick={() => setIsCommunityModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Community Name</label>
-              <input 
-                type="text" 
-                placeholder="e.g. Dream Team Productions" 
-                value={newCommunityName}
-                onChange={(e) => setNewCommunityName(e.target.value)}
-                style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Description</label>
-              <textarea 
-                placeholder="Describe your community..." 
-                value={newCommunityDesc}
-                onChange={(e) => setNewCommunityDesc(e.target.value)}
-                rows={2}
-                style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px', resize: 'none' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Select Community Tier</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                <div 
-                  onClick={() => setSelectedPlan('Starter')}
-                  style={{ border: `1px solid ${selectedPlan === 'Starter' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Starter' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
-                >
-                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Starter</div>
-                  <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>20 Members</div>
-                  <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹59</div>
-                </div>
-                <div 
-                  onClick={() => setSelectedPlan('Growth')}
-                  style={{ border: `1px solid ${selectedPlan === 'Growth' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Growth' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
-                >
-                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Growth</div>
-                  <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>35 Members</div>
-                  <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹99</div>
-                </div>
-                <div 
-                  onClick={() => setSelectedPlan('Custom')}
-                  style={{ border: `1px solid ${selectedPlan === 'Custom' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Custom' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
-                >
-                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom</div>
-                  <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Scalable</div>
-                  <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>Flexible</div>
-                </div>
-              </div>
-            </div>
-
-            {selectedPlan === 'Custom' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Target Capacity (Min 10)</label>
-                  <span style={{ fontSize: '11px', color: 'var(--neon)' }}>₹120 base + ₹2/member</span>
-                </div>
-                <input 
-                  type="number" 
-                  min={10} 
-                  value={customMembersCount}
-                  onChange={(e) => setCustomMembersCount(Math.max(10, Number(e.target.value)))}
-                  style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
-                />
-              </div>
-            )}
-
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due:</span>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
-                  ₹{selectedPlan === 'Starter' ? '59' : selectedPlan === 'Growth' ? '99' : `${120 + customMembersCount * 2}`}
-                </div>
-              </div>
+              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)' }}>
+                {communityCreationStep === 1 ? 'Establish Crew Community' : 'Configure Community Details'}
+              </h2>
               <button 
-                onClick={handlePayment}
-                style={{ background: 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}
-                onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
-                onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+                onClick={() => {
+                  setIsCommunityModalOpen(false);
+                  setCommunityCreationStep(1);
+                  setActiveOrderId(null);
+                  setNewCommunityName('');
+                  setNewCommunityDesc('');
+                }} 
+                style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}
               >
-                Subscribe & Launch
+                ✕
               </button>
             </div>
+            
+            {communityCreationStep === 1 && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Select Community Tier</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <div 
+                      onClick={() => setSelectedPlan('Starter')}
+                      style={{ border: `1px solid ${selectedPlan === 'Starter' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Starter' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                    >
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Starter</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>20 Members</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹59</div>
+                    </div>
+                    <div 
+                      onClick={() => setSelectedPlan('Growth')}
+                      style={{ border: `1px solid ${selectedPlan === 'Growth' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Growth' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                    >
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Growth</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>35 Members</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹99</div>
+                    </div>
+                    <div 
+                      onClick={() => setSelectedPlan('Custom')}
+                      style={{ border: `1px solid ${selectedPlan === 'Custom' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Custom' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                    >
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Scalable</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>Flexible</div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedPlan === 'Custom' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Target Capacity (Min 10)</label>
+                      <span style={{ fontSize: '11px', color: 'var(--neon)' }}>₹120 base + ₹2/member</span>
+                    </div>
+                    <input 
+                      type="number" 
+                      min={10} 
+                      value={customMembersCount}
+                      onChange={(e) => setCustomMembersCount(Math.max(10, Number(e.target.value)))}
+                      style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
+                    />
+                  </div>
+                )}
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due:</span>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                      ₹{selectedPlan === 'Starter' ? '59' : selectedPlan === 'Growth' ? '99' : `${120 + customMembersCount * 2}`}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handlePricingProceed}
+                    style={{ background: 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}
+                    onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+                  >
+                    Proceed to Payment
+                  </button>
+                </div>
+              </>
+            )}
+
+            {communityCreationStep === 2 && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Community Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Dream Team Productions" 
+                    value={newCommunityName}
+                    onChange={(e) => setNewCommunityName(e.target.value)}
+                    style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Description</label>
+                  <textarea 
+                    placeholder="Describe your community..." 
+                    value={newCommunityDesc}
+                    onChange={(e) => setNewCommunityDesc(e.target.value)}
+                    rows={4}
+                    style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px', resize: 'none' }}
+                  />
+                </div>
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
+                  <button 
+                    onClick={handleInstantiateCommunity}
+                    style={{ background: 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}
+                    onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+                  >
+                    Finalize & Launch Community
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

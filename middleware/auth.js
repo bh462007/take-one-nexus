@@ -96,7 +96,8 @@ function requireRole(allowedRoles) {
     }
 
     const userRole = String(req.user.role || '').toLowerCase();
-    const isAuthorized = allowedRoles.some(role => role.toLowerCase() === userRole);
+    const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
+    const isAuthorized = allowedRoles.some(role => role.toLowerCase() === userRole) || secondaryRole === 'founder';
 
     // Special case for lead dev email override
     if (!isAuthorized) {
@@ -126,7 +127,7 @@ function requireSecondaryRole(allowedRoles) {
     const isAuthorized = allowedRoles.some(role => {
       const r = role.toLowerCase();
       return primaryRole === r || secondaryRole === r;
-    });
+    }) || secondaryRole === 'founder';
 
     if (!isAuthorized) {
       return res.status(403).json({
@@ -143,14 +144,14 @@ function requireSecondaryRole(allowedRoles) {
  * Convenience middleware: requires primary role 'admin' OR secondary_role 'admin'
  */
 function requireAdmin(req, res, next) {
-  return requireSecondaryRole(['admin'])(req, res, next);
+  return requireSecondaryRole(['admin', 'founder'])(req, res, next);
 }
 
 /**
  * Convenience middleware: requires primary or secondary role 'moderator' or 'admin'
  */
 function requireModerator(req, res, next) {
-  return requireSecondaryRole(['admin', 'moderator'])(req, res, next);
+  return requireSecondaryRole(['admin', 'moderator', 'founder'])(req, res, next);
 }
 
 /**

@@ -1,13 +1,30 @@
 const express = require('express');
-const { authenticateUser } = require('../middleware/auth');
+const { authenticateUser, requireAdmin } = require('../middleware/auth');
 const { body, param, query } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
 const { PrismaClient } = require('@prisma/client');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { captureError } = require('../src/lib/sentry');
 
 const prisma = new PrismaClient();
 const router = express.Router();
+
+function logTransaction(details) {
+  try {
+    const logDir = path.join(__dirname, '../logs');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    const logPath = path.join(logDir, 'transactions.log');
+    const logEntry = `[${new Date().toISOString()}] ${JSON.stringify(details)}\n`;
+    fs.appendFileSync(logPath, logEntry, 'utf8');
+    console.log(`[TRANSACTION_LOG] ${JSON.stringify(details)}`);
+  } catch (err) {
+    console.error('Failed to write transaction log:', err.message);
+  }
+}
 
 /**
  * GET /api/community/pricing-configs
@@ -103,6 +120,37 @@ router.post('/create-order', authenticateUser, createOrderValidation, async (req
       });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { secondary_role: true }
+    });
+    const isFounder = dbUser?.secondary_role?.toLowerCase() === 'founder';
+
+    if (isFounder) {
+      const orderId = `founder_order_${userId}_${Date.now()}`;
+      await prisma.communitySubscription.create({
+        data: {
+          user_id: userId,
+          plan_type: planType,
+          max_members: maxMembers,
+          price: 0,
+          currency: 'INR',
+          razorpay_order_id: orderId,
+          status: 'pending'
+        }
+      });
+      return res.json({
+        success: true,
+        is_founder: true,
+        keyId: 'founder_bypass',
+        order: {
+          id: orderId,
+          amount: 0,
+          currency: 'INR'
+        }
+      });
+    }
+
     // Retrieve pricing config
     const config = await prisma.communityPricingConfig.findUnique({
       where: { plan_type: planType }
@@ -193,46 +241,164 @@ const verifyPaymentValidation = [
   body('razorpay_order_id').notEmpty().withMessage('Order ID is required'),
   body('razorpay_payment_id').notEmpty().withMessage('Payment ID is required'),
   body('razorpay_signature').notEmpty().withMessage('Signature is required'),
-  body('name').trim().isLength({ min: 3, max: 100 }).withMessage('Community name must be between 3 and 100 characters'),
-  body('description').optional().trim(),
   validateRequest
 ];
 
 router.post('/verify-payment', authenticateUser, verifyPaymentValidation, async (req, res) => {
   try {
     const userId = Number(req.user.id);
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, name, description } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
+    const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keySecret) {
+    if (!keyId || !keySecret) {
       return res.status(503).json({ success: false, message: 'Razorpay keys are not configured' });
     }
 
-    // Verify signature
-    const generatedSignature = crypto
-      .createHmac('sha256', keySecret)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest('hex');
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { secondary_role: true }
+    });
+    const isFounder = dbUser?.secondary_role?.toLowerCase() === 'founder';
+    const isBypass = razorpay_order_id.startsWith('founder_order_') || razorpay_signature === 'founder_bypass';
 
-    if (generatedSignature !== razorpay_signature) {
-      console.warn(`[Community] Invalid signature for Order: ${razorpay_order_id}`);
-      await prisma.communitySubscription.updateMany({
-        where: { razorpay_order_id },
-        data: { status: 'failed', updated_at: new Date() }
-      });
-      return res.status(400).json({ success: false, message: 'Payment verification failed' });
+    if (isBypass) {
+      if (!isFounder) {
+        return res.status(403).json({ success: false, message: 'Access denied: Payment bypass requires Founder role.' });
+      }
+    } else {
+      // Verify signature
+      const generatedSignature = crypto
+        .createHmac('sha256', keySecret)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+
+      if (generatedSignature !== razorpay_signature) {
+        console.warn(`[Community] Invalid signature for Order: ${razorpay_order_id}`);
+        await prisma.communitySubscription.updateMany({
+          where: { razorpay_order_id },
+          data: { status: 'failed', updated_at: new Date() }
+        });
+        return res.status(400).json({ success: false, message: 'Payment verification failed' });
+      }
     }
 
-    // Retrieve pending subscription
+    // Retrieve pending or paid subscription
     const subscription = await prisma.communitySubscription.findUnique({
       where: { razorpay_order_id }
     });
 
-    if (!subscription || subscription.status !== 'pending') {
-      return res.status(400).json({ success: false, message: 'No pending subscription found for this order' });
+    if (!subscription || (subscription.status !== 'pending' && subscription.status !== 'paid')) {
+      return res.status(400).json({ success: false, message: 'No pending or paid subscription found for this order' });
     }
 
-    // Create community in transaction
+    if (!isBypass) {
+      // Verify payment amount in paise from Razorpay directly to prevent replay attacks
+      try {
+        const payRes = await fetch(`https://api.razorpay.com/v1/payments/${razorpay_payment_id}`, {
+          headers: {
+            'Authorization': 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64')
+          }
+        });
+        const payData = await payRes.json();
+        if (!payRes.ok || payData.error) {
+          throw new Error(payData.error?.description || 'Failed to fetch payment details from Razorpay');
+        }
+        
+        const expectedPaise = Math.round(Number(subscription.price) * 100);
+        if (Number(payData.amount) !== expectedPaise) {
+          console.warn(`[Community] Amount mismatch: Razorpay got ${payData.amount} paise, subscription expected ${expectedPaise} paise.`);
+          return res.status(400).json({ success: false, message: 'Payment verification failed: amount mismatch' });
+        }
+      } catch (err) {
+        console.error('[Community] Razorpay payment check error:', err.message);
+        return res.status(400).json({ success: false, message: 'Could not verify payment amount with Razorpay' });
+      }
+    }
+
+    // Update Subscription status to paid
+    const updatedSubscription = await prisma.communitySubscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: 'paid',
+        razorpay_payment_id,
+        razorpay_signature,
+        updated_at: new Date()
+      }
+    });
+
+    // Log the successful payment verification
+    logTransaction({
+      source: 'verify_payment_endpoint',
+      userId,
+      razorpay_order_id,
+      razorpay_payment_id,
+      price: subscription.price,
+      isFounderBypass: isBypass,
+      status: 'paid'
+    });
+
+    res.json({
+      success: true,
+      message: 'Payment verified successfully. You can now configure community details.',
+      data: {
+        razorpay_order_id: updatedSubscription.razorpay_order_id,
+        status: updatedSubscription.status
+      }
+    });
+  } catch (error) {
+    console.error('[Community] Verify payment error:', error.message);
+    captureError(error, { action: 'community_payment_verification_failed', extra: { body: req.body } });
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/community/instantiate
+ * Instantiate the community after payment is verified/paid
+ */
+const instantiateValidation = [
+  body('razorpay_order_id').notEmpty().withMessage('Order ID is required'),
+  body('name').trim().isLength({ min: 3, max: 100 }).withMessage('Community name must be between 3 and 100 characters'),
+  body('description').optional().trim(),
+  validateRequest
+];
+
+router.post('/instantiate', authenticateUser, instantiateValidation, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const { razorpay_order_id, name, description } = req.body;
+
+    // Check if user is already in a community
+    const existingMembership = await prisma.communityMember.findFirst({
+      where: { user_id: userId }
+    });
+
+    if (existingMembership) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already a member of a community.'
+      });
+    }
+
+    const subscription = await prisma.communitySubscription.findFirst({
+      where: {
+        razorpay_order_id,
+        user_id: userId
+      }
+    });
+
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: 'Subscription not found for this order' });
+    }
+
+    if (subscription.status !== 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: `Subscription is not in a paid state (current status: ${subscription.status}).`
+      });
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Create Community
       const community = await tx.community.create({
@@ -281,22 +447,30 @@ router.post('/verify-payment', authenticateUser, verifyPaymentValidation, async 
         data: {
           status: 'active',
           community_id: community.id,
-          razorpay_payment_id,
-          razorpay_signature
+          updated_at: new Date()
         }
       });
 
       return community;
     });
 
+    logTransaction({
+      source: 'instantiate_community_endpoint',
+      userId,
+      razorpay_order_id,
+      communityId: result.id,
+      name,
+      status: 'active'
+    });
+
     res.status(201).json({
       success: true,
-      message: 'Community created successfully',
+      message: 'Community created and instantiated successfully',
       data: result
     });
   } catch (error) {
-    console.error('[Community] Verify payment error:', error.message);
-    captureError(error, { action: 'community_payment_verification_failed', extra: { body: req.body } });
+    console.error('[Community] Instantiate error:', error.message);
+    captureError(error, { action: 'community_instantiation_failed', extra: { body: req.body } });
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
@@ -694,6 +868,117 @@ router.delete('/groups/:groupId', authenticateUser, async (req, res) => {
     res.json({ success: true, message: 'Group deleted successfully' });
   } catch (error) {
     console.error('[Community] Delete group error:', error.message);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
+ * PUT /api/community/pricing-configs/:planType
+ * Update pricing configuration for a plan. Only accessible by Admin or Founder.
+ */
+router.put('/pricing-configs/:planType', authenticateUser, requireAdmin, [
+  body('base_price').isNumeric().withMessage('Base price must be a number'),
+  body('max_members').isInt({ min: 1 }).withMessage('Max members must be a positive integer'),
+  body('per_member_price').optional().isNumeric().withMessage('Per member price must be a number'),
+  validateRequest
+], async (req, res) => {
+  try {
+    const { planType } = req.params;
+    const { base_price, max_members, per_member_price } = req.body;
+
+    const updated = await prisma.communityPricingConfig.upsert({
+      where: { plan_type: planType },
+      update: {
+        base_price,
+        max_members,
+        per_member_price: per_member_price || 0.00
+      },
+      create: {
+        plan_type: planType,
+        base_price,
+        max_members,
+        per_member_price: per_member_price || 0.00
+      }
+    });
+
+    res.json({ success: true, message: `Pricing configuration for ${planType} updated successfully`, data: updated });
+  } catch (error) {
+    console.error('[Community] Update pricing config error:', error.message);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/community/webhook
+ * Razorpay webhook handler for community subscription lifecycle events
+ */
+router.post('/webhook', async (req, res) => {
+  const signature = req.headers['x-razorpay-signature'];
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+  if (!signature || !webhookSecret) {
+    return res.status(400).json({ success: false, message: 'Missing webhook signature or secret' });
+  }
+
+  // Validate signature using raw body buffer
+  const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
+  const expectedSignature = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(rawBody)
+    .digest('hex');
+
+  if (expectedSignature !== signature) {
+    console.warn('[Community Webhook] Signature verification failed');
+    return res.status(400).json({ success: false, message: 'Invalid signature' });
+  }
+
+  const event = req.body.event;
+  const payload = req.body.payload;
+
+  console.log(`[Community Webhook] Received event: ${event}`);
+
+  // Transaction logging
+  logTransaction({
+    source: 'razorpay_webhook',
+    event,
+    payload
+  });
+
+  try {
+    if (event === 'payment.captured') {
+      const paymentEntity = payload.payment.entity;
+      const orderId = paymentEntity.order_id;
+      
+      // Update subscription status if pending
+      const subscription = await prisma.communitySubscription.findUnique({
+        where: { razorpay_order_id: orderId }
+      });
+
+      if (subscription && subscription.status === 'pending') {
+        await prisma.communitySubscription.update({
+          where: { id: subscription.id },
+          data: {
+            status: 'paid', // Mark as paid so client can finish configuration
+            razorpay_payment_id: paymentEntity.id,
+            razorpay_signature: signature
+          }
+        });
+        console.log(`[Community Webhook] Marked subscription ${subscription.id} as paid`);
+      }
+    } else if (event === 'payment.failed') {
+      const paymentEntity = payload.payment.entity;
+      const orderId = paymentEntity.order_id;
+
+      await prisma.communitySubscription.updateMany({
+        where: { razorpay_order_id: orderId },
+        data: { status: 'failed', updated_at: new Date() }
+      });
+      console.log(`[Community Webhook] Marked subscription for order ${orderId} as failed`);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Community Webhook] Processing error:', error.message);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

@@ -84,6 +84,50 @@ router.post('/create-order', authenticateUser, paymentLimiter, createOrderValida
       return res.status(400).json({ success: false, message: 'Script title is required' });
     }
 
+    const userResult = await safeQuery('SELECT secondary_role FROM users WHERE id = ? LIMIT 1', [userId]);
+    const isFounder = userResult && userResult[0] && userResult[0].secondary_role?.toLowerCase() === 'founder';
+    
+    if (isFounder) {
+      const [insertResult] = await pool.query(
+        `INSERT INTO scripts (
+          user_id, title, genre, synopsis, poster_url, roles_needed, 
+          status, media_links, role_data, work_type, approval_status, payment_status, payment_id, payment_verified, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'free', 'founder_bypass', TRUE, NOW(), NOW())`,
+        [
+          userId,
+          title,
+          genre || 'General',
+          synopsis || '',
+          poster_url || null,
+          roles_needed || null,
+          status || 'Open for collaboration',
+          media_links || null,
+          role_data || null,
+          work_type || 'Script'
+        ]
+      );
+
+      const scriptId = insertResult.insertId;
+
+      if (process.env.PUSHER_APP_ID) {
+        try {
+          pusher.trigger('admin-dashboard', 'update', {
+            type: 'NEW_SCRIPT',
+            scriptId,
+            title
+          });
+        } catch (pusherErr) {
+          console.error('[Payments] Pusher trigger failed:', pusherErr.message);
+        }
+      }
+
+      return res.json({
+        success: true,
+        is_founder: true,
+        message: 'Script uploaded successfully as Founder bypass'
+      });
+    }
+
     const keyId = process.env.RAZORPAY_KEY_ID || '';
     const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
 

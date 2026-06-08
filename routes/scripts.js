@@ -345,6 +345,43 @@ router.post('/portfolio', authenticateUser, requireVerified, portfolioLimiter, a
 
 router.post('/', authenticateUser, requireVerified, async (req, res) => {
   try {
+    const userId = Number(req.user.id);
+    const [userRows] = await pool.query('SELECT secondary_role FROM users WHERE id = ? LIMIT 1', [userId]);
+    const isFounder = userRows && userRows[0] && userRows[0].secondary_role?.toLowerCase() === 'founder';
+    
+    if (isFounder) {
+      const { title, genre, synopsis, poster_url, roles_needed, status, media_links, role_data, work_type } = req.body;
+      if (!title) {
+        return res.status(400).json({ success: false, message: 'Script title is required' });
+      }
+
+      const [insertResult] = await pool.query(
+        `INSERT INTO scripts (
+          user_id, title, genre, synopsis, poster_url, roles_needed, 
+          status, media_links, role_data, work_type, approval_status, payment_status, payment_id, payment_verified, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'free', 'founder_bypass', TRUE, NOW(), NOW())`,
+        [
+          userId,
+          title,
+          genre || 'General',
+          synopsis || '',
+          poster_url || null,
+          roles_needed || null,
+          status || 'Open for collaboration',
+          media_links || null,
+          role_data || null,
+          work_type || 'Script'
+        ]
+      );
+      
+      const scriptId = insertResult.insertId;
+      return res.status(201).json({
+        success: true,
+        message: 'Script uploaded successfully as Founder bypass',
+        scriptId
+      });
+    }
+
     return res.status(402).json({
       success: false,
       message: 'Payment verification required. Use /api/payments/create-order and /api/payments/verify before script submission.',

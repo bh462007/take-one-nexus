@@ -158,7 +158,12 @@ const globalLimiter = createRateLimiter({
 app.use(globalLimiter);
 
 // 4. Body Parsing & Sanitization
-app.use(express.json({ limit: '10kb' })); // Limit body size to 10kb
+app.use(express.json({
+  limit: '10kb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+})); // Limit body size to 10kb
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
@@ -183,13 +188,29 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/moderation', moderationRoutes);
+const paymentRateLimiter = createRateLimiter({
+  limit: 30,
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'payment'
+});
+
 app.use('/api/chat', chatRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/issues', issuesRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/credits', creditsRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/payments', paymentRateLimiter, paymentRoutes);
+app.use('/api/community/create-order', paymentRateLimiter);
+app.use('/api/community/verify-payment', paymentRateLimiter);
 app.use('/api/community', communityRoutes);
+
+// Explicitly reject manual group creation outside community scope
+app.post('/api/groups/create', (req, res) => {
+  res.status(403).json({
+    success: false,
+    message: "Group creation is available only inside Communities."
+  });
+});
 
 // Alias routes — mirror endpoints the frontend expects
 app.use('/api/projects', scriptRoutes); // /api/projects mirrors /api/scripts

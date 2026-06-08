@@ -189,7 +189,17 @@ async function uploadWork() {
         const orderRes = await API.payments.createOrder(finalPayload);
         if (!orderRes.success) throw new Error(orderRes.message || 'Order creation failed');
 
-        const { order_id, draft_id, amount, currency, key_id, is_simulated } = orderRes;
+        const { order_id, draft_id, amount, currency, key_id, is_simulated, is_founder } = orderRes;
+
+        if (is_founder) {
+            showTransmissionAccepted(payload.title);
+            renderDynamicUploadForm(user);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+            return;
+        }
 
         if (is_simulated) {
             throw new Error('Payment gateway unavailable. Script was not submitted.');
