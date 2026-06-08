@@ -13,6 +13,7 @@ import './chat.css';
 interface User {
   id: number;
   name: string;
+  email?: string;
   screen_name?: string;
   display_preference?: string;
   avatar_url?: string;
@@ -67,6 +68,24 @@ interface Task {
 
 type ChatState = 'loading' | 'ready' | 'error' | 'not-found';
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve(false);
+      return;
+    }
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
@@ -95,6 +114,282 @@ export default function ChatPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  // Community System States
+  const [inCommunity, setInCommunity] = useState(false);
+  const [communityRole, setCommunityRole] = useState<string | null>(null);
+  const [communityData, setCommunityData] = useState<any>(null);
+  const [showCommunityDashboard, setShowCommunityDashboard] = useState(false);
+  
+  // Modals
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+
+  // Community config
+  const [pricingConfigs, setPricingConfigs] = useState<any[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<'Starter' | 'Growth' | 'Custom'>('Starter');
+  const [customMembersCount, setCustomMembersCount] = useState(50);
+  const [newCommunityName, setNewCommunityName] = useState('');
+  const [newCommunityDesc, setNewCommunityDesc] = useState('');
+
+  // Invites & Groups
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [inviteSuccess, setInviteSuccess] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [groupLoading, setGroupLoading] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+
+  // Fetch Community Info
+  const fetchMyCommunity = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/my-community', {
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const json = await res.json();
+      if (json.success) {
+        setInCommunity(json.inCommunity);
+        if (json.inCommunity) {
+          setCommunityRole(json.role);
+          setCommunityData(json.community);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching community status:', err);
+    }
+  }, []);
+
+  const fetchPricingConfigs = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/pricing-configs', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPricingConfigs(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching pricing config:', err);
+    }
+  }, []);
+
+  const fetchDashboardStats = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/dashboard', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDashboardStats(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+    }
+  }, []);
+
+  const handleInviteMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    setInviteError('');
+    setInviteSuccess('');
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/members/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ email: inviteEmail })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInviteSuccess(data.message);
+        setInviteEmail('');
+        await fetchMyCommunity();
+        await fetchDashboardStats();
+      } else {
+        setInviteError(data.message || 'Invitation failed');
+      }
+    } catch (err) {
+      setInviteError('Error inviting member');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberUserId: number) => {
+    if (!confirm('Are you sure you want to remove this member?')) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/members/${memberUserId}`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member removed successfully');
+        await fetchMyCommunity();
+        await fetchDashboardStats();
+      } else {
+        alert(data.message || 'Failed to remove member');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error removing member');
+    }
+  };
+
+  const handleCreateCommunityGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+    setGroupLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ name: newGroupName })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewGroupName('');
+        setIsCreateGroupModalOpen(false);
+        await fetchConversations();
+        await fetchMyCommunity();
+        await fetchDashboardStats();
+      } else {
+        alert(data.message || 'Failed to create group');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error creating group');
+    } finally {
+      setGroupLoading(false);
+    }
+  };
+
+  const handleDeleteCommunityGroup = async (groupId: number) => {
+    if (!confirm('Are you sure you want to delete this group? This will delete all messages.')) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/groups/${groupId}`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Group deleted successfully');
+        await fetchConversations();
+        await fetchMyCommunity();
+        await fetchDashboardStats();
+      } else {
+        alert(data.message || 'Failed to delete group');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting group');
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!newCommunityName.trim()) {
+      alert('Please enter a community name');
+      return;
+    }
+
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      alert('Razorpay SDK failed to load. Are you online?');
+      return;
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          planType: selectedPlan,
+          memberCount: selectedPlan === 'Custom' ? customMembersCount : undefined
+        })
+      });
+      
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        alert(json.message || 'Failed to create order');
+        return;
+      }
+
+      const options = {
+        key: json.keyId,
+        amount: json.order.amount,
+        currency: json.order.currency,
+        name: 'TAKE ONE',
+        description: `Community Subscription - ${selectedPlan}`,
+        order_id: json.order.id,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch('/api/community/verify-payment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                name: newCommunityName,
+                description: newCommunityDesc
+              })
+            });
+
+            const verifyJson = await verifyRes.json();
+            if (verifyJson.success) {
+              alert('Payment verified! Community created.');
+              setIsCommunityModalOpen(false);
+              setNewCommunityName('');
+              setNewCommunityDesc('');
+              await fetchMyCommunity();
+              setShowCommunityDashboard(true);
+              await fetchDashboardStats();
+            } else {
+              alert(verifyJson.message || 'Payment verification failed');
+            }
+          } catch (verifyErr: any) {
+            console.error('Verification error:', verifyErr);
+            alert('Error verifying payment.');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || ''
+        },
+        theme: {
+          color: '#ff4d1a'
+        }
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
+    } catch (err) {
+      console.error('Payment initialization failed:', err);
+      alert('Payment initialization failed.');
+    }
+  };
 
   // Group messages by date
   const groupMessagesByDate = (msgs: ChatMessage[]) => {
@@ -544,6 +839,7 @@ export default function ChatPage() {
         const targetUserId = Number(params.get('userId') || params.get('user') || 0);
         const targetConversationId = Number(params.get('conversationId') || 0);
         const loadedConversations = await fetchConversations();
+        await fetchMyCommunity();
 
         if (targetUserId) {
           const conversation = await openDirectConversation(targetUserId);
@@ -811,7 +1107,7 @@ export default function ChatPage() {
 
   return (
     <div className="chat-page">
-      <header>
+      <header className="global-header">
         <a href="/" className="logo">TAKE <span>ONE</span></a>
         <nav>
           <a href="/#explore">Discover Projects</a>
@@ -832,21 +1128,178 @@ export default function ChatPage() {
         <aside className="chat-sidebar">
           <div className="sidebar-header">
             <div className="sidebar-title-row">
-              <h2>Transmissions</h2>
-              <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta group-add-btn" aria-label="Create Group">+</button>
+              <h2>Nexus</h2>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta group-add-btn" aria-label="Create Group" title="Create Group">+</button>
+              </div>
             </div>
-            <div className="sidebar-search-wrap">
-              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input 
-                type="text" 
-                className="sidebar-search-input" 
-                placeholder="Search Nexus..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+
+            <div className="sidebar-tabs" style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '12px', marginBottom: '8px' }}>
+              <button 
+                onClick={() => { setShowCommunityDashboard(false); }} 
+                className={`tab-btn ${!showCommunityDashboard ? 'active' : ''}`}
+                style={{ flex: 1, padding: '8px', background: !showCommunityDashboard ? 'rgba(255,77,26,0.1)' : 'transparent', border: 'none', color: '#fff', borderBottom: !showCommunityDashboard ? '2px solid var(--neon)' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+              >
+                Chats
+              </button>
+              <button 
+                onClick={() => {
+                  if (inCommunity) {
+                    setShowCommunityDashboard(true);
+                    fetchDashboardStats();
+                  } else {
+                    fetchPricingConfigs();
+                    setIsCommunityModalOpen(true);
+                  }
+                }} 
+                className={`tab-btn ${showCommunityDashboard ? 'active' : ''}`}
+                style={{ flex: 1, padding: '8px', background: showCommunityDashboard ? 'rgba(255,77,26,0.1)' : 'transparent', border: 'none', color: '#fff', borderBottom: showCommunityDashboard ? '2px solid var(--neon)' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+              >
+                {inCommunity ? (communityData?.name || 'Community') : 'Community'}
+              </button>
             </div>
+
+            {!showCommunityDashboard && (
+              <div className="sidebar-search-wrap">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input 
+                  type="text" 
+                  className="sidebar-search-input" 
+                  placeholder="Search Nexus..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
           </div>
-          <div className="conversation-list">
+          
+          {showCommunityDashboard && inCommunity ? (
+            <div className="conversation-list community-sidebar-view" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', height: 'calc(100% - 130px)' }}>
+              <div className="community-header-info" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '12px' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--neon)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{communityData?.name}</h3>
+                <p style={{ margin: 0, fontSize: '11px', color: '#aaa', lineHeight: '1.4' }}>{communityData?.description || 'No description available'}</p>
+                <div style={{ marginTop: '10px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#888' }}>
+                  <span>Role: <strong>{communityRole}</strong></span>
+                  <span>Limit: {communityData?.members?.length || 0} / {communityData?.max_members || 0}</span>
+                </div>
+              </div>
+
+              {/* Groups section */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Groups ({communityData?.groups?.length || 0})</h4>
+                  {['Owner', 'Moderator'].includes(communityRole || '') && (
+                    <button 
+                      onClick={() => setIsCreateGroupModalOpen(true)} 
+                      style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                      title="Create Group"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {communityData?.groups?.map((group: any) => (
+                    <div 
+                      key={group.id}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '6px', background: activeConv?.id === group.conversation_id ? 'rgba(255,77,26,0.12)' : 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'background 0.2s' }}
+                      onClick={() => {
+                        const targetConv = conversations.find(c => c.id === group.conversation_id);
+                        if (targetConv) {
+                          setActiveConversation(targetConv);
+                          fetchMessages(targetConv.id);
+                        } else {
+                          fetchConversations().then(loaded => {
+                            const found = loaded.find(c => c.id === group.conversation_id);
+                            if (found) {
+                              setActiveConversation(found);
+                              fetchMessages(found.id);
+                            } else {
+                              alert("You do not have access to this group.");
+                            }
+                          });
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: '13px', fontWeight: activeConv?.id === group.conversation_id ? 'bold' : 'normal', color: activeConv?.id === group.conversation_id ? 'var(--neon)' : '#ccc' }}>
+                        # {group.name}
+                      </span>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && group.name !== 'General' && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCommunityGroup(group.id);
+                          }}
+                          style={{ background: 'transparent', border: 'none', color: '#ff3333', fontSize: '11px', cursor: 'pointer', opacity: 0.7 }}
+                          title="Delete Group"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Members section */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Members ({communityData?.members?.length || 0})</h4>
+                  {['Owner', 'Moderator'].includes(communityRole || '') && (
+                    <button 
+                      onClick={() => setIsInviteModalOpen(true)} 
+                      style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                      Invite
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {communityData?.members?.map((member: any) => (
+                    <div 
+                      key={member.id}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.01)' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <img 
+                          src={getAvatarUrl(member.user?.name || 'User', member.user?.gender || 'Other', member.user?.avatar_url)} 
+                          alt="" 
+                          style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0 }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.user?.name}</span>
+                          <span style={{ fontSize: '9px', color: member.role === 'Owner' ? 'var(--neon)' : '#999' }}>{member.role}</span>
+                        </div>
+                      </div>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && member.user_id !== user?.id && (
+                        !(communityRole === 'Moderator' && ['Owner', 'Moderator'].includes(member.role)) && (
+                          <button 
+                            onClick={() => handleRemoveMember(member.user_id)}
+                            style={{ background: 'transparent', border: 'none', color: '#ff4d4d', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
+                            title="Remove from Community"
+                          >
+                            Kick
+                          </button>
+                        )
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dashboard / stats section */}
+              {['Owner', 'Moderator'].includes(communityRole || '') && (
+                <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
+                  <div style={{ background: 'rgba(255,77,26,0.03)', border: '1px solid rgba(255,77,26,0.15)', padding: '10px', borderRadius: '6px', fontSize: '11px', color: '#ccc' }}>
+                    <div style={{ fontWeight: 'bold', color: 'var(--neon)', marginBottom: '4px', fontSize: '12px' }}>Dashboard: {dashboardStats?.planType || 'Owner'}</div>
+                    <div style={{ marginBottom: '2px' }}>Members: <strong>{dashboardStats?.memberCount || 0} / {dashboardStats?.max_members || 0}</strong></div>
+                    <div>Groups: <strong>{dashboardStats?.groupCount || 0} / 50</strong></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="conversation-list">
             {conversations
               .filter(c => {
                 const recipient = getRecipient(c);
@@ -902,6 +1355,7 @@ export default function ChatPage() {
               <div className="sidebar-empty">No active transmissions yet. Open a crew profile and send the first message.</div>
             )}
           </div>
+          )}
         </aside>
 
         <main className="chat-window">
@@ -1454,6 +1908,166 @@ export default function ChatPage() {
         isGroup={activeConv?.is_group || false}
         globalRole={user?.role || 'Member'}
       />
+
+      {isCommunityModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '500px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)' }}>Establish Crew Community</h2>
+              <button onClick={() => setIsCommunityModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Community Name</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Dream Team Productions" 
+                value={newCommunityName}
+                onChange={(e) => setNewCommunityName(e.target.value)}
+                style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Description</label>
+              <textarea 
+                placeholder="Describe your community..." 
+                value={newCommunityDesc}
+                onChange={(e) => setNewCommunityDesc(e.target.value)}
+                rows={2}
+                style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px', resize: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Select Community Tier</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div 
+                  onClick={() => setSelectedPlan('Starter')}
+                  style={{ border: `1px solid ${selectedPlan === 'Starter' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Starter' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                >
+                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Starter</div>
+                  <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>20 Members</div>
+                  <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹59</div>
+                </div>
+                <div 
+                  onClick={() => setSelectedPlan('Growth')}
+                  style={{ border: `1px solid ${selectedPlan === 'Growth' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Growth' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                >
+                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Growth</div>
+                  <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>35 Members</div>
+                  <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹99</div>
+                </div>
+                <div 
+                  onClick={() => setSelectedPlan('Custom')}
+                  style={{ border: `1px solid ${selectedPlan === 'Custom' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Custom' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                >
+                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom</div>
+                  <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Scalable</div>
+                  <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>Flexible</div>
+                </div>
+              </div>
+            </div>
+
+            {selectedPlan === 'Custom' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Target Capacity (Min 10)</label>
+                  <span style={{ fontSize: '11px', color: 'var(--neon)' }}>₹120 base + ₹2/member</span>
+                </div>
+                <input 
+                  type="number" 
+                  min={10} 
+                  value={customMembersCount}
+                  onChange={(e) => setCustomMembersCount(Math.max(10, Number(e.target.value)))}
+                  style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
+                />
+              </div>
+            )}
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due:</span>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                  ₹{selectedPlan === 'Starter' ? '59' : selectedPlan === 'Growth' ? '99' : `${120 + customMembersCount * 2}`}
+                </div>
+              </div>
+              <button 
+                onClick={handlePayment}
+                style={{ background: 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+              >
+                Subscribe & Launch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isInviteModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Invite Crew Member</h3>
+              <button onClick={() => setIsInviteModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <form onSubmit={handleInviteMember} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', color: '#aaa' }}>User Email Address</label>
+                <input 
+                  type="email" 
+                  required 
+                  placeholder="crew@example.com" 
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}
+                />
+              </div>
+              {inviteError && <div style={{ color: '#ff4d4d', fontSize: '12px' }}>{inviteError}</div>}
+              {inviteSuccess && <div style={{ color: '#4dff4d', fontSize: '12px' }}>{inviteSuccess}</div>}
+              <button 
+                type="submit" 
+                disabled={inviteLoading}
+                style={{ background: 'var(--neon)', border: 'none', padding: '10px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                {inviteLoading ? 'Sending...' : 'Send Invitation'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isCreateGroupModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Create Community Group</h3>
+              <button onClick={() => setIsCreateGroupModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <form onSubmit={handleCreateCommunityGroup} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', color: '#aaa' }}>Group Name</label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="e.g. marketing-discussion" 
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={groupLoading}
+                style={{ background: 'var(--neon)', border: 'none', padding: '10px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                {groupLoading ? 'Creating...' : 'Create Group'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

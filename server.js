@@ -58,6 +58,7 @@ const issuesRoutes = require('./routes/issues');
 const otpRoutes = require('./routes/otp');
 const creditsRoutes = require('./routes/credits');
 const paymentRoutes = require('./routes/payments');
+const communityRoutes = require('./routes/community');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -188,6 +189,7 @@ app.use('/api/issues', issuesRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/credits', creditsRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/community', communityRoutes);
 
 // Alias routes — mirror endpoints the frontend expects
 app.use('/api/projects', scriptRoutes); // /api/projects mirrors /api/scripts
