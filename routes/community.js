@@ -873,6 +873,51 @@ router.delete('/groups/:groupId', authenticateUser, async (req, res) => {
 });
 
 /**
+ * GET /api/community/admin/subscriptions
+ * Fetch all community subscription transactions/ledger. Only accessible by Admin or Founder.
+ */
+router.get('/admin/subscriptions', authenticateUser, requireAdmin, async (req, res) => {
+  try {
+    const subscriptions = await prisma.communitySubscription.findMany({
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    const data = subscriptions.map(sub => ({
+      id: sub.id,
+      user_id: sub.user_id,
+      community_id: sub.community_id,
+      plan_type: sub.plan_type,
+      max_members: sub.max_members,
+      price: sub.price,
+      currency: sub.currency,
+      razorpay_order_id: sub.razorpay_order_id,
+      razorpay_payment_id: sub.razorpay_payment_id,
+      razorpay_signature: sub.razorpay_signature,
+      status: sub.status,
+      created_at: sub.created_at,
+      updated_at: sub.updated_at,
+      user_name: sub.user?.name || 'Creator',
+      user_email: sub.user?.email || 'N/A'
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('[Community] Get admin subscriptions error:', error.message);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
  * PUT /api/community/pricing-configs/:planType
  * Update pricing configuration for a plan. Only accessible by Admin or Founder.
  */

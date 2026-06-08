@@ -184,7 +184,7 @@ function requireSameUser(req, res, next) {
   const targetId = Number(req.params.id || req.body.userId);
   const authId = Number(req.user?.id);
 
-  if (targetId !== authId && req.user?.role?.toLowerCase() !== 'admin') {
+  if (targetId !== authId && req.user?.role?.toLowerCase() !== 'admin' && req.user?.secondary_role?.toLowerCase() !== 'founder') {
     return res.status(403).json({
       success: false,
       message: 'Unauthorized access attempt'

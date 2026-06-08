@@ -163,7 +163,8 @@ async function getFreshUser(userId) {
 function hasElevatedScriptDeleteAccess(user) {
   const roles = [user?.role, user?.secondary_role].map((role) => String(role || '').toLowerCase());
   return roles.includes('admin') ||
-    roles.includes('moderator');
+    roles.includes('moderator') ||
+    roles.includes('founder');
 }
 
 router.get('/', async (req, res) => {
