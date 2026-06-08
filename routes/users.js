@@ -886,8 +886,10 @@ router.post('/analytics/track', analyticsTrackLimiter, async (req, res) => {
     }
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-    // Simple hash to protect visitor PII
-    const hashedIp = crypto.createHash('sha256').update(String(ip)).digest('hex').substring(0, 16);
+    
+    // Salted hash using existing JWT_SECRET to protect visitor PII and prevent dictionary attacks
+    const salt = process.env.JWT_SECRET || 'fallback-analytics-salt-v1';
+    const hashedIp = crypto.createHash('sha256').update(String(ip) + salt).digest('hex').substring(0, 16);
 
     await prisma.analyticsEvent.create({
       data: {
