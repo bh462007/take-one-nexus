@@ -74,10 +74,10 @@ Where analytics collection is required, the following anonymization practices ar
 
 The platform uses a truncated SHA-256 hash for visitor identification:
 
-- **Algorithm**: SHA-256
+- **Algorithm**: SHA-256 (Salted)
 - **Truncation**: First 16 hexadecimal characters (64 bits)
-- **Purpose**: Anonymize IP addresses while maintaining visitor uniqueness
-- **Implementation**: `crypto.createHash('sha256').update(String(ip)).digest('hex').substring(0, 16)`
+- **Purpose**: Anonymize IP addresses while maintaining visitor uniqueness and preventing dictionary attacks
+- **Implementation**: `crypto.createHash('sha256').update(String(ip) + process.env.JWT_SECRET).digest('hex').substring(0, 16)`
 
 ### Collision Probability Analysis
 
