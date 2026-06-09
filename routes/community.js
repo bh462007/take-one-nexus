@@ -137,7 +137,19 @@ router.post('/create-order', authenticateUser, createOrderValidation, async (req
     let price = Number(config.base_price);
     let maxMembers = config.max_members;
 
-    if (planType === 'Custom' && memberCount) {
+    if (planType === 'Custom') {
+      if (!memberCount || isNaN(Number(memberCount)) || Number(memberCount) < 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Member count is required and must be at least 1 for the Custom plan.'
+        });
+      }
+      if (config.max_members && Number(memberCount) > config.max_members) {
+        return res.status(400).json({
+          success: false,
+          message: `Member count exceeds system limit of ${config.max_members} for the Custom plan.`
+        });
+      }
       price = Number(config.base_price) + (Number(memberCount) * Number(config.per_member_price));
       maxMembers = Number(memberCount);
     }

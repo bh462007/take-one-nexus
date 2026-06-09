@@ -306,14 +306,16 @@ export default function ChatPage() {
   const handlePricingProceed = async () => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const payload: any = { planType: selectedPlan };
+      if (selectedPlan === 'Custom') {
+        payload.memberCount = customMembersCount;
+      }
       const res = await fetchWithCSRF('/api/community/create-order', {
         method: 'POST',
         headers: {
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({
-          planType: selectedPlan
-        })
+        body: JSON.stringify(payload)
       });
       
       const json = await res.json();
@@ -2022,12 +2024,68 @@ export default function ChatPage() {
                       onClick={() => setSelectedPlan('Custom')}
                       style={{ border: `1px solid ${selectedPlan === 'Custom' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Custom' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
                     >
-                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom Community Plan</div>
-                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Contact-Based Scaling</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Custom')?.base_price || '120'}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Dynamic Scaling</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>
+                        ₹{(() => {
+                          const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                          const base = customCfg ? Number(customCfg.base_price) : 99;
+                          const per = customCfg ? Number(customCfg.per_member_price) : 2;
+                          return base + (customMembersCount * per);
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {selectedPlan === 'Custom' && (() => {
+                  const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                  const basePrice = customCfg ? Number(customCfg.base_price) : 99;
+                  const perMemberPrice = customCfg ? Number(customCfg.per_member_price) : 2;
+                  const maxLimit = customCfg ? Number(customCfg.max_members) : 1000;
+                  const calculatedPrice = basePrice + (customMembersCount * perMemberPrice);
+                  const isInvalid = isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > maxLimit;
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '16px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Desired Members</label>
+                        <input 
+                          type="number" 
+                          min={1}
+                          max={maxLimit}
+                          value={customMembersCount}
+                          onChange={(e) => setCustomMembersCount(parseInt(e.target.value) || 0)}
+                          style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${isInvalid ? '#ff4d1a' : 'rgba(255,255,255,0.1)'}`, borderRadius: '6px', color: '#fff', fontSize: '14px', width: '100%' }}
+                        />
+                        {isInvalid && (
+                          <div style={{ fontSize: '11px', color: '#ff4d1a', marginTop: '2px' }}>
+                            {customMembersCount < 1 ? 'Minimum 1 member required' : `Maximum limit is ${maxLimit} members`}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aaa' }}>
+                          <span>Base Price:</span>
+                          <span>₹{basePrice}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aaa' }}>
+                          <span>Per Member Charge:</span>
+                          <span>₹{perMemberPrice}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aaa' }}>
+                          <span>Member Multiplier:</span>
+                          <span>{customMembersCount} × ₹{perMemberPrice} = ₹{customMembersCount * perMemberPrice}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', color: 'var(--neon)', borderTop: '1px dotted rgba(255,255,255,0.1)', paddingTop: '6px', marginTop: '4px' }}>
+                          <span>Total Price:</span>
+                          <span>₹{calculatedPrice}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -2037,13 +2095,32 @@ export default function ChatPage() {
                         ? (pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59') 
                         : selectedPlan === 'Growth' 
                           ? (pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99') 
-                          : (pricingConfigs.find(c => c.plan_type === 'Custom')?.base_price || '120')}
+                          : (() => {
+                              const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                              const base = customCfg ? Number(customCfg.base_price) : 99;
+                              const per = customCfg ? Number(customCfg.per_member_price) : 2;
+                              return base + (customMembersCount * per);
+                            })()}
                     </div>
                   </div>
                   <button 
                     onClick={handlePricingProceed}
-                    style={{ background: 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}
-                    onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                    disabled={selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))}
+                    style={{ 
+                      background: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? '#555' : 'var(--neon)', 
+                      border: 'none', 
+                      padding: '12px 24px', 
+                      borderRadius: '6px', 
+                      color: '#fff', 
+                      fontWeight: 'bold', 
+                      cursor: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? 'not-allowed' : 'pointer', 
+                      transition: 'filter 0.2s' 
+                    }}
+                    onMouseOver={(e) => {
+                      if (!(selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000)))) {
+                        e.currentTarget.style.filter = 'brightness(1.1)';
+                      }
+                    }}
                     onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
                   >
                     Proceed to Payment

@@ -14,11 +14,27 @@ async function seedCommunities() {
         VALUES 
           ('Starter', 59.00, 20, 0.00),
           ('Growth', 99.00, 35, 0.00),
-          ('Custom', 120.00, 0, 2.00)
+          ('Custom', 99.00, 1000, 2.00)
       `);
       console.log('✅ Seeded community pricing configs.');
     } else {
-      console.log('community_pricing_configs already seeded.');
+      // If already exists, update to correct base values
+      await connection.query(`
+        UPDATE community_pricing_configs 
+        SET base_price = 99.00, max_members = 1000, per_member_price = 2.00
+        WHERE plan_type = 'Custom'
+      `);
+      await connection.query(`
+        UPDATE community_pricing_configs 
+        SET base_price = 59.00, max_members = 20, per_member_price = 0.00
+        WHERE plan_type = 'Starter'
+      `);
+      await connection.query(`
+        UPDATE community_pricing_configs 
+        SET base_price = 99.00, max_members = 35, per_member_price = 0.00
+        WHERE plan_type = 'Growth'
+      `);
+      console.log('✅ Updated existing community pricing configs.');
     }
 
     // 2. Seed community_permissions
