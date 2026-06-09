@@ -106,7 +106,7 @@ function getCookieOptions() {
 
 async function getProfileData(userId) {
   const [userRows] = await pool.query(
-    `SELECT id, name, email, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at, availability
+    `SELECT id, name, email, role, secondary_role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, email_verified, created_at, availability
      FROM users
      WHERE id = ?
      LIMIT 1`,

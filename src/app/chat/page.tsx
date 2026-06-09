@@ -25,6 +25,7 @@ interface User {
   credits?: number;
   created_at?: string;
   role_in_group?: 'Director' | 'Admin' | 'Member';
+  secondary_role?: string;
 }
 
 
@@ -92,6 +93,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
+  const isFounder = user?.secondary_role?.toLowerCase() === 'founder';
   const [state, setState] = useState<ChatState>('loading');
   const [statusText, setStatusText] = useState('Synchronizing with Nexus...');
   const [messageLoading, setMessageLoading] = useState(false);
@@ -447,6 +449,87 @@ export default function ChatPage() {
     } catch (err) {
       console.error('Instantiation error:', err);
       alert('Error establishing community.');
+    }
+  };
+  
+  const handleFounderCreateCommunity = async () => {
+    if (!newCommunityName.trim()) {
+      alert('Please enter a community name');
+      return;
+    }
+    setGroupLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      
+      // Step 1: Create Order automatically on Custom plan with 1000 members for founder bypass
+      const orderRes = await fetchWithCSRF('/api/community/create-order', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          planType: 'Custom',
+          memberCount: 1000
+        })
+      });
+      
+      const orderJson = await orderRes.json();
+      if (!orderRes.ok || !orderJson.success) {
+        alert(orderJson.message || 'Failed to initialize community setup.');
+        setGroupLoading(false);
+        return;
+      }
+
+      // Step 2: Verify Payment Bypass
+      const verifyRes = await fetchWithCSRF('/api/community/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          razorpay_order_id: orderJson.order.id,
+          razorpay_payment_id: 'founder_bypass',
+          razorpay_signature: 'founder_bypass'
+        })
+      });
+
+      const verifyJson = await verifyRes.json();
+      if (!verifyRes.ok || !verifyJson.success) {
+        alert(verifyJson.message || 'Failed to verify founder bypass.');
+        setGroupLoading(false);
+        return;
+      }
+
+      // Step 3: Instantiate Community
+      const instRes = await fetchWithCSRF('/api/community/instantiate', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          razorpay_order_id: orderJson.order.id,
+          name: newCommunityName,
+          description: newCommunityDesc
+        })
+      });
+
+      const instJson = await instRes.json();
+      if (instJson.success) {
+        alert('Community established and launched!');
+        setIsCommunityModalOpen(false);
+        setNewCommunityName('');
+        setNewCommunityDesc('');
+        await fetchMyCommunity();
+        setShowCommunityDashboard(true);
+        await fetchDashboardStats();
+      } else {
+        alert(instJson.message || 'Failed to establish community.');
+      }
+    } catch (err) {
+      console.error('Founder community creation error:', err);
+      alert('Error establishing community.');
+    } finally {
+      setGroupLoading(false);
     }
   };
 
@@ -1207,7 +1290,9 @@ export default function ChatPage() {
                     setShowCommunityDashboard(true);
                     fetchDashboardStats();
                   } else {
-                    fetchPricingConfigs();
+                    if (!isFounder) {
+                      fetchPricingConfigs();
+                    }
                     setIsCommunityModalOpen(true);
                   }
                 }} 
@@ -1983,7 +2068,11 @@ export default function ChatPage() {
           <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '500px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)' }}>
-                {communityCreationStep === 1 ? 'Establish Crew Community' : 'Configure Community Details'}
+                {isFounder 
+                  ? 'Establish Crew Community' 
+                  : communityCreationStep === 1 
+                    ? 'Establish Crew Community' 
+                    : 'Configure Community Details'}
               </h2>
               <button 
                 onClick={() => {
@@ -1999,7 +2088,7 @@ export default function ChatPage() {
               </button>
             </div>
             
-            {communityCreationStep === 1 && (
+            {!isFounder && communityCreationStep === 1 && (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Select Community Tier</label>
@@ -2129,7 +2218,7 @@ export default function ChatPage() {
               </>
             )}
 
-            {communityCreationStep === 2 && (
+            {(isFounder || communityCreationStep === 2) && (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Community Name</label>
@@ -2155,12 +2244,15 @@ export default function ChatPage() {
 
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
                   <button 
-                    onClick={handleInstantiateCommunity}
-                    style={{ background: 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}
-                    onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                    onClick={isFounder ? handleFounderCreateCommunity : handleInstantiateCommunity}
+                    disabled={groupLoading}
+                    style={{ background: groupLoading ? '#555' : 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: groupLoading ? 'not-allowed' : 'pointer', transition: 'filter 0.2s' }}
+                    onMouseOver={(e) => {
+                      if (!groupLoading) e.currentTarget.style.filter = 'brightness(1.1)';
+                    }}
                     onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
                   >
-                    Finalize & Launch Community
+                    {groupLoading ? 'Establishing...' : 'Finalize & Launch Community'}
                   </button>
                 </div>
               </>
