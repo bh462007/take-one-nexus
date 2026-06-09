@@ -169,6 +169,8 @@ app.use(cookieParser());
 
 const { sanitizeMiddleware } = require('./utils/validation');
 app.use(sanitizeMiddleware); // Prevent XSS globally
+const webhookRoutes = require('./routes/webhook');
+app.use('/api', webhookRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
