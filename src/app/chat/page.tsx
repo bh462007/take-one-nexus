@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Pusher from 'pusher-js';
 import { getAvatarUrl } from '@/lib/avatars';
 import { format } from 'date-fns';
-import CreateGroupModal from '@/components/CreateGroupModal';
+import NewDirectMessageModal from '@/components/NewDirectMessageModal';
 import TaskModal from '@/components/TaskModal';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 import './chat.css';
@@ -312,8 +312,7 @@ export default function ChatPage() {
           'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({
-          planType: selectedPlan,
-          memberCount: selectedPlan === 'Custom' ? customMembersCount : undefined
+          planType: selectedPlan
         })
       });
       
@@ -1955,7 +1954,17 @@ export default function ChatPage() {
           )}
         </main>
       </div>
-      <CreateGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} onCreate={createGroupConversation} />
+      <NewDirectMessageModal 
+        isOpen={isGroupModalOpen} 
+        onClose={() => setIsGroupModalOpen(false)} 
+        onSelectUser={async (userId) => {
+          setIsGroupModalOpen(false);
+          const conversation = await openDirectConversation(userId);
+          if (conversation) {
+            await fetchMessages(conversation.id);
+          }
+        }} 
+      />
       <TaskModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)} 
@@ -1999,7 +2008,7 @@ export default function ChatPage() {
                     >
                       <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Starter</div>
                       <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>20 Members</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹59</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59'}</div>
                     </div>
                     <div 
                       onClick={() => setSelectedPlan('Growth')}
@@ -2007,40 +2016,28 @@ export default function ChatPage() {
                     >
                       <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Growth</div>
                       <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>35 Members</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹99</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99'}</div>
                     </div>
                     <div 
                       onClick={() => setSelectedPlan('Custom')}
                       style={{ border: `1px solid ${selectedPlan === 'Custom' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Custom' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
                     >
-                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom</div>
-                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Scalable</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>Flexible</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom Community Plan</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Contact-Based Scaling</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Custom')?.base_price || '120'}</div>
                     </div>
                   </div>
                 </div>
-
-                {selectedPlan === 'Custom' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Target Capacity (Min 10)</label>
-                      <span style={{ fontSize: '11px', color: 'var(--neon)' }}>₹120 base + ₹2/member</span>
-                    </div>
-                    <input 
-                      type="number" 
-                      min={10} 
-                      value={customMembersCount}
-                      onChange={(e) => setCustomMembersCount(Math.max(10, Number(e.target.value)))}
-                      style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
-                    />
-                  </div>
-                )}
 
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due:</span>
                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
-                      ₹{selectedPlan === 'Starter' ? '59' : selectedPlan === 'Growth' ? '99' : `${120 + customMembersCount * 2}`}
+                      ₹{selectedPlan === 'Starter' 
+                        ? (pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59') 
+                        : selectedPlan === 'Growth' 
+                          ? (pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99') 
+                          : (pricingConfigs.find(c => c.plan_type === 'Custom')?.base_price || '120')}
                     </div>
                   </div>
                   <button 

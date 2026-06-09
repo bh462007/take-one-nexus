@@ -441,6 +441,7 @@ module.exports = app;
 const { seedCreditTasks } = require('./utils/seedCreditTasks');
 const { cleanupExpiredDrafts } = require('./utils/cleanupDrafts');
 const { initializeModerationTable } = require('./utils/dbInit');
+const { cleanupPendingCommunityPayments } = require('./utils/cleanupCommunityPayments');
 
 if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
   connectDB()
@@ -453,6 +454,10 @@ if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
       return seedCreditTasks();
     })
     .then(() => cleanupExpiredDrafts(true))
+    .then(() => cleanupPendingCommunityPayments())
+    .then(() => {
+      setInterval(cleanupPendingCommunityPayments, 15 * 60 * 1000);
+    })
     .catch((error) => {
       console.error('Database boot check failed:', error.message);
     });

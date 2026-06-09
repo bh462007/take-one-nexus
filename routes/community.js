@@ -120,11 +120,27 @@ router.post('/create-order', authenticateUser, createOrderValidation, async (req
       });
     }
 
+    const config = await prisma.communityPricingConfig.findUnique({
+      where: { plan_type: planType }
+    });
+
+    if (!config) {
+      return res.status(404).json({ success: false, message: 'Plan configuration not found' });
+    }
+
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { secondary_role: true }
     });
     const isFounder = dbUser?.secondary_role?.toLowerCase() === 'founder';
+
+    let price = Number(config.base_price);
+    let maxMembers = config.max_members;
+
+    if (planType === 'Custom' && memberCount) {
+      price = Number(config.base_price) + (Number(memberCount) * Number(config.per_member_price));
+      maxMembers = Number(memberCount);
+    }
 
     if (isFounder) {
       const orderId = `founder_order_${userId}_${Date.now()}`;
@@ -149,26 +165,6 @@ router.post('/create-order', authenticateUser, createOrderValidation, async (req
           currency: 'INR'
         }
       });
-    }
-
-    // Retrieve pricing config
-    const config = await prisma.communityPricingConfig.findUnique({
-      where: { plan_type: planType }
-    });
-
-    if (!config) {
-      return res.status(404).json({ success: false, message: 'Plan configuration not found' });
-    }
-
-    let price = Number(config.base_price);
-    let maxMembers = config.max_members;
-
-    if (planType === 'Custom') {
-      if (!memberCount) {
-        return res.status(400).json({ success: false, message: 'Member count is required for Custom plan' });
-      }
-      price = Number(config.base_price) + (Number(memberCount) * Number(config.per_member_price));
-      maxMembers = Number(memberCount);
     }
 
     const keyId = process.env.RAZORPAY_KEY_ID;
