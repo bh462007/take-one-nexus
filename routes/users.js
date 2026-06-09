@@ -189,7 +189,7 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const [result] = await pool.query(
       `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference)
