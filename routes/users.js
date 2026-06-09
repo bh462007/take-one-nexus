@@ -151,7 +151,7 @@ async function getProfileData(userId) {
 const registerValidation = [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).withMessage('Name is too long'),
   body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('role').notEmpty().withMessage('Role is required').not().equals('Select Role').withMessage('Please select a valid role'),
   body('gender').notEmpty().withMessage('Gender is required').not().equals('Choose Gender').withMessage('Please select your gender'),
   body('display_preference').notEmpty().withMessage('Display preference is required').not().equals('Select Display Preference').withMessage('Please select a display preference'),
