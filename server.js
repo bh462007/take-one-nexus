@@ -40,7 +40,6 @@ const { captureError, initSentry } = require('./src/lib/sentry');
 const csrfProtection = require('./middleware/csrf');
 const csrfRoutes = require('./routes/csrf');
 
-
 // Initialize Sentry for backend tracking
 initSentry();
 
@@ -61,6 +60,10 @@ const paymentRoutes = require('./routes/payments');
 const communityRoutes = require('./routes/community');
 
 const app = express();
+
+// Architectural Requirement: Extract true client IP behind reverse proxies (Vercel, Cloudflare, Nginx)
+app.set('trust proxy', true);
+
 const PORT = process.env.PORT || 3000;
 
 // 1. Security Headers (Helmet)
@@ -86,9 +89,14 @@ const cspConfig = {
 app.use(helmet({
   contentSecurityPolicy: cspConfig,
   crossOriginEmbedderPolicy: false,
-  xFrameOptions: { action: "sameorigin" },
+  xFrameOptions: { action: "deny" }, // Hardened clickjacking defence layout as per criteria
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   xContentTypeOptions: true,
+  hsts: {
+    maxAge: 31536000, // 1 year runtime enforcement
+    includeSubDomains: true,
+    preload: true // Explicit browser preload compliance registry
+  }
 }));
 
 // Set Permissions-Policy globally
@@ -101,14 +109,12 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   'https://takeone-nexus.net.in',
   'https://www.takeone-nexus.net.in',
-  'https://admin.takeone-nexus.net.in',    // Admin panel subdomain
-  'https://scripts.takeone-nexus.net.in',  // Scripts moderation subdomain
-  // Vercel preview deployments — explicitly whitelisted trusted deployments only
+  'https://admin.takeone-nexus.net.in',    
+  'https://scripts.takeone-nexus.net.in',  
   'https://take-one-nexus.vercel.app',
   'https://admin-take-one.vercel.app',
 ];
 
-// Allow custom origins from environment variable (comma-separated)
 if (process.env.ALLOWED_ORIGINS) {
   const customOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean);
   allowedOrigins.push(...customOrigins);
@@ -129,7 +135,6 @@ if (!isProd) {
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow same-origin (no origin) or allowed origins
     if (
       !origin || 
       allowedOrigins.includes(origin) || 
@@ -137,22 +142,20 @@ app.use(cors({
     ) {
       return callback(null, true);
     }
-
-    // SECURITY: Reject all other origins - removed unsafe .vercel.app wildcard
     console.warn(`[SECURITY] CORS blocked unauthorized origin: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-CSRF-Token'],
-  maxAge: 86400 // 24 hours
+  maxAge: 86400 
 }));
 
-// 3. Global Rate Limiting
+// 3. Global Sliding-Window Rate Limiting (Using the newly optimized custom tracker)
 const { createRateLimiter } = require('./middleware/rateLimiter');
 const globalLimiter = createRateLimiter({
-  limit: 200, // 200 requests
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 60, // Max 60 ticks per acceptance criteria
+  windowMs: process.env.RATE_LIMIT_WINDOW_MS ? parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) : 60000, // 60 seconds sliding log
   keyPrefix: 'global'
 });
 app.use(globalLimiter);
@@ -163,20 +166,17 @@ app.use(express.json({
   verify: (req, res, buf) => {
     req.rawBody = buf;
   }
-})); // Limit body size to 10kb
+})); 
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
 const { sanitizeMiddleware } = require('./utils/validation');
-app.use(sanitizeMiddleware); // Prevent XSS globally
+app.use(sanitizeMiddleware); 
 
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// CSRF token route definition
 app.use('/api', csrfRoutes);
-
-// Global CSRF Protection — applies to all subsequent mutating routes (POST, PUT, DELETE, PATCH)
 app.use(csrfProtection);
 
 // 5. Routes
@@ -188,6 +188,7 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/moderation', moderationRoutes);
+
 const paymentRateLimiter = createRateLimiter({
   limit: 30,
   windowMs: 15 * 60 * 1000,
@@ -204,7 +205,6 @@ app.use('/api/community/create-order', paymentRateLimiter);
 app.use('/api/community/verify-payment', paymentRateLimiter);
 app.use('/api/community', communityRoutes);
 
-// Explicitly reject manual group creation outside community scope
 app.post('/api/groups/create', (req, res) => {
   res.status(403).json({
     success: false,
@@ -212,10 +212,8 @@ app.post('/api/groups/create', (req, res) => {
   });
 });
 
-// Alias routes — mirror endpoints the frontend expects
-app.use('/api/projects', scriptRoutes); // /api/projects mirrors /api/scripts
+app.use('/api/projects', scriptRoutes); 
 
-// Top-level leaderboard endpoint
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const { pool } = require('./config/db');
@@ -252,7 +250,6 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// Top-level creators endpoint — returns registered users with basic info
 app.get('/api/creators', async (req, res) => {
   try {
     const { pool } = require('./config/db');
@@ -314,7 +311,6 @@ app.get('/api/health', async (req, res) => {
     console.error('Health check DB error:', err.message);
   }
 
-
   let prismaStatus = 'unknown';
   try {
     const prisma = require('./utils/prisma');
@@ -347,7 +343,6 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'project.htm'));
 });
@@ -372,7 +367,6 @@ app.get('/moderation', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'moderation.htm'));
 });
 
-
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -387,14 +381,12 @@ app.use((err, req, res, next) => {
   console.error(`[Server Error] ${req.method} ${req.url}`);
   console.error(err);
 
-  // Report to Sentry with request context
   captureError(err, {
     url: req.url,
     method: req.method,
     status
   });
 
-  // Hide detailed error messages in production unless they are intentionally thrown
   const message = (isProd && status === 500) 
     ? 'An internal server error occurred. Our team has been notified.' 
     : err.message || 'Something went wrong on the server';
@@ -407,26 +399,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-
-// For Vercel serverless environment, we export the app and only call listen if run directly
 if (require.main === module || process.env.NODE_ENV !== 'production') {
   const server = app.listen(PORT, () => {
     console.log('');
     console.log('TAKE ONE API running');
     console.log(`Port: ${PORT}`);
-    console.log('');
-    console.log('Available now:');
-    console.log('GET /');
-    console.log('GET /api/health');
-    console.log('GET /api/home');
-    console.log('GET /api/scripts/search');
-    console.log('POST /api/scripts (payment verification required)');
-    console.log('POST /api/requests');
-    console.log('GET /api/requests/user/:id');
-    console.log('POST /api/users/register');
-    console.log('POST /api/users/login');
-    console.log('POST /api/auth/forgot-password');
-    console.log('POST /api/auth/reset-password');
     console.log('');
   });
 
@@ -446,11 +423,9 @@ const { cleanupPendingCommunityPayments } = require('./utils/cleanupCommunityPay
 if (require.main === module || process.env.TAKE_ONE_DB_BOOT_CHECK === 'true') {
   connectDB()
     .then(() => {
-      // Initialize database tables
       return initializeModerationTable();
     })
     .then(() => {
-      // Seed default credit tasks
       return seedCreditTasks();
     })
     .then(() => cleanupExpiredDrafts(true))
