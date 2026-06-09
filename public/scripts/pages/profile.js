@@ -37,13 +37,54 @@ function activateHashTab() {
 }
 
 /* ── AVATAR UPLOAD ── */
-function changeAvatar(input) {
+async function changeAvatar(input) {
     if (!input.files[0]) return;
+    const file = input.files[0];
+
+    // 1. Show immediate local visual feedback (optimistic UI design)
     const reader = new FileReader();
     reader.onload = e => {
         document.getElementById('profilePic').src = e.target.result;
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
+
+    // 2. Wrap file in FormData and upload permanently to your server
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+        if (typeof showToast === 'function') showToast('Uploading picture... ✦');
+        
+        const response = await fetch('/api/users/upload-avatar', {
+            method: 'POST',
+            body: formData,
+             credentials: 'include',  // ← Add this
+    headers: {
+        'Authorization': `Bearer ${API.auth.getToken()}`  // ← Add this
+    }
+            // (Note: If your API uses Bearer JWT headers, be sure to add 'Authorization': 'Bearer <token>' here)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            if (typeof showToast === 'function') showToast('Profile picture saved permanently! ✦');
+            
+            // 3. Keep client-session in sync
+            if (typeof API !== 'undefined' && API.auth) {
+                const user = API.auth.getUser();
+                if (user) {
+                    user.avatar_url = result.avatar_url;
+                    API.auth.saveToken(API.auth.getToken(), user); // Save back to local storage
+                }
+            }
+        } else {
+            if (typeof showToast === 'function') showToast(result.message || 'Upload failed ✦');
+        }
+    } catch (err) {
+        console.error('Upload failed:', err);
+        if (typeof showToast === 'function') showToast('Error linking picture to server. ✦');
+    }
 }
 
 /* ── LIVE NAME PREVIEW ── */
@@ -541,6 +582,7 @@ async function saveProfile() {
     
     const payload = {
         name: document.getElementById('editName')?.value.trim() || '',
+        avatar_url: document.getElementById('profilePic')?.src || '',
         role: document.getElementById('editRole')?.value.trim() || '',
         college: document.getElementById('editCollege')?.value.trim() || '',
         city: document.getElementById('editCity')?.value.trim() || '',

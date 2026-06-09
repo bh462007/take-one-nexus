@@ -16,6 +16,10 @@ const { validateRequest } = require('../middleware/validator');
 const prisma = new PrismaClient();
 const router = express.Router();
 
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
 // Rate limiters
 const loginLimiter = createRateLimiter({
   limit: 5,
@@ -45,6 +49,39 @@ const profileUpdateLimiter = createRateLimiter({
   limit: 30, // 30 profile updates per 15 minutes
   windowMs: 15 * 60 * 1000,
   keyPrefix: 'profile-update',
+});
+
+
+// Ensure the target server-side upload directory exists
+const uploadDir = path.join(__dirname, '../public/uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const userId = req.user?.id || 'anonymous';
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar-${userId}-${Date.now()}${ext}`);
+  }
+});
+
+// Image filter validation
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Format rejected. Only image files are allowed!'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB Limit
 });
 
 
@@ -732,6 +769,40 @@ router.get('/:id', authenticateUser, requireSameUser, async (req, res) => {
       success: false,
       message: 'Could not load profile'
     });
+  }
+});
+
+
+
+/**
+ * POST /api/users/upload-avatar
+ * File-handling route for profile pictures
+ */
+router.post('/upload-avatar', authenticateUser, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const userId = Number(req.user.id);
+    
+    // This is the public relative URL pointing to the file on disk
+    const avatarUrl = `/uploads/${req.file.filename}`;
+
+    // Update the database record using Prisma
+    await prisma.user.update({
+      where: { id: userId },
+      data: { avatar_url: avatarUrl }
+    });
+
+    res.json({
+      success: true,
+      message: 'Avatar uploaded and saved successfully!',
+      avatar_url: avatarUrl
+    });
+  } catch (error) {
+    console.error('Avatar upload error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error uploading avatar' });
   }
 });
 
