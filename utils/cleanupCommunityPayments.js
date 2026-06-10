@@ -24,7 +24,13 @@ async function cleanupPendingCommunityPayments() {
     }
   } catch (error) {
     // Gracefully handle case where table doesn't exist yet (migrations not applied)
-    if (error.message.includes('does not exist') || error.code === 'P2021') {
+    const isTableMissing = 
+      error.message?.includes('does not exist') || 
+      error.code === 'P2021' ||
+      error.message?.includes('Unknown table') ||
+      error.message?.includes('community_subscriptions');
+    
+    if (isTableMissing) {
       console.log('[CommunityPaymentCleanup] Table does not exist yet, skipping cleanup (migrations may not be applied)');
     } else {
       console.error('[CommunityPaymentCleanup] Error pruning abandoned payments:', error.message);
