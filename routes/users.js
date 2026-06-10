@@ -51,6 +51,12 @@ const profileUpdateLimiter = createRateLimiter({
   keyPrefix: 'profile-update',
 });
 
+const avatarUploadLimiter = createRateLimiter({
+  limit: 5,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'avatar-upload',
+});
+
 
 // Ensure the target server-side upload directory exists
 const uploadDir = path.join(__dirname, '../public/uploads');
@@ -778,7 +784,7 @@ router.get('/:id', authenticateUser, requireSameUser, async (req, res) => {
  * POST /api/users/upload-avatar
  * File-handling route for profile pictures
  */
-router.post('/upload-avatar', authenticateUser, upload.single('avatar'), async (req, res) => {
+router.post('/upload-avatar', authenticateUser, avatarUploadLimiter, upload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
