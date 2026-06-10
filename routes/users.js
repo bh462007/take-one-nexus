@@ -815,7 +815,7 @@ router.get('/leaderboard', async (req, res) => {
       `SELECT id, name, role, college, city, avatar_url, gender, credits,
               screen_name, display_preference, email_verified
        FROM users
-       WHERE credits >= 0                     // ← line 817 — only change
+       WHERE credits >= 0
        ORDER BY credits DESC, name ASC
        LIMIT 100`
     );
