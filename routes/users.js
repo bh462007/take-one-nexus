@@ -194,7 +194,7 @@ async function getProfileData(userId) {
 const registerValidation = [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).withMessage('Name is too long'),
   body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('role').notEmpty().withMessage('Role is required').not().equals('Select Role').withMessage('Please select a valid role'),
   body('gender').notEmpty().withMessage('Gender is required').not().equals('Choose Gender').withMessage('Please select your gender'),
   body('display_preference').notEmpty().withMessage('Display preference is required').not().equals('Select Display Preference').withMessage('Please select a display preference'),
@@ -232,7 +232,7 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const [result] = await pool.query(
       `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference)
@@ -889,9 +889,10 @@ router.get('/public/:id', async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const rows = await safeQuery(
-      `SELECT id, name, role, college, city, avatar_url, gender, credits, screen_name, display_preference, email_verified
+      `SELECT id, name, role, college, city, avatar_url, gender, credits,
+              screen_name, display_preference, email_verified
        FROM users
-       WHERE credits > 0
+       WHERE credits >= 0
        ORDER BY credits DESC, name ASC
        LIMIT 100`
     );
