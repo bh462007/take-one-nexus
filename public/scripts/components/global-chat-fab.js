@@ -52,7 +52,38 @@
     }
 
     if (window.Pusher && key && cluster) {
-      const pusher = new Pusher(key, { cluster });
+      const pusher = new Pusher(key, {
+        cluster,
+        authorizer: (channel, options) => {
+          return {
+            authorize: (socketId, callback) => {
+              const token = localStorage.getItem(TOKEN_KEY);
+              fetch('/api/chat/pusher/auth', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                  socket_id: socketId,
+                  channel_name: channel.name
+                })
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.auth) {
+                  callback(null, data);
+                } else {
+                  callback(new Error(data.message || 'Authorization failed'), null);
+                }
+              })
+              .catch(err => {
+                callback(err, null);
+              });
+            }
+          };
+        }
+      });
       const channel = pusher.subscribe(`user-${userId}`);
       channel.bind('message-notification', () => {
         // Fetch exact count from server for accuracy
