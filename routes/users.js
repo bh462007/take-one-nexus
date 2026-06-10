@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { authenticateUser, requireSameUser } = require('../middleware/auth');
 const { sendWelcomeEmail, sendVerificationEmail } = require('../utils/email');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { formatDisplayName, getCanonicalDisplayName } = require('../utils/formatting');
 const Pusher = require('pusher');
 const { createRateLimiter } = require('../middleware/rateLimiter');
@@ -13,7 +13,7 @@ const { createRateLimiter } = require('../middleware/rateLimiter');
 const { body } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
 
-const prisma = new PrismaClient();
+
 const router = express.Router();
 
 // Rate limiters
