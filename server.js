@@ -193,6 +193,12 @@ app.use(sanitizeMiddleware); // Prevent XSS globally
 const webhookRoutes = require('./routes/webhook');
 app.use('/api', webhookRoutes);
 
+const uploadDir = process.env.VERCEL
+  ? path.join('/tmp', 'logos')
+  : path.resolve(__dirname, 'public', 'assets', 'uploads', 'logos');
+
+app.use('/assets/uploads/logos', express.static(uploadDir));
+app.use('/uploads/logos', express.static(uploadDir));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'assets', 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 

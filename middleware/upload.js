@@ -2,10 +2,17 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure destination directory exists
-const uploadDir = path.resolve(__dirname, '..', 'public', 'assets', 'uploads', 'logos');
+// Determine upload directory: Vercel serverless functions only have write permissions in /tmp
+const uploadDir = process.env.VERCEL
+  ? path.join('/tmp', 'logos')
+  : path.resolve(__dirname, '..', 'public', 'assets', 'uploads', 'logos');
+
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (err) {
+    console.warn(`[Upload Config] Warning: Failed to create upload directory "${uploadDir}":`, err.message);
+  }
 }
 
 // Configure disk storage
