@@ -527,19 +527,20 @@ router.get('/me', authenticateUser, async (req, res) => {
 });
 
 
-router.get('/search', async (req, res) => {
+router.get('/search', authenticateUser, async (req, res) => {
   try {
     const role = String(req.query.role || '').trim();
     const city = String(req.query.city || '').trim();
     const availability = String(req.query.availability || '').trim();
     const q = String(req.query.q || '').trim();
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
 
     let sql = `
       SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified, availability
       FROM users
-      WHERE 1 = 1
+      WHERE id != ?
     `;
-    const params = [];
+    const params = [req.user.id];
 
     if (role) {
       sql += ` AND role LIKE ?`;
@@ -557,11 +558,12 @@ router.get('/search', async (req, res) => {
     }
 
     if (q) {
-      sql += ` AND (name LIKE ? OR college LIKE ? OR skills LIKE ?)`;
-      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+      sql += ` AND (name LIKE ? OR screen_name LIKE ? OR role LIKE ? OR college LIKE ? OR skills LIKE ?)`;
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
 
-    sql += ` ORDER BY created_at DESC, id DESC LIMIT 50`;
+    sql += ` ORDER BY created_at DESC, id DESC LIMIT ?`;
+    params.push(limit);
 
     const rows = await safeQuery(sql, params);
 
@@ -574,7 +576,7 @@ router.get('/search', async (req, res) => {
     console.error('User search error:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Could not load crew members'
+      message: 'Could not search users'
     });
   }
 });
