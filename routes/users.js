@@ -812,9 +812,10 @@ router.get('/public/:id', async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const rows = await safeQuery(
-      `SELECT id, name, role, college, city, avatar_url, gender, credits, screen_name, display_preference, email_verified
+      `SELECT id, name, role, college, city, avatar_url, gender, credits,
+              screen_name, display_preference, email_verified
        FROM users
-       WHERE credits > 0
+       WHERE credits >= 0                     // ← line 817 — only change
        ORDER BY credits DESC, name ASC
        LIMIT 100`
     );
