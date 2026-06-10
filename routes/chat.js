@@ -5,9 +5,17 @@ const { validateRequest } = require('../middleware/validator');
 const { PrismaClient } = require('@prisma/client');
 const Pusher = require('pusher');
 const { formatDisplayName } = require('../utils/formatting');
+const { createRateLimiter } = require('../middleware/rateLimiter');
 
 const prisma = new PrismaClient();
 const router = express.Router();
+
+// Rate limiter for Pusher authorization endpoint to prevent abuse
+const pusherAuthLimiter = createRateLimiter({
+  limit: 100, // Max 100 authorization requests per window
+  windowMs: 60000, // 60 seconds
+  keyPrefix: 'pusher-auth'
+});
 
 // Configure Pusher
 const pusher = new Pusher({
@@ -693,7 +701,7 @@ router.patch('/conversations/:id/avatar', authenticateUser, [
  * Pusher channel authorization endpoint
  * Validates that the authenticated user has permission to access the requested channel
  */
-router.post('/pusher/auth', authenticateUser, async (req, res) => {
+router.post('/pusher/auth', pusherAuthLimiter, authenticateUser, async (req, res) => {
   try {
     const userId = Number(req.user?.id);
     const { socket_id: socketId, channel_name: channelName } = req.body;
