@@ -580,21 +580,17 @@ router.get('/members', authenticateUser, async (req, res) => {
 
 /**
  * POST /api/community/members/invite
- * Invite a user by ID to join the community (Owner/Moderator only)
+ * Invite a user by email to join the community (Owner/Moderator only)
  */
 const inviteMemberValidation = [
-  body('userId').isInt({ min: 1 }).withMessage('Valid user ID is required'),
+  body('email').isEmail().withMessage('Valid email is required'),
   validateRequest
 ];
 
 router.post('/members/invite', authenticateUser, inviteMemberValidation, async (req, res) => {
   try {
     const callerId = Number(req.user.id);
-    const { userId } = req.body;
-
-    if (callerId === Number(userId)) {
-      return res.status(400).json({ success: false, message: 'You cannot invite yourself' });
-    }
+    const { email } = req.body;
 
     // Verify caller is Owner or Moderator
     const myMembership = await prisma.communityMember.findFirst({
@@ -628,11 +624,11 @@ router.post('/members/invite', authenticateUser, inviteMemberValidation, async (
 
     // Find invitee user
     const targetUser = await prisma.user.findUnique({
-      where: { id: Number(userId) }
+      where: { email }
     });
 
     if (!targetUser) {
-      return res.status(404).json({ success: false, message: 'Crew member not found' });
+      return res.status(404).json({ success: false, message: 'Crew member with this email not found' });
     }
 
     // Check if user is already in a community
@@ -647,141 +643,16 @@ router.post('/members/invite', authenticateUser, inviteMemberValidation, async (
       });
     }
 
-    // Check for existing pending invitation
-    const existingInvite = await prisma.communityInvitation.findFirst({
-      where: {
-        community_id: community.id,
-        invitee_id: targetUser.id,
-        status: 'pending'
-      }
-    });
-
-    if (existingInvite) {
-      return res.status(400).json({
-        success: false,
-        message: 'An invitation is already pending for this crew member.'
-      });
-    }
-
-    // Create the invitation
-    const invitation = await prisma.communityInvitation.create({
-      data: {
-        community_id: community.id,
-        invited_by_id: callerId,
-        invitee_id: targetUser.id,
-        role: 'Member',
-        status: 'pending'
-      }
-    });
-
-    res.json({
-      success: true,
-      message: `Invitation sent to ${targetUser.name}.`,
-      data: invitation
-    });
-  } catch (error) {
-    console.error('[Community] Invite member error:', error.message);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-/**
- * GET /api/community/invitations/pending
- * List all pending community invitations for the logged-in user
- */
-router.get('/invitations/pending', authenticateUser, async (req, res) => {
-  try {
-    const callerId = Number(req.user.id);
-    const pendingInvites = await prisma.communityInvitation.findMany({
-      where: {
-        invitee_id: callerId,
-        status: 'pending'
-      },
-      include: {
-        community: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            avatar_url: true
-          }
-        },
-        invited_by: {
-          select: {
-            id: true,
-            name: true,
-            avatar_url: true,
-            role: true
-          }
-        }
-      }
-    });
-    res.json({ success: true, data: pendingInvites });
-  } catch (error) {
-    console.error('[Community] List pending invitations error:', error.message);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-/**
- * POST /api/community/invitations/:id/accept
- * Accept a pending invitation
- */
-router.post('/invitations/:id/accept', authenticateUser, async (req, res) => {
-  try {
-    const inviteId = Number(req.params.id);
-    const callerId = Number(req.user.id);
-    
-    const invite = await prisma.communityInvitation.findUnique({
-      where: { id: inviteId },
-      include: {
-        community: {
-          include: {
-            members: true,
-            groups: true
-          }
-        }
-      }
-    });
-
-    if (!invite || invite.invitee_id !== callerId || invite.status !== 'pending') {
-      return res.status(404).json({ success: false, message: 'Pending invitation not found' });
-    }
-
-    // Check membership constraints: user must not be in any community already
-    const existingMembership = await prisma.communityMember.findFirst({
-      where: { user_id: callerId }
-    });
-
-    if (existingMembership) {
-      return res.status(400).json({ success: false, message: 'You are already a member of a community.' });
-    }
-
-    const { community } = invite;
-
-    // Check community capacity limit
-    if (community.members.length >= community.max_members) {
-      return res.status(400).json({
-        success: false,
-        message: `Community membership limit reached (${community.max_members} max).`
-      });
-    }
-
+    // Add member to community & General group in transaction
     const generalGroup = community.groups.find(g => g.name === 'General');
 
     await prisma.$transaction(async (tx) => {
-      // Update invitation status to accepted
-      await tx.communityInvitation.update({
-        where: { id: inviteId },
-        data: { status: 'accepted' }
-      });
-
       // Add CommunityMember record
       await tx.communityMember.create({
         data: {
           community_id: community.id,
-          user_id: callerId,
-          role: invite.role || 'Member'
+          user_id: targetUser.id,
+          role: 'Member'
         }
       });
 
@@ -790,45 +661,19 @@ router.post('/invitations/:id/accept', authenticateUser, async (req, res) => {
         await tx.conversationMember.create({
           data: {
             conversation_id: generalGroup.conversation_id,
-            user_id: callerId,
-            role: invite.role || 'Member'
+            user_id: targetUser.id,
+            role: 'Member'
           }
         });
       }
     });
 
-    res.json({ success: true, message: `Successfully joined ${community.name}!` });
-  } catch (error) {
-    console.error('[Community] Accept invitation error:', error.message);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
-
-/**
- * POST /api/community/invitations/:id/reject
- * Reject a pending invitation
- */
-router.post('/invitations/:id/reject', authenticateUser, async (req, res) => {
-  try {
-    const inviteId = Number(req.params.id);
-    const callerId = Number(req.user.id);
-    
-    const invite = await prisma.communityInvitation.findUnique({
-      where: { id: inviteId }
+    res.json({
+      success: true,
+      message: `${targetUser.name} has been added to the community.`
     });
-
-    if (!invite || invite.invitee_id !== callerId || invite.status !== 'pending') {
-      return res.status(404).json({ success: false, message: 'Pending invitation not found' });
-    }
-
-    await prisma.communityInvitation.update({
-      where: { id: inviteId },
-      data: { status: 'rejected' }
-    });
-
-    res.json({ success: true, message: 'Invitation rejected.' });
   } catch (error) {
-    console.error('[Community] Reject invitation error:', error.message);
+    console.error('[Community] Invite member error:', error.message);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

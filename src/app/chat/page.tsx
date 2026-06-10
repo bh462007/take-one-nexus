@@ -137,11 +137,8 @@ export default function ChatPage() {
   const [communityCreationStep, setCommunityCreationStep] = useState(1);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
 
-  // User Search & Invitation states
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
-  const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  // Invites & Groups
+  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
@@ -200,68 +197,8 @@ export default function ChatPage() {
     }
   }, []);
 
-  const fetchPendingInvitations = useCallback(async () => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch('/api/community/invitations/pending', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      const data = await res.json();
-      if (data.success) {
-        setPendingInvitations(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching pending invitations:', err);
-    }
-  }, []);
-
-  const handleAcceptInvitation = async (invitationId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/invitations/${invitationId}/accept`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(data.message || 'Invitation accepted!');
-        await fetchMyCommunity();
-        await fetchPendingInvitations();
-        await fetchConversations();
-      } else {
-        alert(data.message || 'Failed to accept invitation');
-      }
-    } catch (err) {
-      console.error('Error accepting invitation:', err);
-      alert('Error accepting invitation');
-    }
-  };
-
-  const handleRejectInvitation = async (invitationId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/invitations/${invitationId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(data.message || 'Invitation rejected.');
-        await fetchPendingInvitations();
-      } else {
-        alert(data.message || 'Failed to reject invitation');
-      }
-    } catch (err) {
-      console.error('Error rejecting invitation:', err);
-      alert('Error rejecting invitation');
-    }
-  };
-
-  const handleInviteUser = async (userId: number) => {
+  const handleInviteMember = async (e: React.FormEvent) => {
+    e.preventDefault();
     setInviteLoading(true);
     setInviteError('');
     setInviteSuccess('');
@@ -273,12 +210,12 @@ export default function ChatPage() {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ email: inviteEmail })
       });
       const data = await res.json();
       if (data.success) {
-        setInviteSuccess(data.message || 'Invitation sent successfully');
-        setUserSearchResults(prev => prev.map(u => u.id === userId ? { ...u, invited: true } : u));
+        setInviteSuccess(data.message);
+        setInviteEmail('');
         await fetchMyCommunity();
         await fetchDashboardStats();
       } else {
@@ -290,35 +227,6 @@ export default function ChatPage() {
       setInviteLoading(false);
     }
   };
-
-  // Live user lookup search debouncer
-  useEffect(() => {
-    if (!userSearchQuery.trim()) {
-      setUserSearchResults([]);
-      return;
-    }
-    const delayDebounceFn = setTimeout(async () => {
-      setUserSearchLoading(true);
-      try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-        const res = await fetch(`/api/users/search?q=${encodeURIComponent(userSearchQuery)}`, {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : ''
-          }
-        });
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setUserSearchResults(data.data);
-        }
-      } catch (err) {
-        console.error('Error searching users:', err);
-      } finally {
-        setUserSearchLoading(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [userSearchQuery]);
 
   const handleRemoveMember = async (memberUserId: number) => {
     if (!confirm('Are you sure you want to remove this member?')) return;
@@ -1074,7 +982,6 @@ export default function ChatPage() {
         const targetConversationId = Number(params.get('conversationId') || 0);
         const loadedConversations = await fetchConversations();
         await fetchMyCommunity();
-        await fetchPendingInvitations();
 
         if (targetUserId) {
           const conversation = await openDirectConversation(targetUserId);
@@ -2112,7 +2019,7 @@ export default function ChatPage() {
               )}
             </>
           ) : (
-            <div className="chat-empty" style={{ overflowY: 'auto', maxHeight: '100%', padding: '32px 16px' }}>
+            <div className="chat-empty">
               <div className="empty-icon-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 <div className="pulse-ring"></div>
@@ -2130,90 +2037,6 @@ export default function ChatPage() {
                   <span className="cell-value">99.9%</span>
                 </div>
               </div>
-
-              {pendingInvitations.length > 0 && (
-                <div style={{ marginTop: '32px', width: '100%', maxWidth: '450px', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
-                  <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--neon)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-                    <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon)', boxShadow: '0 0 8px var(--neon)' }}></span>
-                    Pending Community Invitations ({pendingInvitations.length})
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {pendingInvitations.map((invite) => (
-                      <div 
-                        key={invite.id} 
-                        style={{ 
-                          background: 'rgba(255, 255, 255, 0.02)', 
-                          border: '1px solid rgba(255, 77, 26, 0.15)', 
-                          borderRadius: '8px', 
-                          padding: '12px 16px', 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '10px' 
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img 
-                            src={invite.community?.avatar_url || '/assets/default-group.png'} 
-                            alt="" 
-                            style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}
-                          />
-                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                            <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {invite.community?.name}
-                            </span>
-                            <span style={{ fontSize: '10px', color: '#aaa' }}>
-                              Invited by {invite.invited_by?.name || 'crew member'}
-                            </span>
-                          </div>
-                        </div>
-                        {invite.community?.description && (
-                          <p style={{ margin: 0, fontSize: '11px', color: '#888', lineHeight: '1.4' }}>
-                            {invite.community.description}
-                          </p>
-                        )}
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                          <button 
-                            onClick={() => handleRejectInvitation(invite.id)}
-                            style={{ 
-                              background: 'rgba(255,255,255,0.05)', 
-                              border: '1px solid rgba(255,255,255,0.1)', 
-                              color: '#ccc', 
-                              padding: '6px 12px', 
-                              borderRadius: '4px', 
-                              fontSize: '11px', 
-                              cursor: 'pointer',
-                              fontWeight: '600',
-                              transition: 'background 0.2s'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                          >
-                            Decline
-                          </button>
-                          <button 
-                            onClick={() => handleAcceptInvitation(invite.id)}
-                            style={{ 
-                              background: 'var(--neon)', 
-                              border: 'none', 
-                              color: '#fff', 
-                              padding: '6px 12px', 
-                              borderRadius: '4px', 
-                              fontSize: '11px', 
-                              cursor: 'pointer',
-                              fontWeight: '600',
-                              transition: 'filter 0.2s'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
-                            onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
-                          >
-                            Accept & Join
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </main>
@@ -2445,96 +2268,33 @@ export default function ChatPage() {
 
       {isInviteModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(6px)' }}>
-          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff', maxHeight: '80vh' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Invite Crew Member</h3>
-              <button 
-                onClick={() => {
-                  setIsInviteModalOpen(false);
-                  setUserSearchQuery('');
-                  setUserSearchResults([]);
-                  setInviteError('');
-                  setInviteSuccess('');
-                }} 
-                style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}
-              >
-                ✕
-              </button>
+              <button onClick={() => setIsInviteModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, minHeight: 0 }}>
+            <form onSubmit={handleInviteMember} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', color: '#aaa' }}>Search Crew Members</label>
+                <label style={{ fontSize: '12px', color: '#aaa' }}>User Email Address</label>
                 <input 
-                  type="text" 
-                  placeholder="Type name, college, or skills..." 
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  type="email" 
+                  required 
+                  placeholder="crew@example.com" 
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
                   style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}
                 />
               </div>
-
               {inviteError && <div style={{ color: '#ff4d4d', fontSize: '12px' }}>{inviteError}</div>}
               {inviteSuccess && <div style={{ color: '#4dff4d', fontSize: '12px' }}>{inviteSuccess}</div>}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, marginTop: '8px' }}>
-                {userSearchLoading ? (
-                  <div style={{ textAlign: 'center', color: '#aaa', fontSize: '12px', padding: '16px 0' }}>Searching crew...</div>
-                ) : userSearchResults.length > 0 ? (
-                  userSearchResults.map((usr: any) => (
-                    <div 
-                      key={usr.id} 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between', 
-                        padding: '8px 12px', 
-                        background: 'rgba(255,255,255,0.02)', 
-                        border: '1px solid rgba(255,255,255,0.05)', 
-                        borderRadius: '6px',
-                        gap: '12px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                        <img 
-                          src={getAvatarUrl(usr.name, usr.gender || 'Other', usr.avatar_url)} 
-                          alt="" 
-                          style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)' }}
-                        />
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                          <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {usr.name}
-                          </span>
-                          <span style={{ fontSize: '10px', color: '#888' }}>
-                            {usr.role || 'Creator'} • {usr.screen_name || usr.email.split('@')[0]}
-                          </span>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => handleInviteUser(usr.id)}
-                        disabled={inviteLoading || usr.invited}
-                        style={{ 
-                          background: usr.invited ? 'rgba(77, 255, 77, 0.1)' : 'var(--neon)', 
-                          border: usr.invited ? '1px solid rgba(77, 255, 77, 0.3)' : 'none', 
-                          color: usr.invited ? '#4dff4d' : '#fff', 
-                          padding: '6px 12px', 
-                          borderRadius: '4px', 
-                          fontSize: '11px', 
-                          cursor: usr.invited ? 'default' : 'pointer', 
-                          fontWeight: 'bold' 
-                        }}
-                      >
-                        {usr.invited ? 'Invited' : 'Invite'}
-                      </button>
-                    </div>
-                  ))
-                ) : userSearchQuery.trim() ? (
-                  <div style={{ textAlign: 'center', color: '#888', fontSize: '12px', padding: '16px 0' }}>No crew members found matching your search.</div>
-                ) : (
-                  <div style={{ textAlign: 'center', color: '#666', fontSize: '12px', padding: '16px 0' }}>Start typing to search users...</div>
-                )}
-              </div>
-            </div>
+              <button 
+                type="submit" 
+                disabled={inviteLoading}
+                style={{ background: 'var(--neon)', border: 'none', padding: '10px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                {inviteLoading ? 'Sending...' : 'Send Invitation'}
+              </button>
+            </form>
           </div>
         </div>
       )}
