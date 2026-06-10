@@ -5,16 +5,18 @@ const { validateRequest } = require('../middleware/validator');
 const { PrismaClient } = require('@prisma/client');
 const Pusher = require('pusher');
 const { formatDisplayName } = require('../utils/formatting');
-const { createRateLimiter } = require('../middleware/rateLimiter');
+const rateLimit = require('express-rate-limit');
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
 // Rate limiter for Pusher authorization endpoint to prevent abuse
-const pusherAuthLimiter = createRateLimiter({
-  limit: 100, // Max 100 authorization requests per window
-  windowMs: 60000, // 60 seconds
-  keyPrefix: 'pusher-auth'
+const pusherAuthLimiter = rateLimit({
+  windowMs: 60 * 1000, // 60 seconds
+  max: 100, // Max 100 authorization requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests. Please wait before trying again.' }
 });
 
 // Configure Pusher

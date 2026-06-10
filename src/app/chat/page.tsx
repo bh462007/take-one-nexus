@@ -299,8 +299,7 @@ export default function ChatPage() {
       } else {
         alert(data.message || 'Failed to delete group');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert('Error deleting group');
     }
   };
@@ -1029,7 +1028,7 @@ export default function ChatPage() {
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
           cluster: pusherCluster,
-          authorizer: (channel, options) => {
+          authorizer: (channel) => {
             return {
               authorize: (socketId, callback) => {
                 const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
@@ -1109,7 +1108,7 @@ export default function ChatPage() {
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
           cluster: pusherCluster,
-          authorizer: (channel, options) => {
+          authorizer: (channel) => {
             return {
               authorize: (socketId, callback) => {
                 const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;

@@ -54,7 +54,7 @@
     if (window.Pusher && key && cluster) {
       const pusher = new Pusher(key, {
         cluster,
-        authorizer: (channel, options) => {
+        authorizer: (channel) => {
           return {
             authorize: (socketId, callback) => {
               const token = localStorage.getItem(TOKEN_KEY);
