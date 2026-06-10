@@ -344,12 +344,13 @@ const messageValidation = [
   body('content').trim().notEmpty().withMessage('Message content cannot be empty').isLength({ max: 5000 }),
   body('conversationId').optional().isNumeric(),
   body('recipientId').optional().isNumeric(),
+  body('tempId').optional().isString(),
   validateRequest
 ];
 
 router.post('/messages', authenticateUser, messageValidation, async (req, res) => {
   try {
-    const { conversationId, content, recipientId } = req.body;
+    const { conversationId, content, recipientId, tempId } = req.body;
     const senderId = Number(req.user?.id);
 
     if (!senderId || isNaN(senderId)) {
@@ -467,6 +468,7 @@ router.post('/messages', authenticateUser, messageValidation, async (req, res) =
 
       pusher.trigger(`conversation-${targetConversationId}`, 'new-message', {
         ...message,
+        tempId: tempId || null,
         sender: {
           ...message.sender,
           name: formatDisplayName(message.sender?.name)
@@ -486,7 +488,10 @@ router.post('/messages', authenticateUser, messageValidation, async (req, res) =
 
     res.json({
       success: true,
-      data: message
+      data: {
+        ...message,
+        tempId: tempId || null
+      }
     });
   } catch (error) {
     console.error('Send message error:', error.message);
