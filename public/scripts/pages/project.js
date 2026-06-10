@@ -1670,8 +1670,8 @@ registerForm?.addEventListener('submit', async (e) => {
     return;
   }
   
-  if (password.length < 6) {
-    showToast('❌ Password must be at least 6 characters');
+  if (password.length < 8) {
+    showToast('❌ Password must be at least 8 characters');
     return;
   }
   // The final step's submit button uses .wizard-btn-next[type="submit"], not .form-submit
