@@ -1,49 +1,21 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "public/**",
-          "routes/**",
-          "config/**",
-          "middleware/**",
-          "utils/**",
-          "database/**",
-          "src/lib/**"
-        ]
-      }
+      "source": "/api/(.*)",
+      "destination": "/api/server"
     },
     {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
+      "source": "/uploads/(.*)",
+      "destination": "/api/server"
     },
     {
-      "src": "/uploads/(.*)",
-      "dest": "/server.js"
+      "source": "/project",
+      "destination": "/project.htm"
     },
     {
-      "src": "/project",
-      "dest": "/project.htm"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/",
-      "dest": "/project.htm"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/",
+      "destination": "/project.htm"
     }
   ]
 }
