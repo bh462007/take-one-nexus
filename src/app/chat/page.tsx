@@ -1019,6 +1019,22 @@ export default function ChatPage() {
     initialize();
   }, [fetchConversations, fetchMessages, openDirectConversation, setActiveConversation]);
 
+  // =========================================================================
+  // FIX 1: DEDICATED PUSHER CLIENT CONNECTION DISPOSAL LIFECYCLE HOOK
+  // Handles complete websocket disconnection on unmount, layout switches, or logouts.
+  // =========================================================================
+  useEffect(() => {
+    return () => {
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+        pusherRef.current = null;
+      }
+    };
+  }, [user]); // Fires on explicit layout unmount or session invalidation (logout)
+
+  // =========================================================================
+  // FIX 2: REFACTORED USER CHANNEL SUBSCRIPTION (DETERMINISTIC CLEANUP)
+  // =========================================================================
   useEffect(() => {
     if (!user) return;
 
@@ -1038,12 +1054,12 @@ export default function ChatPage() {
     const userChannelName = `user-${user.id}`;
     const userChannel = pusherRef.current.subscribe(userChannelName);
 
-    userChannel.bind('credit-update', (data: { credits: number, change: number, reason: string }) => {
+    // Named reference allocation to avoid handler replication
+    const handleCreditUpdate = (data: { credits: number, change: number, reason: string }) => {
       setUser(prev => prev ? { ...prev, credits: data.credits } : null);
+    };
 
-    });
-
-    userChannel.bind('message-notification', (data: { conversationId: number, message: ChatMessage }) => {
+    const handleMessageNotification = (data: { conversationId: number, message: ChatMessage }) => {
       setConversations((current) => {
         const convIndex = current.findIndex((c) => c.id === data.conversationId);
         if (convIndex > -1) {
@@ -1062,14 +1078,23 @@ export default function ChatPage() {
           return current;
         }
       });
-    });
+    };
 
+    // Binding reference listeners
+    userChannel.bind('credit-update', handleCreditUpdate);
+    userChannel.bind('message-notification', handleMessageNotification);
+
+    // Strict explicit event teardown block
     return () => {
-      userChannel.unbind_all();
+      userChannel.unbind('credit-update', handleCreditUpdate);
+      userChannel.unbind('message-notification', handleMessageNotification);
       pusherRef.current?.unsubscribe(userChannelName);
     };
   }, [user, activeConv?.id, fetchConversations]);
 
+  // =========================================================================
+  // FIX 3: REFACTORED CONVERSATION ACTIVE CHANNEL (DETERMINISTIC CLEANUP)
+  // =========================================================================
   useEffect(() => {
     if (!activeConv) return;
 
@@ -1088,7 +1113,9 @@ export default function ChatPage() {
 
     const channelName = `conversation-${activeConv.id}`;
     const channel = pusherRef.current.subscribe(channelName);
-    channel.bind('new-message', (data: { message: ChatMessage }) => {
+
+    // Named handlers to allow precise runtime stack unbinding
+    const handleNewMessage = (data: { message: ChatMessage }) => {
       if (activeConv.id === data.message.conversation_id) {
         setMessages((prev) => {
           if (prev.find((message) => message.id === data.message.id)) return prev;
@@ -1111,9 +1138,9 @@ export default function ChatPage() {
         }
         return current;
       });
-    });
+    };
 
-    channel.bind('user-typing', (data: { userId: number, userName: string, isTyping: boolean }) => {
+    const handleUserTyping = (data: { userId: number, userName: string, isTyping: boolean }) => {
       if (data.userId === user?.id) return;
       setTypingUsers(prev => {
         const next = { ...prev };
@@ -1121,9 +1148,9 @@ export default function ChatPage() {
         else delete next[data.userId];
         return next;
       });
-    });
+    };
 
-    channel.bind('task-update', (data: { type: string, task: Task, taskId?: number }) => {
+    const handleTaskUpdate = (data: { type: string, task: Task, taskId?: number }) => {
       if (data.type === 'TASK_CREATED') {
         setTasks(prev => [data.task, ...prev]);
       } else if (data.type === 'TASK_UPDATED' || data.type === 'TASK_APPROVED') {
@@ -1131,14 +1158,21 @@ export default function ChatPage() {
       } else if (data.type === 'TASK_DELETED') {
         setTasks(prev => prev.filter(t => t.id !== data.taskId));
       }
-    });
+    };
 
+    // Binding reference handlers
+    channel.bind('new-message', handleNewMessage);
+    channel.bind('user-typing', handleUserTyping);
+    channel.bind('task-update', handleTaskUpdate);
+
+    // Explicit channel and handler teardown phase
     return () => {
-      channel.unbind_all();
+      channel.unbind('new-message', handleNewMessage);
+      channel.unbind('user-typing', handleUserTyping);
+      channel.unbind('task-update', handleTaskUpdate);
       pusherRef.current?.unsubscribe(channelName);
     };
   }, [activeConv, user?.id]);
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, messageLoading]);
