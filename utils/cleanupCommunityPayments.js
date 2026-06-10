@@ -23,7 +23,12 @@ async function cleanupPendingCommunityPayments() {
       console.log(`[CommunityPaymentCleanup] Successfully pruned ${result.count} abandoned pending payment(s) older than 2 hours.`);
     }
   } catch (error) {
-    console.error('[CommunityPaymentCleanup] Error pruning abandoned payments:', error.message);
+    // Gracefully handle case where table doesn't exist yet (migrations not applied)
+    if (error.message.includes('does not exist') || error.code === 'P2021') {
+      console.log('[CommunityPaymentCleanup] Table does not exist yet, skipping cleanup (migrations may not be applied)');
+    } else {
+      console.error('[CommunityPaymentCleanup] Error pruning abandoned payments:', error.message);
+    }
   } finally {
     isRunning = false;
   }

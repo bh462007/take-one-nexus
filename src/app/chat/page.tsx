@@ -849,7 +849,7 @@ export default function ChatPage() {
   };
 
   const handleClearChat = async (id: number) => {
-    if (!confirm('Are you sure you want to clear all messages in this conversation? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to clear all messages in this conversation? This will permanently delete messages for ALL participants. Only Directors and Admins can perform this action.')) return;
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
       const res = await fetchWithCSRF(`/api/chat/conversations/${id}/clear`, { 
@@ -860,6 +860,9 @@ export default function ChatPage() {
       if (res.ok) {
         setMessages([]);
         setShowMenu(false);
+      } else {
+        const json = await res.json();
+        alert(json.message || 'Failed to clear chat');
       }
     } catch (err) {
       console.error('Failed to clear chat', err);
