@@ -1881,7 +1881,7 @@ function applyRoleBasedUI(user) {
       if (!adminLink && nav) {
         adminLink = document.createElement('a');
         adminLink.id = 'adminPanelLink';
-        adminLink.href = '/admin';
+        adminLink.href = 'https://admin.takeone-nexus.net.in';
         adminLink.textContent = 'Admin Panel';
         adminLink.style.color = 'var(--neon)';
         adminLink.style.fontWeight = 'bold';

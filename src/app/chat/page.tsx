@@ -1258,7 +1258,7 @@ export default function ChatPage() {
           <a href="/#upload">Share Your Script</a>
           <a href="/profile">Profile</a>
           {user?.role && ['admin', 'developer', 'moderator'].includes(user.role.toLowerCase()) && (
-            <a href="/admin" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
+            <a href="https://admin.takeone-nexus.net.in" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
           )}
           <button onClick={() => window.location.href = '/profile'} className="nav-cta">
             My Signal
@@ -2099,7 +2099,7 @@ export default function ChatPage() {
                     >
                       <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Starter</div>
                       <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>20 Members</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59'}</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59'} / 3 Months</div>
                     </div>
                     <div 
                       onClick={() => setSelectedPlan('Growth')}
@@ -2107,7 +2107,7 @@ export default function ChatPage() {
                     >
                       <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Growth</div>
                       <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>35 Members</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99'}</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99'} / 3 Months</div>
                     </div>
                     <div 
                       onClick={() => setSelectedPlan('Custom')}
@@ -2121,7 +2121,7 @@ export default function ChatPage() {
                           const base = customCfg ? Number(customCfg.base_price) : 99;
                           const per = customCfg ? Number(customCfg.per_member_price) : 2;
                           return base + (customMembersCount * per);
-                        })()}
+                        })()} / 3 Months
                       </div>
                     </div>
                   </div>
@@ -2169,51 +2169,56 @@ export default function ChatPage() {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', color: 'var(--neon)', borderTop: '1px dotted rgba(255,255,255,0.1)', paddingTop: '6px', marginTop: '4px' }}>
                           <span>Total Price:</span>
-                          <span>₹{calculatedPrice}</span>
+                          <span>₹{calculatedPrice} / 3 Months</span>
                         </div>
                       </div>
                     </div>
                   );
                 })()}
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due:</span>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
-                      ₹{selectedPlan === 'Starter' 
-                        ? (pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59') 
-                        : selectedPlan === 'Growth' 
-                          ? (pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99') 
-                          : (() => {
-                              const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
-                              const base = customCfg ? Number(customCfg.base_price) : 99;
-                              const per = customCfg ? Number(customCfg.per_member_price) : 2;
-                              return base + (customMembersCount * per);
-                            })()}
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due (3 Months Subscription):</span>
+                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                        ₹{selectedPlan === 'Starter' 
+                          ? (pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59') 
+                          : selectedPlan === 'Growth' 
+                            ? (pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99') 
+                            : (() => {
+                                const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                                const base = customCfg ? Number(customCfg.base_price) : 99;
+                                const per = customCfg ? Number(customCfg.per_member_price) : 2;
+                                return base + (customMembersCount * per);
+                              })()}
+                      </div>
                     </div>
+                    <button 
+                      onClick={handlePricingProceed}
+                      disabled={selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))}
+                      style={{ 
+                        background: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? '#555' : 'var(--neon)', 
+                        border: 'none', 
+                        padding: '12px 24px', 
+                        borderRadius: '6px', 
+                        color: '#fff', 
+                        fontWeight: 'bold', 
+                        cursor: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? 'not-allowed' : 'pointer', 
+                        transition: 'filter 0.2s' 
+                      }}
+                      onMouseOver={(e) => {
+                        if (!(selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000)))) {
+                          e.currentTarget.style.filter = 'brightness(1.1)';
+                        }
+                      }}
+                      onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+                    >
+                      Proceed to Payment
+                    </button>
                   </div>
-                  <button 
-                    onClick={handlePricingProceed}
-                    disabled={selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))}
-                    style={{ 
-                      background: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? '#555' : 'var(--neon)', 
-                      border: 'none', 
-                      padding: '12px 24px', 
-                      borderRadius: '6px', 
-                      color: '#fff', 
-                      fontWeight: 'bold', 
-                      cursor: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? 'not-allowed' : 'pointer', 
-                      transition: 'filter 0.2s' 
-                    }}
-                    onMouseOver={(e) => {
-                      if (!(selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000)))) {
-                        e.currentTarget.style.filter = 'brightness(1.1)';
-                      }
-                    }}
-                    onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
-                  >
-                    Proceed to Payment
-                  </button>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', background: 'rgba(255, 77, 26, 0.05)', border: '1px solid rgba(255, 77, 26, 0.2)', padding: '10px', borderRadius: '6px', lineHeight: '1.4' }}>
+                    <strong>Subscription Interval:</strong> Community subscriptions are charged once every 3 months. The payment covers full access to the selected member tier for a 3-month cycle.
+                  </div>
                 </div>
               </>
             )}
