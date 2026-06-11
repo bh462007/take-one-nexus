@@ -405,8 +405,7 @@ export default function ChatPage() {
       } else {
         alert(data.message || 'Failed to delete group');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert('Error deleting group');
     }
   };
@@ -1138,7 +1137,36 @@ export default function ChatPage() {
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
-          cluster: pusherCluster
+          cluster: pusherCluster,
+          authorizer: (channel) => {
+            return {
+              authorize: (socketId, callback) => {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                fetch('/api/chat/pusher/auth', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({
+                    socket_id: socketId,
+                    channel_name: channel.name
+                  })
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.auth) {
+                    callback(null, data);
+                  } else {
+                    callback(new Error(data.message || 'Authorization failed'), null);
+                  }
+                })
+                .catch(err => {
+                  callback(err, null);
+                });
+              }
+            };
+          }
         });
       }
     }
@@ -1189,7 +1217,36 @@ export default function ChatPage() {
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
-          cluster: pusherCluster
+          cluster: pusherCluster,
+          authorizer: (channel) => {
+            return {
+              authorize: (socketId, callback) => {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                fetch('/api/chat/pusher/auth', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({
+                    socket_id: socketId,
+                    channel_name: channel.name
+                  })
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.auth) {
+                    callback(null, data);
+                  } else {
+                    callback(new Error(data.message || 'Authorization failed'), null);
+                  }
+                })
+                .catch(err => {
+                  callback(err, null);
+                });
+              }
+            };
+          }
         });
       }
     }
