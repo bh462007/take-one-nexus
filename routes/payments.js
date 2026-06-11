@@ -548,7 +548,9 @@ router.get('/admin/systems/:code/transactions', authenticateUser, requireAdmin, 
         p.id, 
         p.amount, 
         p.currency, 
+        p.razorpay_order_id,
         p.razorpay_payment_id, 
+        p.status,
         p.created_at, 
         u.name AS user_name, 
         u.email AS user_email,
@@ -557,7 +559,6 @@ router.get('/admin/systems/:code/transactions', authenticateUser, requireAdmin, 
       JOIN users u ON p.user_id = u.id
       LEFT JOIN scripts s ON p.script_id = s.id
       LEFT JOIN script_drafts d ON p.draft_id = d.id
-      WHERE p.status = 'successful'
       ORDER BY p.created_at DESC`
     );
 

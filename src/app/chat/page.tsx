@@ -36,8 +36,22 @@ interface ChatMessage {
   content: string;
   created_at: string;
   sender: User;
-  status?: 'sending' | 'error' | 'sent';
+  status?: 'pending' | 'sending' | 'sent' | 'failed';
+  tempId?: string;
 }
+
+interface QueuedMessage {
+  tempId: string;
+  content: string;
+  conversationId: number;
+  senderId: number;
+  createdAt: string;
+  status: 'pending' | 'sending' | 'sent' | 'failed';
+  retryCount: number;
+  nextRetryAt: number;
+}
+
+type PusherConnectionState = 'connected' | 'connecting' | 'disconnected' | 'unavailable';
 
 interface Conversation {
   id: number;
@@ -68,6 +82,130 @@ interface Task {
 }
 
 type ChatState = 'loading' | 'ready' | 'error' | 'not-found';
+
+// ───────────────────────────────────────────────────────────────
+// Custom Hooks for Resilient Message Queue System
+// ───────────────────────────────────────────────────────────────
+
+/**
+ * Hook: usePusherConnectionState
+ * Monitors Pusher connection state and provides callback on reconnection
+ */
+const usePusherConnectionState = (pusher: Pusher | null, onConnected?: () => void) => {
+  const [connectionState, setConnectionState] = useState<PusherConnectionState>('disconnected');
+  
+  useEffect(() => {
+    if (!pusher) return;
+    
+    const handleConnectionStateChange = (state: PusherConnectionState) => {
+      setConnectionState(state);
+      if (state === 'connected' && onConnected) {
+        onConnected();
+      }
+    };
+    
+    pusher.connection.bind('state_change', (state: any) => {
+      handleConnectionStateChange(state.current);
+    });
+    
+    const currentState = pusher.connection.state as PusherConnectionState;
+    setConnectionState(currentState);
+    
+    return () => {
+      pusher.connection.unbind('state_change', handleConnectionStateChange);
+    };
+  }, [pusher, onConnected]);
+  
+  return connectionState;
+};
+
+/**
+ * Hook: useMessageQueue
+ * Manages the outbox queue with retry logic and localStorage persistence
+ */
+const useMessageQueue = (enabled: boolean) => {
+  const [queue, setQueue] = useState<QueuedMessage[]>([]);
+  const processingRef = useRef(false);
+  
+  // Restore queue from localStorage on mount
+  useEffect(() => {
+    if (!enabled) return;
+    try {
+      const stored = localStorage.getItem('take_one_message_queue');
+      if (stored) {
+        const restoredQueue = JSON.parse(stored);
+        setQueue(restoredQueue);
+      }
+    } catch (err) {
+      console.error('[QUEUE] Failed to restore queue from localStorage', err);
+    }
+  }, [enabled]);
+  
+  // Persist queue to localStorage whenever it changes
+  useEffect(() => {
+    if (!enabled) return;
+    try {
+      localStorage.setItem('take_one_message_queue', JSON.stringify(queue));
+    } catch (err) {
+      console.error('[QUEUE] Failed to persist queue to localStorage', err);
+    }
+  }, [queue, enabled]);
+  
+  const addToQueue = useCallback((message: QueuedMessage) => {
+    setQueue(prev => [...prev, message]);
+  }, []);
+  
+  const updateMessageStatus = useCallback((tempId: string, status: QueuedMessage['status'], retryCount?: number) => {
+    setQueue(prev => prev.map(msg => 
+      msg.tempId === tempId 
+        ? { ...msg, status, retryCount: retryCount !== undefined ? retryCount : msg.retryCount }
+        : msg
+    ));
+  }, []);
+  
+  const removeFromQueue = useCallback((tempId: string) => {
+    setQueue(prev => prev.filter(msg => msg.tempId !== tempId));
+  }, []);
+  
+  const getNextMessageToRetry = useCallback((): QueuedMessage | null => {
+    const now = Date.now();
+    const pending = queue.find(msg => 
+      (msg.status === 'pending' || msg.status === 'failed') &&
+      msg.retryCount < 5 &&
+      msg.nextRetryAt <= now
+    );
+    return pending || null;
+  }, [queue]);
+  
+  const getExponentialBackoffDelay = (retryCount: number): number => {
+    const delays = [1000, 2000, 4000, 8000, 8000];
+    return delays[Math.min(retryCount, delays.length - 1)];
+  };
+  
+  const scheduleRetry = useCallback((tempId: string, retryCount: number) => {
+    const delay = getExponentialBackoffDelay(retryCount);
+    const nextRetryAt = Date.now() + delay;
+    setQueue(prev => prev.map(msg =>
+      msg.tempId === tempId
+        ? { ...msg, status: 'failed', retryCount, nextRetryAt }
+        : msg
+    ));
+  }, []);
+  
+  const isProcessing = useCallback(() => processingRef.current, []);
+  const setProcessing = useCallback((value: boolean) => { processingRef.current = value; }, []);
+  
+  return {
+    queue,
+    addToQueue,
+    updateMessageStatus,
+    removeFromQueue,
+    getNextMessageToRetry,
+    scheduleRetry,
+    isProcessing,
+    setProcessing
+  };
+};
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -117,6 +255,10 @@ export default function ChatPage() {
   const [tasksLoading, setTasksLoading] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
+  // Message Queue System
+  const messageQueue = useMessageQueue(true);
+  const [pusherConnectionState, setPusherConnectionState] = useState<PusherConnectionState>('disconnected');
+
   // Community System States
   const [inCommunity, setInCommunity] = useState(false);
   const [communityRole, setCommunityRole] = useState<string | null>(null);
@@ -137,14 +279,36 @@ export default function ChatPage() {
   const [communityCreationStep, setCommunityCreationStep] = useState(1);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
 
-  // Invites & Groups
-  const [inviteEmail, setInviteEmail] = useState('');
+  // Invites & Groups & Multi-Community
+  const [myInvitations, setMyInvitations] = useState<any[]>([]);
+  const [myCommunities, setMyCommunities] = useState<any[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [selectedUserForInvite, setSelectedUserForInvite] = useState<any | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [groupLoading, setGroupLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
+
+  const fetchDashboardStats = useCallback(async (communityId?: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const targetId = communityId || communityData?.id;
+      const url = targetId ? `/api/community/dashboard?communityId=${targetId}` : '/api/community/dashboard';
+      const res = await fetch(url, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDashboardStats(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+    }
+  }, [communityData]);
 
   // Fetch Community Info
   const fetchMyCommunity = useCallback(async () => {
@@ -157,13 +321,42 @@ export default function ChatPage() {
       const json = await res.json();
       if (json.success) {
         setInCommunity(json.inCommunity);
-        if (json.inCommunity) {
-          setCommunityRole(json.role);
-          setCommunityData(json.community);
+        if (json.inCommunity && json.communities && json.communities.length > 0) {
+          setMyCommunities(json.communities);
+          setCommunityData((prev: any) => {
+            const found = prev ? json.communities.find((c: any) => c.id === prev.id) : null;
+            if (found) {
+              setCommunityRole(found.role);
+              fetchDashboardStats(found.id);
+              return found;
+            }
+            setCommunityRole(json.communities[0].role);
+            fetchDashboardStats(json.communities[0].id);
+            return json.communities[0];
+          });
+        } else {
+          setMyCommunities([]);
+          setCommunityData(null);
+          setCommunityRole(null);
         }
       }
     } catch (err) {
       console.error('Error fetching community status:', err);
+    }
+  }, [fetchDashboardStats]);
+
+  const fetchMyInvitations = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/invitations/my-invitations', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMyInvitations(json.invitations);
+      }
+    } catch (err) {
+      console.error('Error fetching invitations:', err);
     }
   }, []);
 
@@ -182,23 +375,11 @@ export default function ChatPage() {
     }
   }, []);
 
-  const fetchDashboardStats = useCallback(async () => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch('/api/community/dashboard', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDashboardStats(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
+  const handleInviteMember = async (targetUserId: number) => {
+    if (!communityData?.id) {
+      setInviteError('No active community selected');
+      return;
     }
-  }, []);
-
-  const handleInviteMember = async (e: React.FormEvent) => {
-    e.preventDefault();
     setInviteLoading(true);
     setInviteError('');
     setInviteSuccess('');
@@ -210,14 +391,14 @@ export default function ChatPage() {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({ email: inviteEmail })
+        body: JSON.stringify({ userId: targetUserId, communityId: communityData.id })
       });
       const data = await res.json();
       if (data.success) {
         setInviteSuccess(data.message);
-        setInviteEmail('');
-        await fetchMyCommunity();
-        await fetchDashboardStats();
+        setUserSearchQuery('');
+        setUserSearchResults([]);
+        setSelectedUserForInvite(null);
       } else {
         setInviteError(data.message || 'Invitation failed');
       }
@@ -225,6 +406,73 @@ export default function ChatPage() {
       setInviteError('Error inviting member');
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const handleAcceptInvitation = async (invitationId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations/${invitationId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message || 'Joined community successfully!');
+        await fetchMyCommunity();
+        await fetchMyInvitations();
+        await fetchConversations();
+      } else {
+        alert(data.message || 'Failed to accept invitation');
+      }
+    } catch (err) {
+      console.error('Error accepting invitation:', err);
+    }
+  };
+
+  const handleRejectInvitation = async (invitationId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations/${invitationId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation rejected.');
+        await fetchMyInvitations();
+      } else {
+        alert(data.message || 'Failed to reject invitation');
+      }
+    } catch (err) {
+      console.error('Error rejecting invitation:', err);
+    }
+  };
+
+  const handleUserSearch = async (query: string) => {
+    setUserSearchQuery(query);
+    if (!query.trim()) {
+      setUserSearchResults([]);
+      return;
+    }
+    setUserSearchLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUserSearchResults(data.users || []);
+      }
+    } catch (err) {
+      console.error('Error searching users:', err);
+    } finally {
+      setUserSearchLoading(false);
     }
   };
 
@@ -299,8 +547,7 @@ export default function ChatPage() {
       } else {
         alert(data.message || 'Failed to delete group');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert('Error deleting group');
     }
   };
@@ -849,7 +1096,7 @@ export default function ChatPage() {
   };
 
   const handleClearChat = async (id: number) => {
-    if (!confirm('Are you sure you want to clear all messages in this conversation? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to clear all messages in this conversation? This will permanently delete messages for ALL participants. Only Directors and Admins can perform this action.')) return;
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
       const res = await fetchWithCSRF(`/api/chat/conversations/${id}/clear`, { 
@@ -860,6 +1107,9 @@ export default function ChatPage() {
       if (res.ok) {
         setMessages([]);
         setShowMenu(false);
+      } else {
+        const json = await res.json();
+        alert(json.message || 'Failed to clear chat');
       }
     } catch (err) {
       console.error('Failed to clear chat', err);
@@ -982,6 +1232,7 @@ export default function ChatPage() {
         const targetConversationId = Number(params.get('conversationId') || 0);
         const loadedConversations = await fetchConversations();
         await fetchMyCommunity();
+        await fetchMyInvitations();
 
         if (targetUserId) {
           const conversation = await openDirectConversation(targetUserId);
@@ -1017,7 +1268,7 @@ export default function ChatPage() {
     };
 
     initialize();
-  }, [fetchConversations, fetchMessages, openDirectConversation, setActiveConversation]);
+  }, [fetchConversations, fetchMessages, openDirectConversation, setActiveConversation, fetchMyCommunity, fetchMyInvitations]);
 
   // =========================================================================
   // FIX 1: DEDICATED PUSHER CLIENT CONNECTION DISPOSAL LIFECYCLE HOOK
@@ -1044,7 +1295,36 @@ export default function ChatPage() {
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
-          cluster: pusherCluster
+          cluster: pusherCluster,
+          authorizer: (channel) => {
+            return {
+              authorize: (socketId, callback) => {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                fetch('/api/chat/pusher/auth', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({
+                    socket_id: socketId,
+                    channel_name: channel.name
+                  })
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.auth) {
+                    callback(null, data);
+                  } else {
+                    callback(new Error(data.message || 'Authorization failed'), null);
+                  }
+                })
+                .catch(err => {
+                  callback(err, null);
+                });
+              }
+            };
+          }
         });
       }
     }
@@ -1089,12 +1369,179 @@ export default function ChatPage() {
       userChannel.unbind('credit-update', handleCreditUpdate);
       userChannel.unbind('message-notification', handleMessageNotification);
       pusherRef.current?.unsubscribe(userChannelName);
-    };
-  }, [user, activeConv?.id, fetchConversations]);
+}, [user, activeConv?.id, fetchConversations]);
 
   // =========================================================================
   // FIX 3: REFACTORED CONVERSATION ACTIVE CHANNEL (DETERMINISTIC CLEANUP)
   // =========================================================================
+
+  const attemptSendMessage = useCallback(async (tempId: string, content: string, conversationId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF('/api/chat/messages', {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({
+          conversationId,
+          content,
+          tempId
+        })
+      });
+
+      if (res.status === 401) {
+        window.location.href = '/?auth=login';
+        return;
+      }
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        // Permanent error (auth, validation) - mark as failed
+        if (res.status === 401 || res.status === 403 || res.status === 400) {
+          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+          messageQueue.removeFromQueue(tempId);
+          setStatusText(json.message || 'Message failed to send.');
+          return;
+        }
+        
+        // Transient error - schedule retry
+        messageQueue.scheduleRetry(tempId, 0);
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+        setStatusText(json.message || 'Message send failed. Retrying...');
+        return;
+      }
+
+      // Success - remove from queue and mark as sent
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...json.data, status: 'sent' } : m));
+      messageQueue.removeFromQueue(tempId);
+      
+      setConversations((current) => {
+        const index = current.findIndex(c => c.id === json.data.conversation_id);
+        if (index === -1) return current;
+        const updated = { ...current[index], messages: [json.data] };
+        const next = [...current];
+        next.splice(index, 1);
+        return [updated, ...next];
+      });
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err) {
+      console.error('[MESSAGE] Failed to send message', err);
+      // Network error - schedule retry
+      messageQueue.scheduleRetry(tempId, 0);
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+      setStatusText('Network error. Message will be retried.');
+    } finally {
+      setSending(false);
+    }
+  }, [messageQueue, setMessages, setConversations, setSending, setStatusText]);
+
+  const processMessageQueue = useCallback(async () => {
+    if (messageQueue.isProcessing() || pusherConnectionState !== 'connected') return;
+    
+    messageQueue.setProcessing(true);
+    
+    try {
+      let nextMessage = messageQueue.getNextMessageToRetry();
+      
+      while (nextMessage) {
+        const msg = nextMessage;
+        messageQueue.updateMessageStatus(msg.tempId, 'sending');
+        setMessages(prev => prev.map(m => 
+          m.id === msg.tempId ? { ...m, status: 'sending' } : m
+        ));
+        
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+          const res = await fetchWithCSRF('/api/chat/messages', {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: JSON.stringify({
+              conversationId: msg.conversationId,
+              content: msg.content,
+              tempId: msg.tempId
+            })
+          });
+
+          const json = await res.json();
+
+          if (res.ok && json.success) {
+            // Success
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...json.data, status: 'sent' } : m
+            ));
+            messageQueue.removeFromQueue(msg.tempId);
+            
+            setConversations((current) => {
+              const index = current.findIndex(c => c.id === json.data.conversation_id);
+              if (index === -1) return current;
+              const updated = { ...current[index], messages: [json.data] };
+              const next = [...current];
+              next.splice(index, 1);
+              return [updated, ...next];
+            });
+          } else if (res.status === 401 || res.status === 403 || res.status === 400) {
+            // Permanent error
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...m, status: 'failed' } : m
+            ));
+            messageQueue.removeFromQueue(msg.tempId);
+            break; // Stop processing on auth error
+          } else {
+            // Transient error
+            messageQueue.scheduleRetry(msg.tempId, msg.retryCount + 1);
+            if (msg.retryCount >= 4) {
+              setMessages(prev => prev.map(m => 
+                m.id === msg.tempId ? { ...m, status: 'failed' } : m
+              ));
+              break; // Max retries reached
+            }
+          }
+        } catch (err) {
+          console.error('[QUEUE] Error processing message:', err);
+          messageQueue.scheduleRetry(msg.tempId, msg.retryCount + 1);
+          if (msg.retryCount >= 4) {
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...m, status: 'failed' } : m
+            ));
+            break;
+          }
+        }
+        
+        // Get next message to retry
+        nextMessage = messageQueue.getNextMessageToRetry();
+        
+        // Small delay between retries
+        if (nextMessage) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    } finally {
+      messageQueue.setProcessing(false);
+    }
+  }, [messageQueue, pusherConnectionState, setMessages, setConversations]);
+
+  // Monitor Pusher connection state and process queue on reconnection
+  useEffect(() => {
+    if (!pusherRef.current) return;
+    
+    const handleConnectionStateChange = (state: any) => {
+      const newState: PusherConnectionState = state.current;
+      setPusherConnectionState(newState);
+      
+      if (newState === 'connected') {
+        processMessageQueue();
+      }
+    };
+    
+    pusherRef.current.connection.bind('state_change', handleConnectionStateChange);
+    
+    const currentState = pusherRef.current.connection.state as PusherConnectionState;
+    setPusherConnectionState(currentState);
+    
+    return () => {
+      pusherRef.current?.connection.unbind('state_change', handleConnectionStateChange);
+    };
+  }, [processMessageQueue]); // Added processMessageQueue safely here
   useEffect(() => {
     if (!activeConv) return;
 
@@ -1104,7 +1551,36 @@ export default function ChatPage() {
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
-          cluster: pusherCluster
+          cluster: pusherCluster,
+          authorizer: (channel) => {
+            return {
+              authorize: (socketId, callback) => {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                fetch('/api/chat/pusher/auth', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({
+                    socket_id: socketId,
+                    channel_name: channel.name
+                  })
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.auth) {
+                    callback(null, data);
+                  } else {
+                    callback(new Error(data.message || 'Authorization failed'), null);
+                  }
+                })
+                .catch(err => {
+                  callback(err, null);
+                });
+              }
+            };
+          }
         });
       }
     }
@@ -1118,7 +1594,18 @@ export default function ChatPage() {
     const handleNewMessage = (data: { message: ChatMessage }) => {
       if (activeConv.id === data.message.conversation_id) {
         setMessages((prev) => {
+          // Check if message already exists by ID
           if (prev.find((message) => message.id === data.message.id)) return prev;
+          
+          // Check if this is a reply to a queued message (match by tempId)
+          if (data.message.tempId) {
+            return prev.map(m => 
+              m.id === data.message.tempId || m.tempId === data.message.tempId
+                ? { ...data.message, status: 'sent' }
+                : m
+            );
+          }
+          
           return [...prev, data.message];
         });
       }
@@ -1218,7 +1705,7 @@ export default function ChatPage() {
     if (!newMessage.trim() || !activeConv || sending || !user) return;
 
     const content = newMessage.trim();
-    const tempId = `temp-${Date.now()}`;
+    const tempId = crypto.randomUUID();
     
     const optimisticMessage: ChatMessage = {
       id: tempId,
@@ -1227,57 +1714,51 @@ export default function ChatPage() {
       content,
       created_at: new Date().toISOString(),
       sender: user,
-      status: 'sending'
+      status: pusherConnectionState === 'connected' ? 'sending' : 'pending',
+      tempId
     };
 
     setNewMessage('');
     setMessages(prev => [...prev, optimisticMessage]);
     setSending(true);
     
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetchWithCSRF('/api/chat/messages', {
-        method: 'POST',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        body: JSON.stringify({
-          conversationId: activeConv.id,
-          content
-        })
-      });
+    const queuedMessage: QueuedMessage = {
+      tempId,
+      content,
+      conversationId: activeConv.id,
+      senderId: user.id,
+      createdAt: new Date().toISOString(),
+      status: pusherConnectionState === 'connected' ? 'sending' : 'pending',
+      retryCount: 0,
+      nextRetryAt: Date.now()
+    };
 
-      if (res.status === 401) {
-        window.location.href = '/?auth=login';
-        return;
-      }
+    // Add to queue
+    messageQueue.addToQueue(queuedMessage);
 
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
-        setStatusText(json.message || 'Message could not be sent.');
-        return;
-      }
-
-      // Replace optimistic message with actual message from server
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...json.data, status: 'sent' } : m));
-      
-      setConversations((current) => {
-        const index = current.findIndex(c => c.id === json.data.conversation_id);
-        if (index === -1) return current;
-        const updated = { ...current[index], messages: [json.data] };
-        const next = [...current];
-        next.splice(index, 1);
-        return [updated, ...next];
-      });
-      setTimeout(() => inputRef.current?.focus(), 100);
-    } catch (err) {
-      console.error('Failed to send message', err);
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
-      setStatusText('Connection lost. Message failed to send.');
-    } finally {
+    // If connected, attempt send immediately; otherwise mark as pending
+    if (pusherConnectionState === 'connected') {
+      await attemptSendMessage(tempId, content, activeConv.id);
+    } else {
+      messageQueue.updateMessageStatus(tempId, 'pending');
       setSending(false);
+      setStatusText('Message queued. Will send when connection is restored.');
     }
   };
+
+  // Periodic retry check for queued messages
+  useEffect(() => {
+    if (!user || pusherConnectionState !== 'connected') return;
+    
+    const interval = setInterval(() => {
+      const nextMessage = messageQueue.getNextMessageToRetry();
+      if (nextMessage) {
+        processMessageQueue();
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [user, pusherConnectionState, messageQueue.queue]);
 
   if (state === 'loading') return <div className="chat-loading">{statusText}</div>;
 
@@ -1292,7 +1773,7 @@ export default function ChatPage() {
           <a href="/#upload">Share Your Script</a>
           <a href="/profile">Profile</a>
           {user?.role && ['admin', 'developer', 'moderator'].includes(user.role.toLowerCase()) && (
-            <a href="/admin" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
+            <a href="https://admin.takeone-nexus.net.in" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
           )}
           <button onClick={() => window.location.href = '/profile'} className="nav-cta">
             My Signal
@@ -1351,127 +1832,287 @@ export default function ChatPage() {
             )}
           </div>
           
-          {showCommunityDashboard && inCommunity ? (
+          {showCommunityDashboard ? (
             <div className="conversation-list community-sidebar-view" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', height: 'calc(100% - 130px)' }}>
-              <div className="community-header-info" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '12px' }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--neon)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{communityData?.name}</h3>
-                <p style={{ margin: 0, fontSize: '11px', color: '#aaa', lineHeight: '1.4' }}>{communityData?.description || 'No description available'}</p>
-                <div style={{ marginTop: '10px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#888' }}>
-                  <span>Role: <strong>{communityRole}</strong></span>
-                  <span>Limit: {communityData?.members?.length || 0} / {communityData?.max_members || 0}</span>
-                </div>
-              </div>
+              {inCommunity && communityData ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '12px' }}>
+                    {communityData.logo_url ? (
+                      <img src={communityData.logo_url} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                    ) : (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '18px', color: 'var(--neon)' }}>
+                        {communityData.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', color: 'var(--neon)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{communityData.name}</h3>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && (
+                        <label style={{ fontSize: '10px', color: '#aaa', cursor: 'pointer', textDecoration: 'underline' }}>
+                          Update Logo
+                          <input 
+                            type="file" 
+                            accept="image/jpeg,image/png,image/webp" 
+                            style={{ display: 'none' }} 
+                            onChange={async (e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                if (file.size > 5 * 1024 * 1024) {
+                                  alert('File is too large. Max size is 5MB.');
+                                  return;
+                                }
+                                const formData = new FormData();
+                                formData.append('logo', file);
+                                formData.append('communityId', String(communityData.id));
+                                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                                try {
+                                  const res = await fetch('/api/community/logo', {
+                                    method: 'POST',
+                                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                                    body: formData
+                                  });
+                                  const json = await res.json();
+                                  if (json.success) {
+                                    alert('Logo updated successfully.');
+                                    await fetchMyCommunity();
+                                  } else {
+                                    alert(json.message || 'Failed to upload logo.');
+                                  }
+                                } catch (err) {
+                                  console.error('Error uploading logo:', err);
+                                  alert('Failed to upload logo.');
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Groups section */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Groups ({communityData?.groups?.length || 0})</h4>
-                  {['Owner', 'Moderator'].includes(communityRole || '') && (
-                    <button 
-                      onClick={() => setIsCreateGroupModalOpen(true)} 
-                      style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
-                      title="Create Group"
-                    >
-                      +
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {communityData?.groups?.map((group: any) => (
-                    <div 
-                      key={group.id}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '6px', background: activeConv?.id === group.conversation_id ? 'rgba(255,77,26,0.12)' : 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'background 0.2s' }}
-                      onClick={() => {
-                        const targetConv = conversations.find(c => c.id === group.conversation_id);
-                        if (targetConv) {
-                          setActiveConversation(targetConv);
-                          fetchMessages(targetConv.id);
-                        } else {
-                          fetchConversations().then(loaded => {
-                            const found = loaded.find(c => c.id === group.conversation_id);
-                            if (found) {
-                              setActiveConversation(found);
-                              fetchMessages(found.id);
-                            } else {
-                              alert("You do not have access to this group.");
+                  {myCommunities.length > 1 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '10px', color: '#888', display: 'block', marginBottom: '4px' }}>Active Community</label>
+                      <select 
+                        value={communityData.id} 
+                        onChange={async (e) => {
+                          const selectedId = Number(e.target.value);
+                          const found = myCommunities.find(c => c.id === selectedId);
+                          if (found) {
+                            setCommunityData(found);
+                            setCommunityRole(found.role);
+                            const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                            const statsRes = await fetch(`/api/community/dashboard?communityId=${selectedId}`, {
+                              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                            });
+                            const statsJson = await statsRes.json();
+                            if (statsJson.success) {
+                              setDashboardStats(statsJson.data);
                             }
-                          });
-                        }
-                      }}
-                    >
-                      <span style={{ fontSize: '13px', fontWeight: activeConv?.id === group.conversation_id ? 'bold' : 'normal', color: activeConv?.id === group.conversation_id ? 'var(--neon)' : '#ccc' }}>
-                        # {group.name}
-                      </span>
-                      {['Owner', 'Moderator'].includes(communityRole || '') && group.name !== 'General' && (
+                          }
+                        }}
+                        style={{ width: '100%', padding: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', fontSize: '12px' }}
+                      >
+                        {myCommunities.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Groups ({communityData.groups?.length || 0})</h4>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && (
                         <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCommunityGroup(group.id);
-                          }}
-                          style={{ background: 'transparent', border: 'none', color: '#ff3333', fontSize: '11px', cursor: 'pointer', opacity: 0.7 }}
-                          title="Delete Group"
+                          onClick={() => setIsCreateGroupModalOpen(true)} 
+                          style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                          title="Create Group"
                         >
-                          ✕
+                          +
                         </button>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Members section */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Members ({communityData?.members?.length || 0})</h4>
-                  {['Owner', 'Moderator'].includes(communityRole || '') && (
-                    <button 
-                      onClick={() => setIsInviteModalOpen(true)} 
-                      style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
-                    >
-                      Invite
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {communityData?.members?.map((member: any) => (
-                    <div 
-                      key={member.id}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.01)' }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                        <img 
-                          src={getAvatarUrl(member.user?.name || 'User', member.user?.gender || 'Other', member.user?.avatar_url)} 
-                          alt="" 
-                          style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0 }}
-                        />
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.user?.name}</span>
-                          <span style={{ fontSize: '9px', color: member.role === 'Owner' ? 'var(--neon)' : '#999' }}>{member.role}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {communityData.groups?.map((group: any) => (
+                        <div 
+                          key={group.id}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '6px', background: activeConv?.id === group.conversation_id ? 'rgba(255,77,26,0.12)' : 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'background 0.2s' }}
+                          onClick={() => {
+                            const targetConv = conversations.find(c => c.id === group.conversation_id);
+                            if (targetConv) {
+                              setActiveConversation(targetConv);
+                              fetchMessages(targetConv.id);
+                            } else {
+                              fetchConversations().then(loaded => {
+                                const found = loaded.find(c => c.id === group.conversation_id);
+                                if (found) {
+                                  setActiveConversation(found);
+                                  fetchMessages(found.id);
+                                } else {
+                                  alert("You do not have access to this group.");
+                                }
+                              });
+                            }
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', fontWeight: activeConv?.id === group.conversation_id ? 'bold' : 'normal', color: activeConv?.id === group.conversation_id ? 'var(--neon)' : '#ccc' }}>
+                            # {group.name}
+                          </span>
+                          {['Owner', 'Moderator'].includes(communityRole || '') && group.name !== 'General' && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCommunityGroup(group.id);
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: '#ff3333', fontSize: '11px', cursor: 'pointer', opacity: 0.7 }}
+                              title="Delete Group"
+                            >
+                              ✕
+                            </button>
+                          )}
                         </div>
-                      </div>
-                      {['Owner', 'Moderator'].includes(communityRole || '') && member.user_id !== user?.id && (
-                        !(communityRole === 'Moderator' && ['Owner', 'Moderator'].includes(member.role)) && (
-                          <button 
-                            onClick={() => handleRemoveMember(member.user_id)}
-                            style={{ background: 'transparent', border: 'none', color: '#ff4d4d', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
-                            title="Remove from Community"
-                          >
-                            Kick
-                          </button>
-                        )
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Members ({communityData.members?.length || 0})</h4>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && (
+                        <button 
+                          onClick={() => setIsInviteModalOpen(true)} 
+                          style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                          Invite
+                        </button>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {communityData.members?.map((member: any) => (
+                        <div 
+                          key={member.id}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.01)' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                            <img 
+                              src={getAvatarUrl(member.user?.name || 'User', member.user?.gender || 'Other', member.user?.avatar_url)} 
+                              alt="" 
+                              style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0 }}
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.user?.name}</span>
+                              <span style={{ fontSize: '9px', color: member.role === 'Owner' ? 'var(--neon)' : '#999' }}>{member.role}</span>
+                            </div>
+                          </div>
+                          {['Owner', 'Moderator'].includes(communityRole || '') && member.user_id !== user?.id && (
+                            !(communityRole === 'Moderator' && ['Owner', 'Moderator'].includes(member.role)) && (
+                              <button 
+                                onClick={() => handleRemoveMember(member.user_id)}
+                                style={{ background: 'transparent', border: 'none', color: '#ff4d4d', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
+                                title="Remove from Community"
+                              >
+                                Kick
+                              </button>
+                            )
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Dashboard / stats section */}
-              {['Owner', 'Moderator'].includes(communityRole || '') && (
-                <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
-                  <div style={{ background: 'rgba(255,77,26,0.03)', border: '1px solid rgba(255,77,26,0.15)', padding: '10px', borderRadius: '6px', fontSize: '11px', color: '#ccc' }}>
-                    <div style={{ fontWeight: 'bold', color: 'var(--neon)', marginBottom: '4px', fontSize: '12px' }}>Dashboard: {dashboardStats?.planType || 'Owner'}</div>
-                    <div style={{ marginBottom: '2px' }}>Members: <strong>{dashboardStats?.memberCount || 0} / {dashboardStats?.max_members || 0}</strong></div>
-                    <div>Groups: <strong>{dashboardStats?.groupCount || 0} / 50</strong></div>
+                  {['Owner', 'Moderator'].includes(communityRole || '') && (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', marginTop: 'auto' }}>
+                      <div style={{ background: 'rgba(255,77,26,0.03)', border: '1px solid rgba(255,77,26,0.15)', padding: '10px', borderRadius: '6px', fontSize: '11px', color: '#ccc' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--neon)', marginBottom: '4px', fontSize: '12px' }}>Dashboard: {dashboardStats?.planType || 'Owner'}</div>
+                        <div style={{ marginBottom: '2px' }}>Members: <strong>{dashboardStats?.memberCount || 0} / {dashboardStats?.max_members || 0}</strong></div>
+                        <div>Groups: <strong>{dashboardStats?.groupCount || 0} / 50</strong></div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', marginTop: dashboardStats ? '12px' : 'auto' }}>
+                    <button 
+                      onClick={() => {
+                        if (!isFounder) {
+                          fetchPricingConfigs();
+                        }
+                        setIsCommunityModalOpen(true);
+                      }}
+                      style={{ width: '100%', background: 'transparent', border: '1px dashed rgba(255,77,26,0.4)', color: 'var(--neon)', padding: '8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      + Create Another Community
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,77,26,0.05)', border: '1px solid rgba(255,77,26,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <svg viewBox="0 0 24 24" width="28" height="28" stroke="var(--neon)" strokeWidth="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                  </div>
+                  <div>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--neon)' }}>No Community Yet</h3>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#888', lineHeight: '1.5' }}>Launch a community to host custom groups, invite crew, and collaborate on scripts.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (!isFounder) {
+                        fetchPricingConfigs();
+                      }
+                      setIsCommunityModalOpen(true);
+                    }}
+                    style={{ background: 'var(--neon)', border: 'none', padding: '10px 20px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    Launch Community
+                  </button>
+                </div>
+              )}
+
+              {myInvitations.length > 0 && (
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px', marginTop: '12px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Pending Invitations ({myInvitations.length})</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {myInvitations.map((inv: any) => (
+                      <div 
+                        key={inv.id} 
+                        style={{ 
+                          padding: '10px', 
+                          background: 'rgba(255,77,26,0.03)', 
+                          border: '1px solid rgba(255,77,26,0.15)', 
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {inv.community.logo_url ? (
+                            <img src={inv.community.logo_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                              {inv.community.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.community.name}</div>
+                            <div style={{ fontSize: '10px', color: '#888' }}>Invited by {inv.inviter?.name || 'Owner'}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button 
+                            onClick={() => handleAcceptInvitation(inv.id)}
+                            style={{ flex: 1, background: 'var(--neon)', border: 'none', padding: '4px', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                          >
+                            Accept
+                          </button>
+                          <button 
+                            onClick={() => handleRejectInvitation(inv.id)}
+                            style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '4px', color: '#ccc', fontSize: '11px', cursor: 'pointer' }}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1758,7 +2399,7 @@ export default function ChatPage() {
                                 <div className="msg-content">
                                   {msg.content}
                                   {msg.status === 'sending' && <span className="msg-status-icon sending">...</span>}
-                                  {msg.status === 'error' && (
+                                  {msg.status === 'failed' && (
                                     <span className="msg-status-icon error" title="Failed to send. Click to retry." onClick={() => {
                                       setNewMessage(msg.content);
                                       setMessages(prev => prev.filter(m => m.id !== msg.id));
@@ -2133,7 +2774,7 @@ export default function ChatPage() {
                     >
                       <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Starter</div>
                       <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>20 Members</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59'}</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59'} / 3 Months</div>
                     </div>
                     <div 
                       onClick={() => setSelectedPlan('Growth')}
@@ -2141,7 +2782,7 @@ export default function ChatPage() {
                     >
                       <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Growth</div>
                       <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>35 Members</div>
-                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99'}</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99'} / 3 Months</div>
                     </div>
                     <div 
                       onClick={() => setSelectedPlan('Custom')}
@@ -2155,7 +2796,7 @@ export default function ChatPage() {
                           const base = customCfg ? Number(customCfg.base_price) : 99;
                           const per = customCfg ? Number(customCfg.per_member_price) : 2;
                           return base + (customMembersCount * per);
-                        })()}
+                        })()} / 3 Months
                       </div>
                     </div>
                   </div>
@@ -2203,51 +2844,56 @@ export default function ChatPage() {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', color: 'var(--neon)', borderTop: '1px dotted rgba(255,255,255,0.1)', paddingTop: '6px', marginTop: '4px' }}>
                           <span>Total Price:</span>
-                          <span>₹{calculatedPrice}</span>
+                          <span>₹{calculatedPrice} / 3 Months</span>
                         </div>
                       </div>
                     </div>
                   );
                 })()}
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due:</span>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
-                      ₹{selectedPlan === 'Starter' 
-                        ? (pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59') 
-                        : selectedPlan === 'Growth' 
-                          ? (pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99') 
-                          : (() => {
-                              const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
-                              const base = customCfg ? Number(customCfg.base_price) : 99;
-                              const per = customCfg ? Number(customCfg.per_member_price) : 2;
-                              return base + (customMembersCount * per);
-                            })()}
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due (3 Months Subscription):</span>
+                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                        ₹{selectedPlan === 'Starter' 
+                          ? (pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59') 
+                          : selectedPlan === 'Growth' 
+                            ? (pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99') 
+                            : (() => {
+                                const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                                const base = customCfg ? Number(customCfg.base_price) : 99;
+                                const per = customCfg ? Number(customCfg.per_member_price) : 2;
+                                return base + (customMembersCount * per);
+                              })()}
+                      </div>
                     </div>
+                    <button 
+                      onClick={handlePricingProceed}
+                      disabled={selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))}
+                      style={{ 
+                        background: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? '#555' : 'var(--neon)', 
+                        border: 'none', 
+                        padding: '12px 24px', 
+                        borderRadius: '6px', 
+                        color: '#fff', 
+                        fontWeight: 'bold', 
+                        cursor: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? 'not-allowed' : 'pointer', 
+                        transition: 'filter 0.2s' 
+                      }}
+                      onMouseOver={(e) => {
+                        if (!(selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000)))) {
+                          e.currentTarget.style.filter = 'brightness(1.1)';
+                        }
+                      }}
+                      onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+                    >
+                      Proceed to Payment
+                    </button>
                   </div>
-                  <button 
-                    onClick={handlePricingProceed}
-                    disabled={selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))}
-                    style={{ 
-                      background: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? '#555' : 'var(--neon)', 
-                      border: 'none', 
-                      padding: '12px 24px', 
-                      borderRadius: '6px', 
-                      color: '#fff', 
-                      fontWeight: 'bold', 
-                      cursor: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? 'not-allowed' : 'pointer', 
-                      transition: 'filter 0.2s' 
-                    }}
-                    onMouseOver={(e) => {
-                      if (!(selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000)))) {
-                        e.currentTarget.style.filter = 'brightness(1.1)';
-                      }
-                    }}
-                    onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
-                  >
-                    Proceed to Payment
-                  </button>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', background: 'rgba(255, 77, 26, 0.05)', border: '1px solid rgba(255, 77, 26, 0.2)', padding: '10px', borderRadius: '6px', lineHeight: '1.4' }}>
+                    <strong>Subscription Interval:</strong> Community subscriptions are charged once every 3 months. The payment covers full access to the selected member tier for a 3-month cycle.
+                  </div>
                 </div>
               </>
             )}
@@ -2297,33 +2943,84 @@ export default function ChatPage() {
 
       {isInviteModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(6px)' }}>
-          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Invite Crew Member</h3>
-              <button onClick={() => setIsInviteModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Invite Members</h3>
+              <button onClick={() => { setIsInviteModalOpen(false); setUserSearchQuery(''); setUserSearchResults([]); setSelectedUserForInvite(null); setInviteError(''); setInviteSuccess(''); }} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
-            <form onSubmit={handleInviteMember} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', color: '#aaa' }}>User Email Address</label>
-                <input 
-                  type="email" 
-                  required 
-                  placeholder="crew@example.com" 
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}
-                />
-              </div>
-              {inviteError && <div style={{ color: '#ff4d4d', fontSize: '12px' }}>{inviteError}</div>}
-              {inviteSuccess && <div style={{ color: '#4dff4d', fontSize: '12px' }}>{inviteSuccess}</div>}
-              <button 
-                type="submit" 
-                disabled={inviteLoading}
-                style={{ background: 'var(--neon)', border: 'none', padding: '10px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                {inviteLoading ? 'Sending...' : 'Send Invitation'}
-              </button>
-            </form>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>Search Platform Users</label>
+              <input 
+                type="text" 
+                placeholder="Search by name, username, or role..." 
+                value={userSearchQuery}
+                onChange={(e) => handleUserSearch(e.target.value)}
+                style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
+              />
+            </div>
+
+            {userSearchLoading && <div style={{ fontSize: '12px', color: 'var(--neon)', textAlign: 'center' }}>Searching users...</div>}
+
+            <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {userSearchResults.map((user: any) => (
+                <div 
+                  key={user.id} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    padding: '8px 12px', 
+                    background: 'rgba(255,255,255,0.02)', 
+                    border: '1px solid rgba(255,255,255,0.05)', 
+                    borderRadius: '8px' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', color: 'var(--neon)', fontSize: '14px' }}>
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {user.name}
+                        {user.email_verified && (
+                          <span title="Verified User" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--neon)', color: '#000', borderRadius: '50%', width: '14px', height: '14px', fontSize: '8px', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#888' }}>
+                        @{user.screen_name || 'username'} • {user.role || 'Member'}
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleInviteMember(user.id)}
+                    disabled={inviteLoading}
+                    style={{ 
+                      background: 'rgba(255, 77, 26, 0.15)', 
+                      border: '1px solid var(--neon)', 
+                      padding: '6px 12px', 
+                      borderRadius: '4px', 
+                      color: '#fff', 
+                      fontSize: '12px', 
+                      fontWeight: 'bold', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Invite
+                  </button>
+                </div>
+              ))}
+              {!userSearchLoading && userSearchQuery && userSearchResults.length === 0 && (
+                <div style={{ fontSize: '12px', color: '#aaa', textAlign: 'center', padding: '16px' }}>No users found matching "{userSearchQuery}"</div>
+              )}
+            </div>
+
+            {inviteError && <div style={{ color: '#ff4d4d', fontSize: '12px', textAlign: 'center' }}>{inviteError}</div>}
+            {inviteSuccess && <div style={{ color: '#4dff4d', fontSize: '12px', textAlign: 'center' }}>{inviteSuccess}</div>}
           </div>
         </div>
       )}

@@ -1670,8 +1670,8 @@ registerForm?.addEventListener('submit', async (e) => {
     return;
   }
   
-  if (password.length < 6) {
-    showToast('❌ Password must be at least 6 characters');
+  if (password.length < 8) {
+    showToast('❌ Password must be at least 8 characters');
     return;
   }
   // The final step's submit button uses .wizard-btn-next[type="submit"], not .form-submit
@@ -1725,7 +1725,7 @@ registerForm?.addEventListener('submit', async (e) => {
     const screen_name = document.getElementById('registerScreenName')?.value || '';
     const display_preference = document.getElementById('registerDisplayPreference')?.value || 'Show Real Name Only';
 
-    const payload = { name, email, password, role, gender, college, city, screen_name, display_preference };
+    const payload = { name, email, password, role, gender, college, city, screen_name, display_preference};
     console.log('[Register] Submitting registration payload:', { ...payload, password: '[REDACTED]' });
 
     const response = await API.users.register(payload);
@@ -1881,7 +1881,7 @@ function applyRoleBasedUI(user) {
       if (!adminLink && nav) {
         adminLink = document.createElement('a');
         adminLink.id = 'adminPanelLink';
-        adminLink.href = '/admin';
+        adminLink.href = 'https://admin.takeone-nexus.net.in';
         adminLink.textContent = 'Admin Panel';
         adminLink.style.color = 'var(--neon)';
         adminLink.style.fontWeight = 'bold';

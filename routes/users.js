@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { authenticateUser, requireSameUser } = require('../middleware/auth');
 const { sendWelcomeEmail, sendVerificationEmail } = require('../utils/email');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { formatDisplayName, getCanonicalDisplayName } = require('../utils/formatting');
 const Pusher = require('pusher');
 const { createRateLimiter } = require('../middleware/rateLimiter');
@@ -13,8 +13,12 @@ const { createRateLimiter } = require('../middleware/rateLimiter');
 const { body } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
 
-const prisma = new PrismaClient();
+
 const router = express.Router();
+
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Rate limiters
 const loginLimiter = createRateLimiter({
@@ -45,6 +49,45 @@ const profileUpdateLimiter = createRateLimiter({
   limit: 30, // 30 profile updates per 15 minutes
   windowMs: 15 * 60 * 1000,
   keyPrefix: 'profile-update',
+});
+
+const avatarUploadLimiter = createRateLimiter({
+  limit: 5,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'avatar-upload',
+});
+
+
+// Ensure the target server-side upload directory exists
+const uploadDir = path.join(__dirname, '../public/uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const userId = req.user?.id || 'anonymous';
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar-${userId}-${Date.now()}${ext}`);
+  }
+});
+
+// Image filter validation
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Format rejected. Only image files are allowed!'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB Limit
 });
 
 
@@ -151,7 +194,7 @@ async function getProfileData(userId) {
 const registerValidation = [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).withMessage('Name is too long'),
   body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('role').notEmpty().withMessage('Role is required').not().equals('Select Role').withMessage('Please select a valid role'),
   body('gender').notEmpty().withMessage('Gender is required').not().equals('Choose Gender').withMessage('Please select your gender'),
   body('display_preference').notEmpty().withMessage('Display preference is required').not().equals('Select Display Preference').withMessage('Please select a display preference'),
@@ -189,7 +232,7 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const [result] = await pool.query(
       `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference)
@@ -527,54 +570,84 @@ router.get('/me', authenticateUser, async (req, res) => {
 });
 
 
-router.get('/search', async (req, res) => {
+router.get('/search', authenticateUser, async (req, res) => {
   try {
     const role = String(req.query.role || '').trim();
     const city = String(req.query.city || '').trim();
     const availability = String(req.query.availability || '').trim();
     const q = String(req.query.q || '').trim();
+    const page = req.query.page ? parseInt(req.query.page, 10) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+    const offset = (page - 1) * limit;
+
+    let countSql = `
+      SELECT COUNT(*) as total
+      FROM users
+      WHERE id != ?
+    `;
+    const countParams = [req.user.id];
 
     let sql = `
       SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified, availability
       FROM users
-      WHERE 1 = 1
+      WHERE id != ?
     `;
-    const params = [];
+    const params = [req.user.id];
 
     if (role) {
       sql += ` AND role LIKE ?`;
       params.push(`%${role}%`);
+      countSql += ` AND role LIKE ?`;
+      countParams.push(`%${role}%`);
     }
 
     if (city) {
       sql += ` AND city LIKE ?`;
       params.push(`%${city}%`);
+      countSql += ` AND city LIKE ?`;
+      countParams.push(`%${city}%`);
     }
 
     if (availability) {
       sql += ` AND availability = ?`;
       params.push(availability);
+      countSql += ` AND availability = ?`;
+      countParams.push(availability);
     }
 
     if (q) {
-      sql += ` AND (name LIKE ? OR college LIKE ? OR skills LIKE ?)`;
-      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+      sql += ` AND (name LIKE ? OR screen_name LIKE ? OR role LIKE ? OR college LIKE ? OR skills LIKE ?)`;
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+      countSql += ` AND (name LIKE ? OR screen_name LIKE ? OR role LIKE ? OR college LIKE ? OR skills LIKE ?)`;
+      countParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
 
-    sql += ` ORDER BY created_at DESC, id DESC LIMIT 50`;
+    // Execute count query
+    const countRows = await safeQuery(countSql, countParams);
+    const total = countRows && countRows[0] ? Number(countRows[0].total) : 0;
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sql += ` ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
 
     const rows = await safeQuery(sql, params);
+    const mappedRows = rows.map(r => ({ ...r, name: formatDisplayName(r.name) }));
 
     res.json({
       success: true,
-      count: rows.length,
-      data: rows.map(r => ({ ...r, name: formatDisplayName(r.name) }))
+      count: mappedRows.length,
+      data: mappedRows,
+      users: mappedRows, // Supporting both data and users fields
+      total,
+      totalPages,
+      page,
+      limit
     });
   } catch (error) {
     console.error('User search error:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Could not load crew members'
+      message: 'Could not search users'
     });
   }
 });
@@ -735,6 +808,40 @@ router.get('/:id', authenticateUser, requireSameUser, async (req, res) => {
   }
 });
 
+
+
+/**
+ * POST /api/users/upload-avatar
+ * File-handling route for profile pictures
+ */
+router.post('/upload-avatar', authenticateUser, avatarUploadLimiter, upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const userId = Number(req.user.id);
+    
+    // This is the public relative URL pointing to the file on disk
+    const avatarUrl = `/uploads/${req.file.filename}`;
+
+    // Update the database record using Prisma
+    await prisma.user.update({
+      where: { id: userId },
+      data: { avatar_url: avatarUrl }
+    });
+
+    res.json({
+      success: true,
+      message: 'Avatar uploaded and saved successfully!',
+      avatar_url: avatarUrl
+    });
+  } catch (error) {
+    console.error('Avatar upload error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error uploading avatar' });
+  }
+});
+
 /**
  * GET /api/users/public/:id
  * Get public profile data for any user
@@ -812,9 +919,10 @@ router.get('/public/:id', async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const rows = await safeQuery(
-      `SELECT id, name, role, college, city, avatar_url, gender, credits, screen_name, display_preference, email_verified
+      `SELECT id, name, role, college, city, avatar_url, gender, credits,
+              screen_name, display_preference, email_verified
        FROM users
-       WHERE credits > 0
+       WHERE credits >= 0
        ORDER BY credits DESC, name ASC
        LIMIT 100`
     );
