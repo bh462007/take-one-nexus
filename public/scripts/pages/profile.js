@@ -70,6 +70,13 @@ async function changeAvatar(input) {
         if (result.success) {
             if (typeof showToast === 'function') showToast('Profile picture saved permanently! ✦');
             
+            // Update the preview image with the server's permanent URL
+            const picEl = document.getElementById('profilePic');
+            if (picEl) picEl.src = result.avatar_url;
+            if (currentProfileData) {
+                currentProfileData.avatar_url = result.avatar_url;
+            }
+
             // 3. Keep client-session in sync
             if (typeof API !== 'undefined' && API.auth) {
                 const user = API.auth.getUser();
@@ -615,9 +622,14 @@ async function saveProfile() {
     const saveButton = document.querySelector('.save-btn') || document.getElementById('saveProfileBtn');
     const originalText = saveButton ? saveButton.textContent : '';
     
+    let avatarUrl = document.getElementById('profilePic')?.src || '';
+    if (avatarUrl.startsWith('data:')) {
+        avatarUrl = currentProfileData?.avatar_url || '';
+    }
+
     const payload = {
         name: document.getElementById('editName')?.value.trim() || '',
-        avatar_url: document.getElementById('profilePic')?.src || '',
+        avatar_url: avatarUrl,
         role: document.getElementById('editRole')?.value.trim() || '',
         college: document.getElementById('editCollege')?.value.trim() || '',
         city: document.getElementById('editCity')?.value.trim() || '',
