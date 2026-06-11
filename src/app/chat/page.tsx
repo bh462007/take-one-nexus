@@ -1350,6 +1350,151 @@ export default function ChatPage() {
     };
   }, [user, activeConv?.id, fetchConversations]);
 
+  const attemptSendMessage = async (tempId: string, content: string, conversationId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF('/api/chat/messages', {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({
+          conversationId,
+          content,
+          tempId
+        })
+      });
+
+      if (res.status === 401) {
+        window.location.href = '/?auth=login';
+        return;
+      }
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        // Permanent error (auth, validation) - mark as failed
+        if (res.status === 401 || res.status === 403 || res.status === 400) {
+          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+          messageQueue.removeFromQueue(tempId);
+          setStatusText(json.message || 'Message failed to send.');
+          return;
+        }
+        
+        // Transient error - schedule retry
+        messageQueue.scheduleRetry(tempId, 0);
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+        setStatusText(json.message || 'Message send failed. Retrying...');
+        return;
+      }
+
+      // Success - remove from queue and mark as sent
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...json.data, status: 'sent' } : m));
+      messageQueue.removeFromQueue(tempId);
+      
+      setConversations((current) => {
+        const index = current.findIndex(c => c.id === json.data.conversation_id);
+        if (index === -1) return current;
+        const updated = { ...current[index], messages: [json.data] };
+        const next = [...current];
+        next.splice(index, 1);
+        return [updated, ...next];
+      });
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err) {
+      console.error('[MESSAGE] Failed to send message', err);
+      // Network error - schedule retry
+      messageQueue.scheduleRetry(tempId, 0);
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+      setStatusText('Network error. Message will be retried.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const processMessageQueue = async () => {
+    if (messageQueue.isProcessing() || pusherConnectionState !== 'connected') return;
+    
+    messageQueue.setProcessing(true);
+    
+    try {
+      let nextMessage = messageQueue.getNextMessageToRetry();
+      
+      while (nextMessage) {
+        const msg = nextMessage;
+        messageQueue.updateMessageStatus(msg.tempId, 'sending');
+        setMessages(prev => prev.map(m => 
+          m.id === msg.tempId ? { ...m, status: 'sending' } : m
+        ));
+        
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+          const res = await fetchWithCSRF('/api/chat/messages', {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: JSON.stringify({
+              conversationId: msg.conversationId,
+              content: msg.content,
+              tempId: msg.tempId
+            })
+          });
+
+          const json = await res.json();
+
+          if (res.ok && json.success) {
+            // Success
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...json.data, status: 'sent' } : m
+            ));
+            messageQueue.removeFromQueue(msg.tempId);
+            
+            setConversations((current) => {
+              const index = current.findIndex(c => c.id === json.data.conversation_id);
+              if (index === -1) return current;
+              const updated = { ...current[index], messages: [json.data] };
+              const next = [...current];
+              next.splice(index, 1);
+              return [updated, ...next];
+            });
+          } else if (res.status === 401 || res.status === 403 || res.status === 400) {
+            // Permanent error
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...m, status: 'failed' } : m
+            ));
+            messageQueue.removeFromQueue(msg.tempId);
+            break; // Stop processing on auth error
+          } else {
+            // Transient error
+            messageQueue.scheduleRetry(msg.tempId, msg.retryCount + 1);
+            if (msg.retryCount >= 4) {
+              setMessages(prev => prev.map(m => 
+                m.id === msg.tempId ? { ...m, status: 'failed' } : m
+              ));
+              break; // Max retries reached
+            }
+          }
+        } catch (err) {
+          console.error('[QUEUE] Error processing message:', err);
+          messageQueue.scheduleRetry(msg.tempId, msg.retryCount + 1);
+          if (msg.retryCount >= 4) {
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...m, status: 'failed' } : m
+            ));
+            break;
+          }
+        }
+        
+        // Get next message to retry
+        nextMessage = messageQueue.getNextMessageToRetry();
+        
+        // Small delay between retries
+        if (nextMessage) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    } finally {
+      messageQueue.setProcessing(false);
+    }
+  };
+
   // Monitor Pusher connection state and process queue on reconnection
   useEffect(() => {
     if (!pusherRef.current) return;
@@ -1565,150 +1710,6 @@ export default function ChatPage() {
       messageQueue.updateMessageStatus(tempId, 'pending');
       setSending(false);
       setStatusText('Message queued. Will send when connection is restored.');
-    }
-  };
-
-  const attemptSendMessage = async (tempId: string, content: string, conversationId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetchWithCSRF('/api/chat/messages', {
-        method: 'POST',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        body: JSON.stringify({
-          conversationId,
-          content,
-          tempId
-        })
-      });
-
-      if (res.status === 401) {
-        window.location.href = '/?auth=login';
-        return;
-      }
-
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        // Permanent error (auth, validation) - mark as failed
-        if (res.status === 401 || res.status === 403 || res.status === 400) {
-          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
-          messageQueue.removeFromQueue(tempId);
-          setStatusText(json.message || 'Message failed to send.');
-          return;
-        }
-        
-        // Transient error - schedule retry
-        messageQueue.scheduleRetry(tempId, 0);
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
-        setStatusText(json.message || 'Message send failed. Retrying...');
-        return;
-      }
-
-      // Success - remove from queue and mark as sent
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...json.data, status: 'sent' } : m));
-      messageQueue.removeFromQueue(tempId);
-      
-      setConversations((current) => {
-        const index = current.findIndex(c => c.id === json.data.conversation_id);
-        if (index === -1) return current;
-        const updated = { ...current[index], messages: [json.data] };
-        const next = [...current];
-        next.splice(index, 1);
-        return [updated, ...next];
-      });
-      setTimeout(() => inputRef.current?.focus(), 100);
-    } catch (err) {
-      console.error('[MESSAGE] Failed to send message', err);
-      // Network error - schedule retry
-      messageQueue.scheduleRetry(tempId, 0);
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
-      setStatusText('Network error. Message will be retried.');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const processMessageQueue = async () => {
-    if (messageQueue.isProcessing() || pusherConnectionState !== 'connected') return;
-    
-    messageQueue.setProcessing(true);
-    
-    try {
-      let nextMessage = messageQueue.getNextMessageToRetry();
-      
-      while (nextMessage) {
-        messageQueue.updateMessageStatus(nextMessage.tempId, 'sending');
-        setMessages(prev => prev.map(m => 
-          m.id === nextMessage.tempId ? { ...m, status: 'sending' } : m
-        ));
-        
-        try {
-          const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-          const res = await fetchWithCSRF('/api/chat/messages', {
-            method: 'POST',
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            body: JSON.stringify({
-              conversationId: nextMessage.conversationId,
-              content: nextMessage.content,
-              tempId: nextMessage.tempId
-            })
-          });
-
-          const json = await res.json();
-
-          if (res.ok && json.success) {
-            // Success
-            setMessages(prev => prev.map(m => 
-              m.id === nextMessage.tempId ? { ...json.data, status: 'sent' } : m
-            ));
-            messageQueue.removeFromQueue(nextMessage.tempId);
-            
-            setConversations((current) => {
-              const index = current.findIndex(c => c.id === json.data.conversation_id);
-              if (index === -1) return current;
-              const updated = { ...current[index], messages: [json.data] };
-              const next = [...current];
-              next.splice(index, 1);
-              return [updated, ...next];
-            });
-          } else if (res.status === 401 || res.status === 403 || res.status === 400) {
-            // Permanent error
-            setMessages(prev => prev.map(m => 
-              m.id === nextMessage.tempId ? { ...m, status: 'failed' } : m
-            ));
-            messageQueue.removeFromQueue(nextMessage.tempId);
-            break; // Stop processing on auth error
-          } else {
-            // Transient error
-            messageQueue.scheduleRetry(nextMessage.tempId, nextMessage.retryCount + 1);
-            if (nextMessage.retryCount >= 4) {
-              setMessages(prev => prev.map(m => 
-                m.id === nextMessage.tempId ? { ...m, status: 'failed' } : m
-              ));
-              break; // Max retries reached
-            }
-          }
-        } catch (err) {
-          console.error('[QUEUE] Error processing message:', err);
-          messageQueue.scheduleRetry(nextMessage.tempId, nextMessage.retryCount + 1);
-          if (nextMessage.retryCount >= 4) {
-            setMessages(prev => prev.map(m => 
-              m.id === nextMessage.tempId ? { ...m, status: 'failed' } : m
-            ));
-            break;
-          }
-        }
-        
-        // Get next message to retry
-        nextMessage = messageQueue.getNextMessageToRetry();
-        
-        // Small delay between retries
-        if (nextMessage) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-    } finally {
-      messageQueue.setProcessing(false);
     }
   };
 
@@ -2365,7 +2366,7 @@ export default function ChatPage() {
                                 <div className="msg-content">
                                   {msg.content}
                                   {msg.status === 'sending' && <span className="msg-status-icon sending">...</span>}
-                                  {msg.status === 'error' && (
+                                  {msg.status === 'failed' && (
                                     <span className="msg-status-icon error" title="Failed to send. Click to retry." onClick={() => {
                                       setNewMessage(msg.content);
                                       setMessages(prev => prev.filter(m => m.id !== msg.id));
