@@ -189,7 +189,17 @@ async function uploadWork() {
         const orderRes = await API.payments.createOrder(finalPayload);
         if (!orderRes.success) throw new Error(orderRes.message || 'Order creation failed');
 
-        const { order_id, draft_id, amount, currency, key_id, is_simulated } = orderRes;
+        const { order_id, draft_id, amount, currency, key_id, is_simulated, is_founder } = orderRes;
+
+        if (is_founder) {
+            showTransmissionAccepted(payload.title);
+            renderDynamicUploadForm(user);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+            return;
+        }
 
         if (is_simulated) {
             throw new Error('Payment gateway unavailable. Script was not submitted.');
@@ -284,12 +294,12 @@ function showTransmissionLost(reason, retryFn) {
   overlay.id = '__txLostOverlay';
   overlay.style.cssText = `
     position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0, 0, 0, 0.92);
+    background: rgba(0, 0, 0, 0.85);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     font-family: 'Space Mono', monospace;
     animation: __txFadeIn 0.4s ease forwards;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(4px);
   `;
 
   overlay.innerHTML = `
@@ -318,6 +328,16 @@ function showTransmissionLost(reason, retryFn) {
           transparent 3px
         );
         animation: __txScanline 8s linear infinite;
+      }
+      #__txRetryBtn:hover {
+        background: rgba(255,77,26,0.15);
+        border-color: #ff4d1a;
+        box-shadow: 0 0 20px rgba(255,77,26,0.4), 0 0 40px rgba(255,77,26,0.2);
+        transform: scale(1.05);
+      }
+      #__txDismissBtn:hover {
+        color: rgba(255,255,255,0.5);
+        text-shadow: 0 0 10px rgba(255,255,255,0.3);
       }
     </style>
 
@@ -367,6 +387,7 @@ function showTransmissionLost(reason, retryFn) {
           font-size: 9px; letter-spacing: 0.2em;
           text-transform: uppercase; cursor: pointer;
           padding: 8px;
+          transition: all 0.2s ease;
         ">DISMISS</button>
       </div>
     </div>
@@ -1649,8 +1670,8 @@ registerForm?.addEventListener('submit', async (e) => {
     return;
   }
   
-  if (password.length < 6) {
-    showToast('❌ Password must be at least 6 characters');
+  if (password.length < 8) {
+    showToast('❌ Password must be at least 8 characters');
     return;
   }
   // The final step's submit button uses .wizard-btn-next[type="submit"], not .form-submit
@@ -1704,7 +1725,7 @@ registerForm?.addEventListener('submit', async (e) => {
     const screen_name = document.getElementById('registerScreenName')?.value || '';
     const display_preference = document.getElementById('registerDisplayPreference')?.value || 'Show Real Name Only';
 
-    const payload = { name, email, password, role, gender, college, city, screen_name, display_preference };
+    const payload = { name, email, password, role, gender, college, city, screen_name, display_preference};
     console.log('[Register] Submitting registration payload:', { ...payload, password: '[REDACTED]' });
 
     const response = await API.users.register(payload);
@@ -1860,7 +1881,7 @@ function applyRoleBasedUI(user) {
       if (!adminLink && nav) {
         adminLink = document.createElement('a');
         adminLink.id = 'adminPanelLink';
-        adminLink.href = '/admin';
+        adminLink.href = 'https://admin.takeone-nexus.net.in';
         adminLink.textContent = 'Admin Panel';
         adminLink.style.color = 'var(--neon)';
         adminLink.style.fontWeight = 'bold';

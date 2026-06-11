@@ -124,7 +124,7 @@ export default function EmailVerificationBanner() {
               ? `Verification uplink transmitted to ${email}.`
               : error
               ? error
-              : 'Messaging, projects, and leaderboard are locked until email signal is confirmed.'}
+              : 'Crew discovery, projects, and leaderboard are locked until email signal is confirmed.'}
           </div>
         </div>
       </div>

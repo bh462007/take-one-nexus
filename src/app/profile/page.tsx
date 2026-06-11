@@ -184,6 +184,24 @@ export default async function ProfilePage({
                     </svg>
                   </span>
                 )}
+                {user.secondary_role === 'founder' && (
+                  <span className="founder-badge-inline" title="Founder" style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'rgba(255, 215, 0, 0.1)',
+                    border: '1px solid #ffd700',
+                    color: '#ffd700',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    boxShadow: '0 0 8px rgba(255, 215, 0, 0.2)'
+                  }}>
+                    Founder ⭐
+                  </span>
+                )}
               </div>
               {screenName && displayPreference !== 'Screen Name Only' && (
                 <div className="profile-screen-name">@{screenName}</div>

@@ -1,13 +1,23 @@
 const express = require('express');
-const { authenticateUser, requireVerified } = require('../middleware/auth');
+const { authenticateUser } = require('../middleware/auth');
 const { body, param, query } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const Pusher = require('pusher');
 const { formatDisplayName } = require('../utils/formatting');
+const rateLimit = require('express-rate-limit');
 
-const prisma = new PrismaClient();
+
 const router = express.Router();
+
+// Rate limiter for Pusher authorization endpoint to prevent abuse
+const pusherAuthLimiter = rateLimit({
+  windowMs: 60 * 1000, // 60 seconds
+  max: 100, // Max 100 authorization requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests. Please wait before trying again.' }
+});
 
 // Configure Pusher
 const pusher = new Pusher({
@@ -84,7 +94,7 @@ function transformConversation(c, userId) {
  * GET /api/chat/conversations
  * Get all conversations for the logged-in user
  */
-router.get('/conversations', authenticateUser, requireVerified, async (req, res) => {
+router.get('/conversations', authenticateUser, async (req, res) => {
   try {
     const userId = Number(req.user?.id);
     
@@ -122,7 +132,7 @@ router.get('/conversations', authenticateUser, requireVerified, async (req, res)
  * GET /api/chat/unread-count
  * Get unread message count for the logged-in user
  */
-router.get('/unread-count', authenticateUser, requireVerified, async (req, res) => {
+router.get('/unread-count', authenticateUser, async (req, res) => {
   try {
     const userId = Number(req.user.id);
     const count = await prisma.message.count({
@@ -155,7 +165,7 @@ const directConvValidation = [
   validateRequest
 ];
 
-router.post('/conversations/direct', authenticateUser, requireVerified, directConvValidation, async (req, res) => {
+router.post('/conversations/direct', authenticateUser, directConvValidation, async (req, res) => {
   try {
     const senderId = Number(req.user.id);
     const recipientId = Number(req.body.recipientId);
@@ -233,46 +243,18 @@ const groupConvValidation = [
   validateRequest
 ];
 
-router.post('/conversations/group', authenticateUser, requireVerified, groupConvValidation, async (req, res) => {
-  try {
-    const senderId = Number(req.user.id);
-    const { name, userIds } = req.body;
-    
-    if (!name || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid group data' });
-    }
-
-    const allUserIds = [...new Set([senderId, ...userIds.map(id => Number(id))])];
-    
-    const conversation = await prisma.conversation.create({
-      data: {
-        name: name,
-        is_group: true,
-        members: {
-          create: [
-            { user_id: senderId, role: 'Director' },
-            ...userIds.map(id => ({ user_id: Number(id), role: 'Member' }))
-          ]
-        }
-      },
-      include: getConversationInclude()
-    });
-
-    res.status(201).json({
-      success: true,
-      data: transformConversation(conversation, senderId)
-    });
-  } catch (error) {
-    console.error('Group conversation error:', error.message);
-    res.status(500).json({ success: false, message: 'Could not create group conversation' });
-  }
+router.post('/conversations/group', authenticateUser, groupConvValidation, async (req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: "Group creation is available only inside Communities."
+  });
 });
 
 /**
  * GET /api/chat/messages/:conversationId
  * Get message history for a conversation
  */
-router.get('/messages/:conversationId', authenticateUser, requireVerified, [
+router.get('/messages/:conversationId', authenticateUser, [
   param('conversationId').isNumeric().withMessage('Invalid conversation ID'),
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('before').optional().isNumeric(),
@@ -372,12 +354,13 @@ const messageValidation = [
   body('content').trim().notEmpty().withMessage('Message content cannot be empty').isLength({ max: 5000 }),
   body('conversationId').optional().isNumeric(),
   body('recipientId').optional().isNumeric(),
+  body('tempId').optional().isString(),
   validateRequest
 ];
 
-router.post('/messages', authenticateUser, requireVerified, messageValidation, async (req, res) => {
+router.post('/messages', authenticateUser, messageValidation, async (req, res) => {
   try {
-    const { conversationId, content, recipientId } = req.body;
+    const { conversationId, content, recipientId, tempId } = req.body;
     const senderId = Number(req.user?.id);
 
     if (!senderId || isNaN(senderId)) {
@@ -495,6 +478,7 @@ router.post('/messages', authenticateUser, requireVerified, messageValidation, a
 
       pusher.trigger(`conversation-${targetConversationId}`, 'new-message', {
         ...message,
+        tempId: tempId || null,
         sender: {
           ...message.sender,
           name: formatDisplayName(message.sender?.name)
@@ -514,7 +498,10 @@ router.post('/messages', authenticateUser, requireVerified, messageValidation, a
 
     res.json({
       success: true,
-      data: message
+      data: {
+        ...message,
+        tempId: tempId || null
+      }
     });
   } catch (error) {
     console.error('Send message error:', error.message);
@@ -526,7 +513,7 @@ router.post('/messages', authenticateUser, requireVerified, messageValidation, a
  * POST /api/chat/typing
  * Notify others that user is typing
  */
-router.post('/typing', authenticateUser, requireVerified, [
+router.post('/typing', authenticateUser, [
   body('conversationId').isNumeric(),
   body('isTyping').isBoolean(),
   validateRequest
@@ -557,7 +544,7 @@ router.post('/typing', authenticateUser, requireVerified, [
  * DELETE /api/chat/conversations/:id
  * Remove user from a conversation (effectively deleting it for them)
  */
-router.delete('/conversations/:id', authenticateUser, requireVerified, [
+router.delete('/conversations/:id', authenticateUser, [
   param('id').isNumeric(),
   validateRequest
 ], async (req, res) => {
@@ -584,7 +571,7 @@ router.delete('/conversations/:id', authenticateUser, requireVerified, [
  * POST /api/chat/conversations/:id/leave
  * Leave a group conversation
  */
-router.post('/conversations/:id/leave', authenticateUser, requireVerified, [
+router.post('/conversations/:id/leave', authenticateUser, [
   param('id').isNumeric(),
   validateRequest
 ], async (req, res) => {
@@ -619,9 +606,9 @@ router.post('/conversations/:id/leave', authenticateUser, requireVerified, [
 
 /**
  * POST /api/chat/conversations/:id/clear
- * Clear all messages in a conversation
+ * Clear all messages in a conversation (only for Directors/Admins)
  */
-router.post('/conversations/:id/clear', authenticateUser, requireVerified, [
+router.post('/conversations/:id/clear', authenticateUser, [
   param('id').isNumeric(),
   validateRequest
 ], async (req, res) => {
@@ -629,19 +616,27 @@ router.post('/conversations/:id/clear', authenticateUser, requireVerified, [
     const conversationId = Number(req.params.id);
     const userId = Number(req.user.id);
 
-    // Check if user is part of the conversation
-    const conversation = await prisma.conversation.findFirst({
+    // Check if user is part of the conversation and get their role
+    const conversationMember = await prisma.conversationMember.findFirst({
       where: {
-        id: conversationId,
-        members: { some: { user_id: userId } }
+        conversation_id: conversationId,
+        user_id: userId
+      },
+      select: {
+        role: true
       }
     });
 
-    if (!conversation) {
+    if (!conversationMember) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Delete messages
+    // Only allow Directors and Admins to clear chat history
+    if (conversationMember.role !== 'Director' && conversationMember.role !== 'Admin') {
+      return res.status(403).json({ success: false, message: 'Only Directors and Admins can clear chat history' });
+    }
+
+    // Delete all messages in the conversation
     await prisma.message.deleteMany({
       where: { conversation_id: conversationId }
     });
@@ -658,7 +653,7 @@ router.post('/conversations/:id/clear', authenticateUser, requireVerified, [
  * PATCH /api/chat/conversations/:id/avatar
  * Update group conversation avatar
  */
-router.patch('/conversations/:id/avatar', authenticateUser, requireVerified, [
+router.patch('/conversations/:id/avatar', authenticateUser, [
   param('id').isNumeric(),
   body('avatarUrl').trim().notEmpty().withMessage('avatarUrl is required'),
   validateRequest
@@ -716,5 +711,82 @@ router.patch('/conversations/:id/avatar', authenticateUser, requireVerified, [
   }
 });
 
+/**
+ * POST /api/pusher/auth
+ * Pusher channel authorization endpoint
+ * Validates that the authenticated user has permission to access the requested channel
+ */
+router.post('/pusher/auth', pusherAuthLimiter, authenticateUser, async (req, res) => {
+  try {
+    const userId = Number(req.user?.id);
+    const { socket_id: socketId, channel_name: channelName } = req.body;
+
+    if (!userId || isNaN(userId)) {
+      console.warn('[PUSHER_AUTH] Invalid user ID in request:', req.user);
+      return res.status(401).json({ success: false, message: 'Invalid session' });
+    }
+
+    if (!socketId || !channelName) {
+      return res.status(400).json({ success: false, message: 'Missing socket_id or channel_name' });
+    }
+
+    // Parse channel name and validate user access
+    // Supported channel formats:
+    // - conversation-{conversationId} - User must be a member of the conversation
+    // - user-{userId} - User can only subscribe to their own user channel
+    // - user-{userId}-chats - User can only subscribe to their own chats channel
+    // - global-events - Public channel, no authorization required
+
+    if (channelName === 'global-events') {
+      // Public channel - allow without additional validation
+    } else if (channelName.startsWith('conversation-')) {
+      const conversationId = Number(channelName.replace('conversation-', ''));
+      
+      if (isNaN(conversationId)) {
+        return res.status(400).json({ success: false, message: 'Invalid conversation ID in channel name' });
+      }
+
+      // Check if user is a member of the conversation
+      const conversation = await prisma.conversation.findFirst({
+        where: {
+          id: conversationId,
+          members: { some: { user_id: userId } }
+        }
+      });
+
+      if (!conversation) {
+        console.warn(`[PUSHER_AUTH] Access denied for user ${userId} to conversation ${conversationId}`);
+        return res.status(403).json({ success: false, message: 'Access denied to this conversation' });
+      }
+
+    } else if (channelName.startsWith('user-')) {
+      // Extract user ID from channel name
+      const channelUserId = Number(channelName.split('-')[1]);
+      
+      if (isNaN(channelUserId)) {
+        return res.status(400).json({ success: false, message: 'Invalid user ID in channel name' });
+      }
+
+      // User can only subscribe to their own user channels
+      if (channelUserId !== userId) {
+        console.warn(`[PUSHER_AUTH] Access denied for user ${userId} to channel ${channelName}`);
+        return res.status(403).json({ success: false, message: 'Access denied to this channel' });
+      }
+
+    } else {
+      // Unsupported channel type
+      console.warn(`[PUSHER_AUTH] Unsupported channel type: ${channelName}`);
+      return res.status(400).json({ success: false, message: 'Unsupported channel type' });
+    }
+
+    // Generate authorization signature
+    const authResponse = pusher.authorizeChannel(socketId, channelName);
+    
+    res.json(authResponse);
+  } catch (error) {
+    console.error('[PUSHER_AUTH] Authorization error:', error.message);
+    res.status(500).json({ success: false, message: 'Authorization failed' });
+  }
+});
 
 module.exports = router;

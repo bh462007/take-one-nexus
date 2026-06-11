@@ -11,6 +11,7 @@ function reportCard(report) {
         </div>
         <p>${escapeHTML(report.details || 'No extra details added.')}</p>
         <p>Reported by ${escapeHTML(report.reporter_name || 'Unknown')} · ${escapeHTML(report.reporter_email || '')}</p>
+        ${report.moderator_name ? `<p><strong>Moderated by:</strong> ${escapeHTML(report.moderator_name)} · ${escapeHTML(report.moderator_email || '')}</p>` : ''}
       </div>
       <div class="report-actions">
         <button type="button" onclick="updateReport(${Number(report.id)}, 'reviewing')">Reviewing</button>

@@ -16,7 +16,7 @@ export async function awardCreditTask(userId: number, triggerType: string) {
       return;
     }
 
-    // Check if already completed
+    // Check if already completed (optimistic check to avoid unnecessary transactions)
     const existingCompletion = await prisma.userCompletedTask.findFirst({
       where: {
         user_id: numericUserId,
@@ -70,6 +70,11 @@ export async function awardCreditTask(userId: number, triggerType: string) {
       console.error('[PUSHER_TRIGGER_ERROR]', e.message);
     }
   } catch (error: any) {
+    // Handle P2002 unique constraint violation (concurrent duplicate completion attempts)
+    if (error.code === 'P2002') {
+      console.log(`[CREDITS_AWARD] Concurrent completion attempt detected for user ${userId} and trigger ${triggerType}. Ignoring duplicate.`);
+      return;
+    }
     console.error(`[CREDITS_AWARD_ERROR] Failed to award credits for ${triggerType}:`, error.message);
   }
 }

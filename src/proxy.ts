@@ -2,22 +2,12 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const ADMIN_EMAILS = [
-  'aarushgupta289@gmail.com',
-  'alok.r25012@csds.rishihood.edu.in'
-];
-
-const DEVELOPER_EMAILS = [
-  'aarushgupta289@gmail.com',
-  'alok.r25012@csds.rishihood.edu.in'
-];
 
 /**
  * Routes that require authentication AND email verification
  * (messaging is gated behind verification to prevent spam)
  */
 const VERIFIED_ONLY_ROUTES = [
-  '/chat',
   '/leaderboard',
   '/crew.htm',
   '/project.htm',
@@ -53,36 +43,25 @@ export async function proxy(request: NextRequest) {
       const secret = new TextEncoder().encode(jwtSecret);
       const { payload } = await jwtVerify(token, secret);
 
-      const userEmail = (payload.email as string || '').toLowerCase();
       const userRole = (payload.role as string || '').toLowerCase();
-      const isAdminEmail = ADMIN_EMAILS.map(e => e.toLowerCase()).includes(userEmail);
-      const isDeveloperEmail = DEVELOPER_EMAILS.map(e => e.toLowerCase()).includes(userEmail);
+      const userSecondaryRole = (payload.secondary_role as string || '').toLowerCase();
+      const isAdminRole = userRole === 'admin' || userSecondaryRole === 'admin';
+      const isDeveloperRole = userRole === 'developer' || userSecondaryRole === 'developer';
 
-      // Admin route: require admin email or admin role
       if (isAdminRoute) {
-        const isAuthorized = isAdminEmail || userRole === 'admin';
-        if (!isAuthorized) {
+        if (!isAdminRole) {
           return NextResponse.redirect(new URL('/?error=unauthorized', request.url));
         }
       }
 
-      // Developer route: require developer/admin email or role
       if (pathname.startsWith('/developer')) {
-        const isAuthorized =
-          isDeveloperEmail ||
-          isAdminEmail ||
-          userRole === 'developer' ||
-          userRole === 'admin';
-
-        if (!isAuthorized) {
+        if (!isDeveloperRole && !isAdminRole) {
           return NextResponse.redirect(new URL('/?error=unauthorized', request.url));
         }
       }
 
-      // Email verification gate: chat requires verified email
-      // Admin/developer emails bypass this check (always trusted)
       const isVerifiedRoute = VERIFIED_ONLY_ROUTES.some(r => pathname.startsWith(r));
-      if (isVerifiedRoute && !isAdminEmail) {
+      if (isVerifiedRoute && !isAdminRole && !isDeveloperRole) {
         const emailVerified = payload.email_verified;
         // Grant access when email_verified is explicitly true or 1 (from legacy database integer formats).
         // Legacy tokens lacking the field (undefined/null) are also blocked.

@@ -59,13 +59,18 @@
     <!-- ── HEADER ── -->
     <header>
         <a href="#" class="logo">TAKE <span>ONE</span></a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
         <nav>
             <a href="#explore" id="navExploreLink">Discover Projects</a>
             <a href="/crew" id="navCrewLink">Find Crew</a>
             <a href="/leaderboard">Leaderboard</a>
             <a href="#upload" id="navUploadLink">Share Your Script</a>
             <a href="/profile">Profile</a>
-            <button id="loginBtn" class="nav-cta" style="background: var(--neon); border: none; padding: 9px 20px; cursor: pointer; font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;">
+            <button id="loginBtn" class="nav-cta">
   Join Now
 </button>
         </nav>
@@ -481,6 +486,16 @@
             <!-- Inject fields here via project.js -->
           </div>
 
+          <!-- Script Pricing Info Banner -->
+          <div class="upload-panel upload-full" style="border-top: none; border-bottom: none; background: rgba(255, 77, 26, 0.03); display: flex; flex-direction: column; gap: 8px; padding: 24px 28px;">
+            <div style="font-family: 'Space Mono', monospace; font-size: 14px; font-weight: bold; color: var(--neon); display: flex; align-items: center; gap: 8px;">
+              <span>✦</span> ₹49 Per Script Submission
+            </div>
+            <div style="font-family: 'Space Mono', monospace; font-size: 11px; line-height: 1.6; color: var(--silver); max-width: 800px;">
+              Each script submission requires a separate payment of ₹49. Only your first/spotlight script is covered under your active community, further script uploads incur a per-submission transaction fee.
+            </div>
+          </div>
+
           <div class="upload-actions">
             <p id="liveCommunityText">Reviewed within 24 hrs. Join the creative film collective.</p>
             <button class="btn-upload" id="uploadActionButton">Submit Work →</button>
@@ -696,7 +711,7 @@
       <h2 class="modal-title">CREATE ACCOUNT</h2>
       <button class="modal-close" id="closeRegisterBtn">&times;</button>
     </div>
-    <form id="registerForm">
+    <form id="registerForm" autocomplete="off">
       <!-- ── STEP PROGRESS BAR ── -->
       <div class="wizard-progress-bar">
         <div class="progress-step active" data-step="1"><span>01</span> Account</div>
@@ -717,16 +732,30 @@
         <div class="form-group">
           <label for="registerPassword">Password</label>
           <div class="pw-wrap">
-            <input type="password" id="registerPassword" placeholder="At least 6 characters" required>
+            <input type="password" id="registerPassword" placeholder="Create a strong password" autocomplete="new-password" required>
             <button type="button" class="pw-toggle" aria-label="Show password" tabindex="0">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
+          <div id="passwordStrength" class="password-strength" style="display: none;">
+            <div class="strength-label">Password Strength</div>
+            <div class="strength-bar">
+            <div id="strengthFill" class="strength-fill"></div>
+            </div>
+            <div id="strengthText" class="strength-text"></div>
+            <ul class="strength-checklist">
+                <li id="ruleLength">✗8+ characters</li>
+                <li id="ruleUpper">✗Uppercase letter</li>
+                <li id="ruleNumber">✗Number</li>
+                <li id="ruleSpecial">✗Special character</li>
+            </ul>
+          </div>
         </div>
+
         <div class="form-group">
           <label for="registerConfirmPassword">Confirm Password</label>
           <div class="pw-wrap">
-            <input type="password" id="registerConfirmPassword" placeholder="Re-enter password" required>
+            <input type="password" id="registerConfirmPassword" placeholder="Re-enter password" autocomplete="new-password" required>
             <button type="button" class="pw-toggle" aria-label="Show password" tabindex="0">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>

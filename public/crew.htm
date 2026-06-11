@@ -21,6 +21,11 @@
 <body>
   <header>
     <a href="/" class="logo">TAKE <span>ONE</span></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <nav>
       <a href="/#explore">Discover Projects</a>
       <a href="/crew" class="active">Find Crew</a>
@@ -90,6 +95,8 @@
         <div class="crew-grid" id="crewGrid">
           <div class="crew-empty">Loading crew...</div>
         </div>
+
+        <div class="pagination-container" id="crewPagination"></div>
       </section>
     </section>
   </main>
