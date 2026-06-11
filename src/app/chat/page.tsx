@@ -248,7 +248,7 @@ export default function ChatPage() {
   const [user, setUser] = useState<User | null>(null);
   const isFounder = user?.secondary_role?.toLowerCase() === 'founder';
   const [state, setState] = useState<ChatState>('loading');
-  const [statusText, setStatusText] = useState('Synchronizing with Nexus...');
+  const [statusText, setStatusText] = useState('Synchronizing with Community...');
   const [messageLoading, setMessageLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
@@ -544,14 +544,18 @@ export default function ChatPage() {
             fetchDashboardStats(json.communities[0].id);
             return json.communities[0];
           });
+          return json.communities;
         } else {
           setMyCommunities([]);
           setCommunityData(null);
           setCommunityRole(null);
+          return [];
         }
       }
+      return [];
     } catch (err) {
       console.error('Error fetching community status:', err);
+      return [];
     }
   }, [fetchDashboardStats]);
 
@@ -1114,7 +1118,7 @@ export default function ChatPage() {
     } catch (err: any) {
       console.error('Failed to fetch messages', err);
       setState('error');
-      setStatusText(err.message || 'The Nexus connection was interrupted.');
+      setStatusText(err.message || 'The Community connection was interrupted.');
     } finally {
       setMessageLoading(false);
       setIsLoadingMore(false);
@@ -1235,7 +1239,7 @@ export default function ChatPage() {
       return loaded as Conversation[];
     } catch (err: any) {
       console.error('Fetch conversations failed:', err);
-      throw new Error(err.message || 'The Nexus frequency is unstable. Please retry.');
+      throw new Error(err.message || 'The Community frequency is unstable. Please retry.');
     }
   }, []);
 
@@ -1405,6 +1409,43 @@ export default function ChatPage() {
     setState('ready');
   }, [setActiveConversation]);
 
+  const handleNavigateToCommunity = useCallback(async (comm: any) => {
+    setInCommunity(true);
+    setCommunityData(comm);
+    setCommunityRole(comm.role);
+    setViewingGalaxyLanding(false);
+    setShowCommunityDashboard(true);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+    try {
+      const statsRes = await fetch(`/api/community/dashboard?communityId=${comm.id}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const statsJson = await statsRes.json();
+      if (statsJson.success) {
+        setDashboardStats(statsJson.data);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+    }
+
+    if (comm.groups && comm.groups.length > 0) {
+      const generalGroup = comm.groups.find((g: any) => g.name.toLowerCase() === 'general') || comm.groups[0];
+      const targetConv = conversations.find(c => c.id === generalGroup.conversation_id);
+      if (targetConv) {
+        setActiveConversation(targetConv);
+        await fetchMessages(targetConv.id);
+      } else {
+        const loaded = await fetchConversations();
+        const found = loaded.find(c => c.id === generalGroup.conversation_id);
+        if (found) {
+          setActiveConversation(found);
+          await fetchMessages(found.id);
+        }
+      }
+    }
+  }, [conversations, fetchConversations, fetchMessages, setActiveConversation]);
+
   useEffect(() => {
     const initialize = async () => {
       let currentUser: User | null = null;
@@ -1482,7 +1523,7 @@ export default function ChatPage() {
       } catch (err: any) {
         console.error('Failed to initialize chat', err);
         setState('error');
-        setStatusText(err.message || 'Signal Error: Could not synchronize with Nexus.');
+        setStatusText(err.message || 'Signal Error: Could not synchronize with Community.');
       }
     };
 
@@ -1976,9 +2017,10 @@ export default function ChatPage() {
 
   // Periodic retry check for queued messages
   useEffect(() => {
-    if (!user?.id || pusherConnectionState !== 'connected') return;
+    if (!user?.id || pusherConnectionState !== 'connected' || messageLoading) return;
     
     const interval = setInterval(() => {
+      if (messageLoading) return;
       const nextMessage = getNextMessageToRetry();
       if (nextMessage) {
         processMessageQueue();
@@ -1986,14 +2028,13 @@ export default function ChatPage() {
     }, 2000); // Check every 2 seconds
     
     return () => clearInterval(interval);
-  }, [user?.id, pusherConnectionState, getNextMessageToRetry, processMessageQueue]);
+  }, [user?.id, pusherConnectionState, getNextMessageToRetry, processMessageQueue, messageLoading]);
 
   if (state === 'loading') return <div className="chat-loading">{statusText}</div>;
 
   return (
     <div className="chat-page">
       <header className="global-header">
-        <a href="/" className="logo">TAKE <span>ONE</span></a>
         <nav>
           <a href="/#explore">Discover Projects</a>
           <a href="/crew">Find Crew</a>
@@ -2012,7 +2053,7 @@ export default function ChatPage() {
       <div className="chat-container">
         {/* Community Switcher Rail */}
         <div className="community-rail">
-          {/* Nexus Global Icon */}
+          {/* Community Global Icon */}
           <div className={`rail-item-wrapper ${!inCommunity && !viewingGalaxyLanding ? 'active' : ''}`}>
             <div className="rail-pill" />
             <button 
@@ -2022,7 +2063,7 @@ export default function ChatPage() {
                 setViewingGalaxyLanding(false);
                 setShowCommunityDashboard(false);
               }}
-              title="Nexus Global Chat"
+              title="Community Global Chat"
             >
               N
             </button>
@@ -2039,22 +2080,7 @@ export default function ChatPage() {
                 <div className="rail-pill" />
                 <button 
                   className="rail-item" 
-                  onClick={async () => {
-                    setInCommunity(true);
-                    setCommunityData(comm);
-                    setCommunityRole(comm.role);
-                    setViewingGalaxyLanding(false);
-                    setShowCommunityDashboard(false);
-                    // Fetch new dashboard stats for switcher context
-                    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-                    const statsRes = await fetch(`/api/community/dashboard?communityId=${comm.id}`, {
-                      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                    });
-                    const statsJson = await statsRes.json();
-                    if (statsJson.success) {
-                      setDashboardStats(statsJson.data);
-                    }
-                  }}
+                  onClick={() => handleNavigateToCommunity(comm)}
                   title={comm.name}
                 >
                   {comm.logo_url ? (
@@ -2105,10 +2131,10 @@ export default function ChatPage() {
           <div className="sidebar-header">
             <div className="sidebar-title-row">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2>Nexus</h2>
+                <h2>NEXUS</h2>
                 <div 
                   className={`connection-indicator ${pusherConnectionState}`}
-                  title={`Nexus Connection: ${pusherConnectionState}`}
+                  title={`Community Connection: ${pusherConnectionState}`}
                   style={{
                     width: '8px',
                     height: '8px',
@@ -2162,7 +2188,7 @@ export default function ChatPage() {
                 <input 
                   type="text" 
                   className="sidebar-search-input" 
-                  placeholder="Search Nexus..." 
+                  placeholder="Search Community..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -2529,7 +2555,7 @@ export default function ChatPage() {
                     🌌 Discover Communities
                   </h2>
                   <p style={{ fontSize: '13px', color: '#888', marginBottom: '20px' }}>
-                    Browse available communities on Nexus or request to join.
+                    Browse available communities or request to join.
                   </p>
 
                   <div className="sidebar-search-wrap" style={{ marginBottom: '20px' }}>
@@ -3653,10 +3679,15 @@ export default function ChatPage() {
                       <button
                         onClick={async () => {
                           setIsJoinRequestModalOpen(false);
-                          setInCommunity(true);
-                          setViewingGalaxyLanding(false);
-                          setShowCommunityDashboard(false);
-                          await fetchMyCommunity();
+                          const communities = await fetchMyCommunity();
+                          if (communities && communities.length > 0) {
+                            const joined = communities.find((c: any) => c.id === req.community.id);
+                            if (joined) {
+                              handleNavigateToCommunity(joined);
+                            } else {
+                              handleNavigateToCommunity(communities[0]);
+                            }
+                          }
                         }}
                         className="nav-cta"
                         style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '4px', background: '#4dff4d', color: '#000', border: 'none' }}

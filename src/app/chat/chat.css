@@ -1,7 +1,7 @@
 /* ── HEADER ── */
 header.global-header {
   position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 800;
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: center; align-items: center;
   padding: 0 30px;
   height: 64px;
   width: 90%;
