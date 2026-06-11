@@ -601,6 +601,64 @@ nav a:hover::after { width: 100%; }
   border: 1px solid var(--border);
 }
 
+/* Message Status States */
+.message-bubble.pending {
+  align-self: flex-end;
+  background: linear-gradient(135deg, rgba(255, 77, 26, 0.08) 0%, rgba(255, 77, 26, 0.02) 100%);
+  color: var(--cream);
+  border: 1px solid rgba(255, 77, 26, 0.2);
+  opacity: 0.65;
+}
+
+.message-bubble.sending {
+  align-self: flex-end;
+  background: linear-gradient(135deg, rgba(255, 77, 26, 0.12) 0%, rgba(255, 77, 26, 0.04) 100%);
+  color: var(--cream);
+  border: 1px solid rgba(255, 77, 26, 0.3);
+  position: relative;
+  animation: sendingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sendingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.message-bubble.sending::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 166, 32, 0.8);
+  border-radius: 50%;
+  animation: sendingDots 1.4s steps(3, end) infinite;
+}
+
+@keyframes sendingDots {
+  0%, 20% { opacity: 0; }
+  40% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.message-bubble.failed {
+  align-self: flex-end;
+  background: linear-gradient(135deg, rgba(255, 50, 50, 0.12) 0%, rgba(255, 50, 50, 0.04) 100%);
+  color: var(--cream);
+  border: 1px solid rgba(255, 50, 50, 0.4);
+  box-shadow: 0 2px 10px rgba(255, 50, 50, 0.1);
+}
+
+.message-bubble.failed::before {
+  content: '⚠';
+  margin-right: 6px;
+  color: #ff3333;
+  font-size: 12px;
+}
+
+
 .msg-sender-row {
   display: flex;
   align-items: center;
