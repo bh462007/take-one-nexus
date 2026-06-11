@@ -2,7 +2,7 @@ const express = require('express');
 const { authenticateUser, requireAdmin } = require('../middleware/auth');
 const { body, param, query } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -16,7 +16,7 @@ const inviteLimiter = createRateLimiter({
   keyPrefix: 'community-invite'
 });
 
-const prisma = new PrismaClient();
+
 const router = express.Router();
 
 function logTransaction(details) {
