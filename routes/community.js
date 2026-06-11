@@ -34,6 +34,36 @@ function logTransaction(details) {
   }
 }
 
+function logCommunityEvent(action, details = {}) {
+  try {
+    const logDir = path.join(__dirname, '../logs');
+    if (!fs.existsSync(logDir)) {
+      try {
+        fs.mkdirSync(logDir, { recursive: true });
+      } catch (e) {
+        // Ignore folder creation errors on serverless
+      }
+    }
+    const logPath = path.join(logDir, 'community.log');
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] [COMMUNITY_EVENT] [${action}] ${JSON.stringify(details)}\n`;
+    try {
+      fs.appendFileSync(logPath, logEntry, 'utf8');
+    } catch (e) {
+      // Ignore write errors on read-only serverless filesystems
+    }
+    console.log(JSON.stringify({
+      timestamp,
+      level: 'INFO',
+      module: 'community',
+      action,
+      ...details
+    }));
+  } catch (err) {
+    console.error('Logging failed:', err.message);
+  }
+}
+
 /**
  * GET /api/community/pricing-configs
  * Returns the seeding/pricing settings
@@ -99,11 +129,15 @@ router.get('/my-community', authenticateUser, async (req, res) => {
       inCommunity: true,
       communities: memberRecords.map(r => ({
         ...r.community,
+        logo_url: r.community ? r.community.avatar_url : null,
         role: r.role
       })),
       // Backward compatibility:
       role: memberRecords[0].role,
-      community: memberRecords[0].community
+      community: memberRecords[0].community ? {
+        ...memberRecords[0].community,
+        logo_url: memberRecords[0].community.avatar_url
+      } : null
     });
   } catch (error) {
     console.error('[Community] Get my community error:', error.message);
@@ -520,6 +554,7 @@ router.get('/dashboard', authenticateUser, async (req, res) => {
         name: community.name,
         description: community.description,
         avatar_url: community.avatar_url,
+        logo_url: community.avatar_url,
         banner_url: community.banner_url,
         owner_id: community.owner_id,
         max_members: community.max_members,
@@ -731,6 +766,8 @@ router.post('/members/invite', authenticateUser, inviteLimiter, inviteMemberVali
       }
     }
 
+    logCommunityEvent('member_invited', { communityId, inviteeId: targetUser.id, inviterId: callerId });
+
     res.json({
       success: true,
       message: `Invitation successfully sent to ${targetUser.name}.`
@@ -768,9 +805,17 @@ router.get('/invitations/my-invitations', authenticateUser, async (req, res) => 
       }
     });
 
+    const mappedInvitations = invitations.map(inv => ({
+      ...inv,
+      community: inv.community ? {
+        ...inv.community,
+        logo_url: inv.community.avatar_url
+      } : null
+    }));
+
     res.json({
       success: true,
-      invitations
+      invitations: mappedInvitations
     });
   } catch (error) {
     console.error('[Community] Get my invitations error:', error.message);
@@ -847,6 +892,8 @@ router.post('/invitations/:id/accept', authenticateUser, async (req, res) => {
       }
     });
 
+    logCommunityEvent('invitation_accepted', { invitationId, userId, communityId: community.id });
+
     res.json({
       success: true,
       message: `You have successfully joined ${community.name}.`
@@ -883,6 +930,8 @@ router.post('/invitations/:id/reject', authenticateUser, async (req, res) => {
       data: { status: 'REJECTED' }
     });
 
+    logCommunityEvent('invitation_rejected', { invitationId, userId, communityId: invitation.community_id });
+
     res.json({
       success: true,
       message: 'Invitation rejected.'
@@ -900,6 +949,11 @@ router.post('/invitations/:id/reject', authenticateUser, async (req, res) => {
 router.post('/logo', authenticateUser, (req, res) => {
   uploadLogo.single('logo')(req, res, async (err) => {
     if (err) {
+      const communityId = req.body ? Number(req.body.communityId || req.body.community_id) : null;
+      logCommunityEvent('logo_upload_failed', { communityId, userId: Number(req.user.id), error: err.message });
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size allowed is 5 MB.' });
+      }
       return res.status(400).json({ success: false, message: err.message });
     }
 
@@ -937,8 +991,10 @@ router.post('/logo', authenticateUser, (req, res) => {
       const logoUrl = `/assets/uploads/logos/${req.file.filename}`;
       await prisma.community.update({
         where: { id: communityId },
-        data: { logo_url: logoUrl }
+        data: { avatar_url: logoUrl }
       });
+
+      logCommunityEvent('logo_upload_success', { communityId, userId: Number(req.user.id), fileName: req.file.filename, size: req.file.size });
 
       res.json({
         success: true,
@@ -947,6 +1003,7 @@ router.post('/logo', authenticateUser, (req, res) => {
       });
     } catch (error) {
       console.error('[Community] Logo upload error:', error.message);
+      logCommunityEvent('logo_upload_failed', { communityId: Number(req.body.communityId || req.body.community_id), userId: Number(req.user.id), error: error.message });
       if (req.file && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
       }

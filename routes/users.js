@@ -576,7 +576,16 @@ router.get('/search', authenticateUser, async (req, res) => {
     const city = String(req.query.city || '').trim();
     const availability = String(req.query.availability || '').trim();
     const q = String(req.query.q || '').trim();
+    const page = req.query.page ? parseInt(req.query.page, 10) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+    const offset = (page - 1) * limit;
+
+    let countSql = `
+      SELECT COUNT(*) as total
+      FROM users
+      WHERE id != ?
+    `;
+    const countParams = [req.user.id];
 
     let sql = `
       SELECT id, name, email, role, college, city, bio, skills, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, email_verified, availability
@@ -588,32 +597,51 @@ router.get('/search', authenticateUser, async (req, res) => {
     if (role) {
       sql += ` AND role LIKE ?`;
       params.push(`%${role}%`);
+      countSql += ` AND role LIKE ?`;
+      countParams.push(`%${role}%`);
     }
 
     if (city) {
       sql += ` AND city LIKE ?`;
       params.push(`%${city}%`);
+      countSql += ` AND city LIKE ?`;
+      countParams.push(`%${city}%`);
     }
 
     if (availability) {
       sql += ` AND availability = ?`;
       params.push(availability);
+      countSql += ` AND availability = ?`;
+      countParams.push(availability);
     }
 
     if (q) {
       sql += ` AND (name LIKE ? OR screen_name LIKE ? OR role LIKE ? OR college LIKE ? OR skills LIKE ?)`;
       params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+      countSql += ` AND (name LIKE ? OR screen_name LIKE ? OR role LIKE ? OR college LIKE ? OR skills LIKE ?)`;
+      countParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
 
-    sql += ` ORDER BY created_at DESC, id DESC LIMIT ?`;
-    params.push(limit);
+    // Execute count query
+    const countRows = await safeQuery(countSql, countParams);
+    const total = countRows && countRows[0] ? Number(countRows[0].total) : 0;
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    sql += ` ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
 
     const rows = await safeQuery(sql, params);
+    const mappedRows = rows.map(r => ({ ...r, name: formatDisplayName(r.name) }));
 
     res.json({
       success: true,
-      count: rows.length,
-      data: rows.map(r => ({ ...r, name: formatDisplayName(r.name) }))
+      count: mappedRows.length,
+      data: mappedRows,
+      users: mappedRows, // Supporting both data and users fields
+      total,
+      totalPages,
+      page,
+      limit
     });
   } catch (error) {
     console.error('User search error:', error.message);
