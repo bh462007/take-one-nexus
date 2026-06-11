@@ -255,6 +255,41 @@ function renderPortfolio(profile) {
 
 let currentProfileData = null;
 
+function notifyProfile(message) {
+    if (typeof showToast === 'function') {
+        showToast(message);
+        return;
+    }
+
+    const toast = document.getElementById('toast');
+    if (toast) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+}
+
+function upsertLocalPortfolioItem(script, remove = false) {
+    if (!currentProfileData || !script || !script.id) return;
+
+    const scripts = Array.isArray(currentProfileData.scripts)
+        ? currentProfileData.scripts.slice()
+        : [];
+    const index = scripts.findIndex(item => Number(item.id) === Number(script.id));
+
+    if (remove) {
+        if (index >= 0) scripts.splice(index, 1);
+    } else if (index >= 0) {
+        scripts[index] = { ...scripts[index], ...script };
+    } else {
+        scripts.unshift(script);
+    }
+
+    currentProfileData.scripts = scripts;
+    renderProjects(scripts);
+    renderPortfolio(currentProfileData);
+}
+
 function populateProfile(profile) {
     if (!profile) return;
     currentProfileData = profile;
@@ -809,7 +844,7 @@ window.openEditWorkModal = function(scriptId = null) {
 
     if (scriptId) {
         title.textContent = 'Edit Portfolio Work';
-        const script = currentProfileData?.scripts?.find(s => s.id === scriptId);
+        const script = currentProfileData?.scripts?.find(s => Number(s.id) === Number(scriptId));
         if (script) {
             document.getElementById('workTitle').value = script.title || '';
             document.getElementById('workGenre').value = script.genre || '';
@@ -846,14 +881,15 @@ window.deleteWork = async function(scriptId) {
         const json = await API.scripts.delete(scriptId);
         
         if (json.success) {
-            if (typeof showToast === 'function') showToast('Project removed ✦');
+            notifyProfile('Project removed');
+            upsertLocalPortfolioItem({ id: scriptId }, true);
             loadProfile(); 
         } else {
-            if (typeof showToast === 'function') showToast(json.message || 'Error deleting project');
+            notifyProfile(json.message || 'Error deleting project');
         }
     } catch (err) {
         console.error('Delete error:', err);
-        if (typeof showToast === 'function') showToast('Connection error');
+        notifyProfile(err.message || 'Connection error');
     }
 };
 
@@ -861,6 +897,7 @@ async function handleWorkSubmit(e) {
     e.preventDefault();
     const scriptId = document.getElementById('workId').value;
     const saveBtn = document.getElementById('saveWorkBtn');
+    const originalText = saveBtn ? saveBtn.textContent : 'Save Work';
     
     const dynamicData = {};
     document.querySelectorAll('.dynamic-field').forEach(field => {
@@ -879,7 +916,12 @@ async function handleWorkSubmit(e) {
     };
 
     if (!data.title) {
-        if (typeof showToast === 'function') showToast('Project title is required ✦');
+        notifyProfile('Project title is required');
+        return;
+    }
+
+    if (typeof API === 'undefined' || !API.scripts) {
+        notifyProfile('Project API is not available. Start the API server and try again.');
         return;
     }
 
@@ -894,19 +936,25 @@ async function handleWorkSubmit(e) {
             : await API.scripts.createPortfolio(data);
         
         if (json.success) {
-            if (typeof showToast === 'function') showToast(scriptId ? 'Project updated ✦' : 'Project added ✦');
+            const savedScript = json.data || {
+                ...data,
+                id: scriptId || Date.now(),
+                created_at: new Date().toISOString()
+            };
+            notifyProfile(scriptId ? 'Project updated' : 'Project added');
+            upsertLocalPortfolioItem(savedScript);
             closeWorkModal();
             loadProfile();
         } else {
-            if (typeof showToast === 'function') showToast(json.message || 'Error saving project');
+            notifyProfile(json.message || 'Error saving project');
         }
     } catch (err) {
         console.error('Save error:', err);
-        if (typeof showToast === 'function') showToast('Connection error');
+        notifyProfile(err.message || 'Connection error');
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.textContent = 'Save Work ✦';
+            saveBtn.textContent = originalText || 'Save Work';
         }
     }
 }

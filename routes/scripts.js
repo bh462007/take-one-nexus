@@ -167,6 +167,16 @@ function hasElevatedScriptDeleteAccess(user) {
     roles.includes('founder');
 }
 
+function isVerifiedUser(user) {
+  return user?.email_verified === true || user?.email_verified === 1;
+}
+
+function isPortfolioScript(script) {
+  return String(script?.payment_status || '').toLowerCase() === 'portfolio' ||
+    String(script?.approval_status || '').toLowerCase() === 'portfolio' ||
+    String(script?.status || '').toLowerCase() === 'portfolio item';
+}
+
 router.get('/', async (req, res) => {
   try {
     const sql = `
@@ -265,7 +275,7 @@ const portfolioLimiter = createRateLimiter({
   keyPrefix: 'portfolio'
 });
 
-router.post('/portfolio', authenticateUser, requireVerified, portfolioLimiter, async (req, res) => {
+router.post('/portfolio', authenticateUser, portfolioLimiter, async (req, res) => {
   try {
     const {
       title,
@@ -397,7 +407,7 @@ router.post('/', authenticateUser, requireVerified, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateUser, requireVerified, async (req, res) => {
+router.put('/:id', authenticateUser, async (req, res) => {
   try {
     const scriptId = Number(req.params.id);
     const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;
@@ -410,13 +420,20 @@ router.put('/:id', authenticateUser, requireVerified, async (req, res) => {
     }
 
     // Check ownership
-    const [rows] = await pool.query('SELECT user_id FROM scripts WHERE id = ? LIMIT 1', [scriptId]);
+    const [rows] = await pool.query('SELECT user_id, status, payment_status, approval_status FROM scripts WHERE id = ? LIMIT 1', [scriptId]);
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Script not found' });
     }
 
     if (rows[0].user_id !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized to edit this script' });
+    }
+
+    if (!isVerifiedUser(req.user) && !isPortfolioScript(rows[0])) {
+      return res.status(403).json({
+        success: false,
+        message: 'Email verification required to edit submitted scripts.'
+      });
     }
 
     await pool.query(
@@ -457,7 +474,7 @@ router.put('/:id', authenticateUser, requireVerified, async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticateUser, requireVerified, async (req, res) => {
+router.delete('/:id', authenticateUser, async (req, res) => {
   const connection = await pool.getConnection();
   try {
     const scriptId = Number(req.params.id);
@@ -477,6 +494,13 @@ router.delete('/:id', authenticateUser, requireVerified, async (req, res) => {
 
     if (!isOwner && !canModerateDelete) {
       return res.status(403).json({ success: false, message: 'Unauthorized to delete this script' });
+    }
+
+    if (isOwner && !isVerifiedUser(req.user) && !isPortfolioScript(script)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Email verification required to delete submitted scripts.'
+      });
     }
 
     await connection.beginTransaction();
