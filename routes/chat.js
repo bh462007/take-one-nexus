@@ -2,11 +2,11 @@ const express = require('express');
 const { authenticateUser } = require('../middleware/auth');
 const { body, param, query } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const Pusher = require('pusher');
 const { formatDisplayName } = require('../utils/formatting');
 
-const prisma = new PrismaClient();
+
 const router = express.Router();
 
 // Configure Pusher
@@ -591,7 +591,7 @@ router.post('/conversations/:id/leave', authenticateUser, [
 
 /**
  * POST /api/chat/conversations/:id/clear
- * Clear all messages in a conversation
+ * Clear all messages in a conversation (only for Directors/Admins)
  */
 router.post('/conversations/:id/clear', authenticateUser, [
   param('id').isNumeric(),
@@ -601,19 +601,27 @@ router.post('/conversations/:id/clear', authenticateUser, [
     const conversationId = Number(req.params.id);
     const userId = Number(req.user.id);
 
-    // Check if user is part of the conversation
-    const conversation = await prisma.conversation.findFirst({
+    // Check if user is part of the conversation and get their role
+    const conversationMember = await prisma.conversationMember.findFirst({
       where: {
-        id: conversationId,
-        members: { some: { user_id: userId } }
+        conversation_id: conversationId,
+        user_id: userId
+      },
+      select: {
+        role: true
       }
     });
 
-    if (!conversation) {
+    if (!conversationMember) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Delete messages
+    // Only allow Directors and Admins to clear chat history
+    if (conversationMember.role !== 'Director' && conversationMember.role !== 'Admin') {
+      return res.status(403).json({ success: false, message: 'Only Directors and Admins can clear chat history' });
+    }
+
+    // Delete all messages in the conversation
     await prisma.message.deleteMany({
       where: { conversation_id: conversationId }
     });
