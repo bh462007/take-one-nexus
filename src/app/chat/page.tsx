@@ -126,6 +126,12 @@ const usePusherConnectionState = (pusher: Pusher | null, onConnected?: () => voi
 const useMessageQueue = (enabled: boolean) => {
   const [queue, setQueue] = useState<QueuedMessage[]>([]);
   const processingRef = useRef(false);
+  const queueRef = useRef<QueuedMessage[]>([]);
+
+  // Keep queueRef in sync with queue state
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
   
   // Restore queue from localStorage on mount
   useEffect(() => {
@@ -169,13 +175,13 @@ const useMessageQueue = (enabled: boolean) => {
   
   const getNextMessageToRetry = useCallback((): QueuedMessage | null => {
     const now = Date.now();
-    const pending = queue.find(msg => 
+    const pending = queueRef.current.find(msg => 
       (msg.status === 'pending' || msg.status === 'failed') &&
       msg.retryCount < 5 &&
       msg.nextRetryAt <= now
     );
     return pending || null;
-  }, [queue]);
+  }, []);
   
   const getExponentialBackoffDelay = (retryCount: number): number => {
     const delays = [1000, 2000, 4000, 8000, 8000];
@@ -195,7 +201,7 @@ const useMessageQueue = (enabled: boolean) => {
   const isProcessing = useCallback(() => processingRef.current, []);
   const setProcessing = useCallback((value: boolean) => { processingRef.current = value; }, []);
   
-  return {
+  return useMemo(() => ({
     queue,
     addToQueue,
     updateMessageStatus,
@@ -204,7 +210,16 @@ const useMessageQueue = (enabled: boolean) => {
     scheduleRetry,
     isProcessing,
     setProcessing
-  };
+  }), [
+    queue,
+    addToQueue,
+    updateMessageStatus,
+    removeFromQueue,
+    getNextMessageToRetry,
+    scheduleRetry,
+    isProcessing,
+    setProcessing
+  ]);
 };
 
 const loadRazorpayScript = () => {
@@ -257,6 +272,15 @@ export default function ChatPage() {
 
   // Message Queue System
   const messageQueue = useMessageQueue(true);
+  const {
+    addToQueue,
+    updateMessageStatus,
+    removeFromQueue,
+    getNextMessageToRetry,
+    scheduleRetry,
+    isProcessing,
+    setProcessing
+  } = messageQueue;
   const [pusherConnectionState, setPusherConnectionState] = useState<PusherConnectionState>('disconnected');
 
   // Community System States
@@ -1281,13 +1305,14 @@ export default function ChatPage() {
         pusherRef.current = null;
       }
     };
-  }, [user]); // Fires on explicit layout unmount or session invalidation (logout)
+  }, [user?.id]); // Fires on explicit layout unmount or session invalidation (logout)
 
   // =========================================================================
   // FIX 2: REFACTORED USER CHANNEL SUBSCRIPTION (DETERMINISTIC CLEANUP)
   // =========================================================================
   useEffect(() => {
-    if (!user) return;
+    const userId = user?.id;
+    if (!userId) return;
 
     if (!pusherRef.current) {
       const pusherKey = pusherConfigRef.current?.key || process.env.NEXT_PUBLIC_PUSHER_KEY;
@@ -1331,7 +1356,7 @@ export default function ChatPage() {
 
     if (!pusherRef.current) return;
 
-    const userChannelName = `user-${user.id}`;
+    const userChannelName = `user-${userId}`;
     const userChannel = pusherRef.current.subscribe(userChannelName);
 
     // Named reference allocation to avoid handler replication
@@ -1370,7 +1395,7 @@ export default function ChatPage() {
       userChannel.unbind('message-notification', handleMessageNotification);
       pusherRef.current?.unsubscribe(userChannelName);
     };
-}, [user, activeConv?.id, fetchConversations]);
+  }, [user?.id, activeConv?.id, fetchConversations]);
 
   // =========================================================================
   // FIX 3: REFACTORED CONVERSATION ACTIVE CHANNEL (DETERMINISTIC CLEANUP)
@@ -1400,13 +1425,13 @@ export default function ChatPage() {
         // Permanent error (auth, validation) - mark as failed
         if (res.status === 401 || res.status === 403 || res.status === 400) {
           setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
-          messageQueue.removeFromQueue(tempId);
+          removeFromQueue(tempId);
           setStatusText(json.message || 'Message failed to send.');
           return;
         }
         
         // Transient error - schedule retry
-        messageQueue.scheduleRetry(tempId, 0);
+        scheduleRetry(tempId, 0);
         setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
         setStatusText(json.message || 'Message send failed. Retrying...');
         return;
@@ -1414,7 +1439,7 @@ export default function ChatPage() {
 
       // Success - remove from queue and mark as sent
       setMessages(prev => prev.map(m => m.id === tempId ? { ...json.data, status: 'sent' } : m));
-      messageQueue.removeFromQueue(tempId);
+      removeFromQueue(tempId);
       
       setConversations((current) => {
         const index = current.findIndex(c => c.id === json.data.conversation_id);
@@ -1428,25 +1453,25 @@ export default function ChatPage() {
     } catch (err) {
       console.error('[MESSAGE] Failed to send message', err);
       // Network error - schedule retry
-      messageQueue.scheduleRetry(tempId, 0);
+      scheduleRetry(tempId, 0);
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
       setStatusText('Network error. Message will be retried.');
     } finally {
       setSending(false);
     }
-  }, [messageQueue, setMessages, setConversations, setSending, setStatusText]);
+  }, [removeFromQueue, scheduleRetry, setMessages, setConversations, setSending, setStatusText]);
 
   const processMessageQueue = useCallback(async () => {
-    if (messageQueue.isProcessing() || pusherConnectionState !== 'connected') return;
+    if (isProcessing() || pusherConnectionState !== 'connected') return;
     
-    messageQueue.setProcessing(true);
+    setProcessing(true);
     
     try {
-      let nextMessage = messageQueue.getNextMessageToRetry();
+      let nextMessage = getNextMessageToRetry();
       
       while (nextMessage) {
         const msg = nextMessage;
-        messageQueue.updateMessageStatus(msg.tempId, 'sending');
+        updateMessageStatus(msg.tempId, 'sending');
         setMessages(prev => prev.map(m => 
           m.id === msg.tempId ? { ...m, status: 'sending' } : m
         ));
@@ -1470,7 +1495,7 @@ export default function ChatPage() {
             setMessages(prev => prev.map(m => 
               m.id === msg.tempId ? { ...json.data, status: 'sent' } : m
             ));
-            messageQueue.removeFromQueue(msg.tempId);
+            removeFromQueue(msg.tempId);
             
             setConversations((current) => {
               const index = current.findIndex(c => c.id === json.data.conversation_id);
@@ -1485,11 +1510,11 @@ export default function ChatPage() {
             setMessages(prev => prev.map(m => 
               m.id === msg.tempId ? { ...m, status: 'failed' } : m
             ));
-            messageQueue.removeFromQueue(msg.tempId);
+            removeFromQueue(msg.tempId);
             break; // Stop processing on auth error
           } else {
             // Transient error
-            messageQueue.scheduleRetry(msg.tempId, msg.retryCount + 1);
+            scheduleRetry(msg.tempId, msg.retryCount + 1);
             if (msg.retryCount >= 4) {
               setMessages(prev => prev.map(m => 
                 m.id === msg.tempId ? { ...m, status: 'failed' } : m
@@ -1499,7 +1524,7 @@ export default function ChatPage() {
           }
         } catch (err) {
           console.error('[QUEUE] Error processing message:', err);
-          messageQueue.scheduleRetry(msg.tempId, msg.retryCount + 1);
+          scheduleRetry(msg.tempId, msg.retryCount + 1);
           if (msg.retryCount >= 4) {
             setMessages(prev => prev.map(m => 
               m.id === msg.tempId ? { ...m, status: 'failed' } : m
@@ -1509,7 +1534,7 @@ export default function ChatPage() {
         }
         
         // Get next message to retry
-        nextMessage = messageQueue.getNextMessageToRetry();
+        nextMessage = getNextMessageToRetry();
         
         // Small delay between retries
         if (nextMessage) {
@@ -1517,9 +1542,9 @@ export default function ChatPage() {
         }
       }
     } finally {
-      messageQueue.setProcessing(false);
+      setProcessing(false);
     }
-  }, [messageQueue, pusherConnectionState, setMessages, setConversations]);
+  }, [isProcessing, pusherConnectionState, getNextMessageToRetry, updateMessageStatus, removeFromQueue, scheduleRetry, setMessages, setConversations, setProcessing]);
 
   // Monitor Pusher connection state and process queue on reconnection
   useEffect(() => {
@@ -1735,13 +1760,13 @@ export default function ChatPage() {
     };
 
     // Add to queue
-    messageQueue.addToQueue(queuedMessage);
+    addToQueue(queuedMessage);
 
     // If connected, attempt send immediately; otherwise mark as pending
     if (pusherConnectionState === 'connected') {
       await attemptSendMessage(tempId, content, activeConv.id);
     } else {
-      messageQueue.updateMessageStatus(tempId, 'pending');
+      updateMessageStatus(tempId, 'pending');
       setSending(false);
       setStatusText('Message queued. Will send when connection is restored.');
     }
@@ -1749,17 +1774,17 @@ export default function ChatPage() {
 
   // Periodic retry check for queued messages
   useEffect(() => {
-    if (!user || pusherConnectionState !== 'connected') return;
+    if (!user?.id || pusherConnectionState !== 'connected') return;
     
     const interval = setInterval(() => {
-      const nextMessage = messageQueue.getNextMessageToRetry();
+      const nextMessage = getNextMessageToRetry();
       if (nextMessage) {
         processMessageQueue();
       }
     }, 2000); // Check every 2 seconds
     
     return () => clearInterval(interval);
-  }, [user, pusherConnectionState, messageQueue.queue]);
+  }, [user?.id, pusherConnectionState, getNextMessageToRetry, processMessageQueue]);
 
   if (state === 'loading') return <div className="chat-loading">{statusText}</div>;
 
