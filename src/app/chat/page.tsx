@@ -1270,6 +1270,22 @@ export default function ChatPage() {
     initialize();
   }, [fetchConversations, fetchMessages, openDirectConversation, setActiveConversation, fetchMyCommunity, fetchMyInvitations]);
 
+  // =========================================================================
+  // FIX 1: DEDICATED PUSHER CLIENT CONNECTION DISPOSAL LIFECYCLE HOOK
+  // Handles complete websocket disconnection on unmount, layout switches, or logouts.
+  // =========================================================================
+  useEffect(() => {
+    return () => {
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+        pusherRef.current = null;
+      }
+    };
+  }, [user]); // Fires on explicit layout unmount or session invalidation (logout)
+
+  // =========================================================================
+  // FIX 2: REFACTORED USER CHANNEL SUBSCRIPTION (DETERMINISTIC CLEANUP)
+  // =========================================================================
   useEffect(() => {
     if (!user) return;
 
@@ -1318,12 +1334,12 @@ export default function ChatPage() {
     const userChannelName = `user-${user.id}`;
     const userChannel = pusherRef.current.subscribe(userChannelName);
 
-    userChannel.bind('credit-update', (data: { credits: number, change: number, reason: string }) => {
+    // Named reference allocation to avoid handler replication
+    const handleCreditUpdate = (data: { credits: number, change: number, reason: string }) => {
       setUser(prev => prev ? { ...prev, credits: data.credits } : null);
+    };
 
-    });
-
-    userChannel.bind('message-notification', (data: { conversationId: number, message: ChatMessage }) => {
+    const handleMessageNotification = (data: { conversationId: number, message: ChatMessage }) => {
       setConversations((current) => {
         const convIndex = current.findIndex((c) => c.id === data.conversationId);
         if (convIndex > -1) {
@@ -1342,15 +1358,25 @@ export default function ChatPage() {
           return current;
         }
       });
-    });
+    };
 
+    // Binding reference listeners
+    userChannel.bind('credit-update', handleCreditUpdate);
+    userChannel.bind('message-notification', handleMessageNotification);
+
+    // Strict explicit event teardown block
     return () => {
-      userChannel.unbind_all();
+      userChannel.unbind('credit-update', handleCreditUpdate);
+      userChannel.unbind('message-notification', handleMessageNotification);
       pusherRef.current?.unsubscribe(userChannelName);
     };
-  }, [user, activeConv?.id, fetchConversations]);
+}, [user, activeConv?.id, fetchConversations]);
 
-  const attemptSendMessage = async (tempId: string, content: string, conversationId: number) => {
+  // =========================================================================
+  // FIX 3: REFACTORED CONVERSATION ACTIVE CHANNEL (DETERMINISTIC CLEANUP)
+  // =========================================================================
+
+  const attemptSendMessage = useCallback(async (tempId: string, content: string, conversationId: number) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
       const res = await fetchWithCSRF('/api/chat/messages', {
@@ -1408,9 +1434,9 @@ export default function ChatPage() {
     } finally {
       setSending(false);
     }
-  };
+  }, [messageQueue, setMessages, setConversations, setSending, setStatusText]);
 
-  const processMessageQueue = async () => {
+  const processMessageQueue = useCallback(async () => {
     if (messageQueue.isProcessing() || pusherConnectionState !== 'connected') return;
     
     messageQueue.setProcessing(true);
@@ -1493,7 +1519,7 @@ export default function ChatPage() {
     } finally {
       messageQueue.setProcessing(false);
     }
-  };
+  }, [messageQueue, pusherConnectionState, setMessages, setConversations]);
 
   // Monitor Pusher connection state and process queue on reconnection
   useEffect(() => {
@@ -1516,8 +1542,7 @@ export default function ChatPage() {
     return () => {
       pusherRef.current?.connection.unbind('state_change', handleConnectionStateChange);
     };
-  }, []);
-
+  }, [processMessageQueue]); // Added processMessageQueue safely here
   useEffect(() => {
     if (!activeConv) return;
 
@@ -1565,7 +1590,9 @@ export default function ChatPage() {
 
     const channelName = `conversation-${activeConv.id}`;
     const channel = pusherRef.current.subscribe(channelName);
-    channel.bind('new-message', (data: { message: ChatMessage }) => {
+
+    // Named handlers to allow precise runtime stack unbinding
+    const handleNewMessage = (data: { message: ChatMessage }) => {
       if (activeConv.id === data.message.conversation_id) {
         setMessages((prev) => {
           // Check if message already exists by ID
@@ -1599,9 +1626,9 @@ export default function ChatPage() {
         }
         return current;
       });
-    });
+    };
 
-    channel.bind('user-typing', (data: { userId: number, userName: string, isTyping: boolean }) => {
+    const handleUserTyping = (data: { userId: number, userName: string, isTyping: boolean }) => {
       if (data.userId === user?.id) return;
       setTypingUsers(prev => {
         const next = { ...prev };
@@ -1609,9 +1636,9 @@ export default function ChatPage() {
         else delete next[data.userId];
         return next;
       });
-    });
+    };
 
-    channel.bind('task-update', (data: { type: string, task: Task, taskId?: number }) => {
+    const handleTaskUpdate = (data: { type: string, task: Task, taskId?: number }) => {
       if (data.type === 'TASK_CREATED') {
         setTasks(prev => [data.task, ...prev]);
       } else if (data.type === 'TASK_UPDATED' || data.type === 'TASK_APPROVED') {
@@ -1619,14 +1646,21 @@ export default function ChatPage() {
       } else if (data.type === 'TASK_DELETED') {
         setTasks(prev => prev.filter(t => t.id !== data.taskId));
       }
-    });
+    };
 
+    // Binding reference handlers
+    channel.bind('new-message', handleNewMessage);
+    channel.bind('user-typing', handleUserTyping);
+    channel.bind('task-update', handleTaskUpdate);
+
+    // Explicit channel and handler teardown phase
     return () => {
-      channel.unbind_all();
+      channel.unbind('new-message', handleNewMessage);
+      channel.unbind('user-typing', handleUserTyping);
+      channel.unbind('task-update', handleTaskUpdate);
       pusherRef.current?.unsubscribe(channelName);
     };
   }, [activeConv, user?.id]);
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, messageLoading]);
