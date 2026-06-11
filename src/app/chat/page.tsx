@@ -1369,6 +1369,7 @@ export default function ChatPage() {
       userChannel.unbind('credit-update', handleCreditUpdate);
       userChannel.unbind('message-notification', handleMessageNotification);
       pusherRef.current?.unsubscribe(userChannelName);
+    };
 }, [user, activeConv?.id, fetchConversations]);
 
   // =========================================================================
