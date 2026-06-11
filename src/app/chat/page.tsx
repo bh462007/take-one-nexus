@@ -1752,7 +1752,26 @@ export default function ChatPage() {
         <aside className="chat-sidebar">
           <div className="sidebar-header">
             <div className="sidebar-title-row">
-              <h2>Nexus</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2>Nexus</h2>
+                <div 
+                  className={`connection-indicator ${pusherConnectionState}`}
+                  title={`Nexus Connection: ${pusherConnectionState}`}
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: pusherConnectionState === 'connected' ? '#00ff88' : pusherConnectionState === 'connecting' ? '#ffa620' : '#ff3232',
+                    boxShadow: pusherConnectionState === 'connected' 
+                      ? '0 0 8px #00ff88' 
+                      : pusherConnectionState === 'connecting' 
+                        ? '0 0 8px #ffa620' 
+                        : '0 0 8px #ff3232',
+                    transition: 'all 0.3s ease',
+                    animation: pusherConnectionState === 'connecting' ? 'pulse-opacity 1.5s infinite' : 'none'
+                  }}
+                />
+              </div>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta group-add-btn" aria-label="Create Group" title="Create Group">+</button>
               </div>

@@ -750,7 +750,7 @@ router.post('/members/invite', authenticateUser, inviteLimiter, inviteMemberVali
                   <p>You have been invited by <strong>${inviterName}</strong> to join the community <strong>${community.name}</strong> on the TAKE ONE platform.</p>
                   <p>Accept this invitation to unlock shared chat spaces, crew call listings, and collaborative tools for this community.</p>
                   <div class="cta-wrap">
-                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/chat" class="cta">Accept Invitation</a>
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL}/chat" class="cta">Accept Invitation</a>
                   </div>
                 </div>
                 <div class="footer">
