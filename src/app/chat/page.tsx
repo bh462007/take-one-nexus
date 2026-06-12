@@ -1409,7 +1409,7 @@ export default function ChatPage() {
     setState('ready');
   }, [setActiveConversation]);
 
-  const handleNavigateToCommunity = useCallback(async (comm: any) => {
+  const handleNavigateToCommunity = async (comm: any) => {
     setInCommunity(true);
     setCommunityData(comm);
     setCommunityRole(comm.role);
@@ -1444,7 +1444,7 @@ export default function ChatPage() {
         }
       }
     }
-  }, [conversations, fetchConversations, fetchMessages, setActiveConversation]);
+  };
 
   useEffect(() => {
     const initialize = async () => {
