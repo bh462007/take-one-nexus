@@ -1410,6 +1410,7 @@ export default function ChatPage() {
   }, [setActiveConversation]);
 
   const handleNavigateToCommunity = useCallback(async (comm: any) => {
+    "use no memo"; //
     setInCommunity(true);
     setCommunityData(comm);
     setCommunityRole(comm.role);
