@@ -51,12 +51,6 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
     while (timestamps.length > 0 && timestamps[0] <= windowStart) {
       timestamps.shift(); // Amortized O(1) removal, dramatically faster than .filter()
     }
-=======
-    let timestamps = ipStore.get(key);
-
-    // 2. Sliding Window Calculation: Evict ticks outside the active sliding timeline
-    const windowStart = now - finalWindowMs;
-    timestamps = timestamps.filter(timestamp => timestamp > windowStart);
 
     const currentRequestCount = timestamps.length;
 
@@ -89,14 +83,9 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
     timestamps.push(now);
     ipStore.set(key, timestamps);
 
-
     // 5. Standard and Backward-Compatible Compliance Response Headers
     res.set({
       'X-RateLimit-Limit': finalLimit,
-      'X-RateLimit-Remaining': finalLimit - currentRequestCount - 1,
-      'RateLimit-Limit': finalLimit,
-      'RateLimit-Remaining': finalLimit - currentRequestCount - 1
-
       'X-RateLimit-Remaining': finalLimit - timestamps.length,
       'RateLimit-Limit': finalLimit,
       'RateLimit-Remaining': finalLimit - timestamps.length
@@ -110,7 +99,6 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
 
     next();
   };
-
 }
 
 // 6. Non-Blocking Memory Eviction Daemon
@@ -128,18 +116,6 @@ const intervalId = setInterval(() => {
 // Prevent the daemon timer from keeping the primary Node event loop open during test suites
 if (typeof intervalId.unref === 'function') {
   intervalId.unref();
-
 }
-
-// 6. Memory Eviction Daemon to prevent leaks from dead connection keys
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, timestamps] of ipStore.entries()) {
-    // Evict entirely if stagnant for more than 15 minutes
-    if (timestamps.length === 0 || now - timestamps[timestamps.length - 1] > 15 * 60 * 1000) {
-      ipStore.delete(key);
-    }
-  }
-}, 5 * 60 * 1000); // Runs every 5 minutes
 
 module.exports = { createRateLimiter };
