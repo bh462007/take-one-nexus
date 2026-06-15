@@ -1,5 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
+import '../../../public/styles/pages/legal.css';
 
 export const metadata: Metadata = {
   title: 'Legal — TAKE ONE',
@@ -9,7 +10,6 @@ export const metadata: Metadata = {
 export default function LegalPage() {
   return (
     <>
-      <link rel="stylesheet" href="/styles/pages/legal.css" />
 
       <header>
         <a className="logo" href="/">TAKE <span>ONE</span></a>

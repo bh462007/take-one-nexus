@@ -51,7 +51,6 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
       setSelectedIds([]);
       fetchUsers('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   useEffect(() => {
@@ -59,7 +58,6 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate }: { isOpen
       if (isOpen) fetchUsers(search);
     }, 300);
     return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, isOpen]);
 
 

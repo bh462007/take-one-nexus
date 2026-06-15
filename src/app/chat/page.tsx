@@ -87,37 +87,6 @@ type ChatState = 'loading' | 'ready' | 'error' | 'not-found';
 // Custom Hooks for Resilient Message Queue System
 // ───────────────────────────────────────────────────────────────
 
-/**
- * Hook: usePusherConnectionState
- * Monitors Pusher connection state and provides callback on reconnection
- */
-const usePusherConnectionState = (pusher: Pusher | null, onConnected?: () => void) => {
-  const [connectionState, setConnectionState] = useState<PusherConnectionState>('disconnected');
-  
-  useEffect(() => {
-    if (!pusher) return;
-    
-    const handleConnectionStateChange = (state: PusherConnectionState) => {
-      setConnectionState(state);
-      if (state === 'connected' && onConnected) {
-        onConnected();
-      }
-    };
-    
-    pusher.connection.bind('state_change', (state: any) => {
-      handleConnectionStateChange(state.current);
-    });
-    
-    const currentState = pusher.connection.state as PusherConnectionState;
-    setConnectionState(currentState);
-    
-    return () => {
-      pusher.connection.unbind('state_change', handleConnectionStateChange);
-    };
-  }, [pusher, onConnected]);
-  
-  return connectionState;
-};
 
 /**
  * Hook: useMessageQueue
@@ -313,7 +282,6 @@ export default function ChatPage() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [selectedUserForInvite, setSelectedUserForInvite] = useState<any | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
@@ -326,7 +294,6 @@ export default function ChatPage() {
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
   const [allCommunitiesLoading, setAllCommunitiesLoading] = useState(false);
   const [myRequests, setMyRequests] = useState<any[]>([]);
-  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [isJoinRequestModalOpen, setIsJoinRequestModalOpen] = useState(false);
   const [showAutoInviteModal, setShowAutoInviteModal] = useState(false);
   const [autoInviteToHandle, setAutoInviteToHandle] = useState<any | null>(null);
@@ -365,20 +332,6 @@ export default function ChatPage() {
     }
   }, []);
 
-  const fetchIncomingRequests = useCallback(async (communityId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/incoming-requests?communityId=${communityId}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIncomingRequests(data.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching incoming requests:', err);
-    }
-  }, []);
 
   const handleRequestJoin = async (communityId: number) => {
     try {
@@ -405,54 +358,6 @@ export default function ChatPage() {
     }
   };
 
-  const handleApproveRequest = async (requestId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/join-request/${requestId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Request approved successfully!');
-        if (communityData?.id) {
-          await fetchIncomingRequests(communityData.id);
-          await fetchMyCommunity();
-        }
-      } else {
-        alert(data.message || 'Failed to approve request');
-      }
-    } catch (err) {
-      console.error('Error approving request:', err);
-      alert('Error approving request');
-    }
-  };
-
-  const handleRejectRequest = async (requestId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/join-request/${requestId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Request rejected successfully!');
-        if (communityData?.id) {
-          await fetchIncomingRequests(communityData.id);
-        }
-      } else {
-        alert(data.message || 'Failed to reject request');
-      }
-    } catch (err) {
-      console.error('Error rejecting request:', err);
-      alert('Error rejecting request');
-    }
-  };
 
   const handleAcceptInvite = async (inviteId: number) => {
     try {
@@ -617,11 +522,10 @@ export default function ChatPage() {
         setInviteSuccess(data.message);
         setUserSearchQuery('');
         setUserSearchResults([]);
-        setSelectedUserForInvite(null);
       } else {
         setInviteError(data.message || 'Invitation failed');
       }
-    } catch (err) {
+    } catch {
       setInviteError('Error inviting member');
     } finally {
       setInviteLoading(false);
@@ -1383,33 +1287,7 @@ export default function ChatPage() {
     }, 2000);
   };
 
-  const createGroupConversation = useCallback(async (name: string, userIds: number[]) => {
-    setState('loading');
-    setStatusText('Creating group transmission...');
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-    const res = await fetchWithCSRF('/api/chat/conversations/group', {
-      method: 'POST',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      body: JSON.stringify({ name, userIds })
-    });
-    
-    if (res.status === 401) { window.location.href = '/?auth=login'; return; }
-    const json = await res.json();
-
-    if (!res.ok || !json.success) {
-      setState('error');
-      setStatusText(json.message || 'Could not create group.');
-      return;
-    }
-
-    const conversation = json.data as Conversation;
-    setConversations((current) => [conversation, ...current]);
-    setActiveConversation(conversation);
-    setState('ready');
-  }, [setActiveConversation]);
-
-  const handleNavigateToCommunity = useCallback(async (comm: any) => {
+  const handleNavigateToCommunity = async (comm: any) => {
     setInCommunity(true);
     setCommunityData(comm);
     setCommunityRole(comm.role);
@@ -1444,7 +1322,7 @@ export default function ChatPage() {
         }
       }
     }
-  }, [conversations, fetchConversations, fetchMessages, setActiveConversation]);
+  };
 
   useEffect(() => {
     const initialize = async () => {
@@ -3286,9 +3164,6 @@ export default function ChatPage() {
         conversationId={activeConv?.id || 0} 
         members={activeConv?.users || []} 
         onCreate={createTask} 
-        myRole={activeConv?.my_role || 'Member'}
-        isGroup={activeConv?.is_group || false}
-        globalRole={user?.role || 'Member'}
       />
 
       {isCommunityModalOpen && (
@@ -3499,7 +3374,7 @@ export default function ChatPage() {
           <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Invite Members</h3>
-              <button onClick={() => { setIsInviteModalOpen(false); setUserSearchQuery(''); setUserSearchResults([]); setSelectedUserForInvite(null); setInviteError(''); setInviteSuccess(''); }} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => { setIsInviteModalOpen(false); setUserSearchQuery(''); setUserSearchResults([]); setInviteError(''); setInviteSuccess(''); }} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

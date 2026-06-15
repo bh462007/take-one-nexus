@@ -11,7 +11,6 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const rawStatus = searchParams.get('status') as Status | null;
   const [status, setStatus] = useState<Status>(rawStatus || 'loading');
-  const [email, setEmail] = useState('');
   const [inputEmail, setInputEmail] = useState('');
   const [resendMessage, setResendMessage] = useState('');
   const [cooldown, setCooldown] = useState(0);
@@ -29,7 +28,7 @@ function VerifyEmailContent() {
 
   const handleResend = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetEmail = email || inputEmail;
+    const targetEmail = inputEmail;
     if (!targetEmail || cooldown > 0) return;
 
     setStatus('resending');
@@ -46,7 +45,7 @@ function VerifyEmailContent() {
       setResendMessage('Failed to resend. Please try again.');
       setStatus('expired');
     }
-  }, [email, inputEmail, cooldown]);
+  }, [inputEmail, cooldown]);
 
   const configs: Record<Status, { icon: string; color: string; title: string; subtitle: string }> = {
     loading: { icon: '◌', color: 'var(--silver)', title: 'VERIFYING SIGNAL…', subtitle: 'Processing your verification request.' },
