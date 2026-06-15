@@ -787,6 +787,13 @@ nav a:hover::after {
     .profile-content {
         padding: 28px 22px;
     }
+    .pstat-text {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    }
 }
 
 .project-card {
