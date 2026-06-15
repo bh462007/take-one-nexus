@@ -656,8 +656,6 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
   try {
     const role = String(req.user.role || '').toLowerCase();
     const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
-    // Mirrors existing requireAdmin behavior while preserving
-    // developer/moderator access already granted by this route.
     const isAuthorized =
       role === 'developer' ||
       role === 'admin' ||
@@ -671,11 +669,18 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
       });
     }
 
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
+
+    const [totalRows] = await pool.query('SELECT COUNT(*) AS total FROM users');
+    const total = Number(totalRows[0]?.total || 0);
+
     const rows = await safeQuery(
       `SELECT id, name, email, role, college, city, created_at
        FROM users
        ORDER BY created_at DESC, id DESC
-       LIMIT 500`
+       LIMIT ${limit} OFFSET ${offset}`
     );
 
     return res.json({
@@ -683,95 +688,18 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
       data: rows.map((row) => ({
         ...row,
         name: formatDisplayName(row.name)
-      }))
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
     });
   } catch (error) {
     console.error('Admin user list error:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Could not load users'
-    });
-  }
-});
-
-router.put('/:id', authenticateUser, requireSameUser, profileUpdateLimiter, async (req, res) => {
-  try {
-    const userId = Number(req.params.id);
-    const {
-      name,
-      role,
-      college,
-      city,
-      bio,
-      skills,
-      portfolio,
-      avatar_url,
-      gender,
-      screen_name,
-      display_preference,
-      social_links,
-      availability
-    } = req.body;
-
-    if (name && typeof name === 'string' && !name.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Display name cannot be empty'
-      });
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(name && { name: name.trim() }),
-        role: typeof role === 'string' ? role.trim() : undefined,
-        college: typeof college === 'string' ? college.trim() : undefined,
-        city: typeof city === 'string' ? city.trim() : undefined,
-        bio: typeof bio === 'string' ? bio.trim() : undefined,
-        skills: typeof skills === 'string' ? skills.trim() : undefined,
-        portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
-        avatar_url: typeof avatar_url === 'string' ? avatar_url.trim() : undefined,
-        gender: typeof gender === 'string' ? gender.trim() : undefined,
-        screen_name: typeof screen_name === 'string' ? screen_name.trim() : undefined,
-        display_preference: typeof display_preference === 'string' ? display_preference.trim() : undefined,
-        social_links: typeof social_links === 'string' ? social_links.trim() : undefined,
-        availability: typeof availability === 'string' ? availability.trim() : undefined,
-      },
-      include: {
-        scripts: {
-          orderBy: { created_at: 'desc' }
-        }
-      }
-    });
-
-    // Trigger Pusher update for admin dashboard
-    if (process.env.PUSHER_APP_ID) {
-      pusher.trigger('admin-dashboard', 'update', {
-        type: 'USER_UPDATED',
-        user: {
-          id: updatedUser.id,
-          name: formatDisplayName(updatedUser.name),
-          role: updatedUser.role,
-          college: updatedUser.college,
-          city: updatedUser.city
-        }
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Profile updated successfully via Prisma',
-      data: {
-        ...updatedUser,
-        name: formatDisplayName(updatedUser.name)
-      }
-    });
-  } catch (error) {
-    console.error('Profile update error:', error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Could not update profile'
-    });
+    return res.status(500).json({ success: false, message: 'Could not load users' });
   }
 });
 
