@@ -466,7 +466,7 @@ router.put('/:id', authenticateUser, updateLimiter, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Script not found' });
     }
 
-    if (rows[0].user_id !== req.user.id) {
+    if (Number(rows[0].user_id) !== Number(req.user.id)) {
       return res.status(403).json({ success: false, message: 'Unauthorized to edit this script' });
     }
 
