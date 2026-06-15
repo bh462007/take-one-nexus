@@ -43,7 +43,15 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
     if (!ipStore.has(key)) {
       ipStore.set(key, []);
     }
+    const timestamps = ipStore.get(key);
 
+    // 2. OPTIMIZED INLINE PRUNING: Evict ticks outside the active sliding timeline
+    // Chronological order guarantees old entries sit exclusively at index 0.
+    const windowStart = now - finalWindowMs;
+    while (timestamps.length > 0 && timestamps[0] <= windowStart) {
+      timestamps.shift(); // Amortized O(1) removal, dramatically faster than .filter()
+    }
+=======
     let timestamps = ipStore.get(key);
 
     // 2. Sliding Window Calculation: Evict ticks outside the active sliding timeline
@@ -81,9 +89,14 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
     timestamps.push(now);
     ipStore.set(key, timestamps);
 
+
     // 5. Standard and Backward-Compatible Compliance Response Headers
     res.set({
       'X-RateLimit-Limit': finalLimit,
+      'X-RateLimit-Remaining': finalLimit - currentRequestCount - 1,
+      'RateLimit-Limit': finalLimit,
+      'RateLimit-Remaining': finalLimit - currentRequestCount - 1
+
       'X-RateLimit-Remaining': finalLimit - timestamps.length,
       'RateLimit-Limit': finalLimit,
       'RateLimit-Remaining': finalLimit - timestamps.length
@@ -97,6 +110,25 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
 
     next();
   };
+
+}
+
+// 6. Non-Blocking Memory Eviction Daemon
+// Periodically eliminates dead client keys whose request history has decayed down to zero.
+const intervalId = setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamps] of ipStore.entries()) {
+    // Check if the latest registered hit for the tracking context falls out of scope
+    if (timestamps.length === 0 || now - timestamps[timestamps.length - 1] > 15 * 60 * 1000) {
+      ipStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000); // Runs every 5 minutes
+
+// Prevent the daemon timer from keeping the primary Node event loop open during test suites
+if (typeof intervalId.unref === 'function') {
+  intervalId.unref();
+
 }
 
 // 6. Memory Eviction Daemon to prevent leaks from dead connection keys

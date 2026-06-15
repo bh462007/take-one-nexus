@@ -57,7 +57,6 @@ export default function NewDirectMessageModal({
       setSearch('');
       fetchUsers('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   useEffect(() => {
@@ -65,7 +64,6 @@ export default function NewDirectMessageModal({
       if (isOpen) fetchUsers(search);
     }, 300);
     return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, isOpen]);
 
   if (!isOpen) return null;

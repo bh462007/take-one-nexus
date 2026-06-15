@@ -1,6 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import Script from 'next/script';
+import '../../../public/styles/pages/moderation.css';
 
 export const metadata: Metadata = {
   title: 'Moderation — TAKE ONE',
@@ -10,7 +11,6 @@ export const metadata: Metadata = {
 export default function ModerationPage() {
   return (
     <>
-      <link rel="stylesheet" href="/styles/pages/moderation.css" />
 
       <header>
         <a className="logo" href="/">TAKE <span>ONE</span></a>

@@ -37,7 +37,7 @@ export default function IssueReportModal({ isOpen, onClose }: { isOpen: boolean;
         setStatus('error');
         setErrorMessage(data.message || 'Failed to submit issue');
       }
-    } catch (error) {
+    } catch {
       setStatus('error');
       setErrorMessage('Network error');
     }

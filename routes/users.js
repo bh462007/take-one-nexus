@@ -656,8 +656,6 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
   try {
     const role = String(req.user.role || '').toLowerCase();
     const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
-    // Mirrors existing requireAdmin behavior while preserving
-    // developer/moderator access already granted by this route.
     const isAuthorized =
       role === 'developer' ||
       role === 'admin' ||
@@ -671,11 +669,18 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
       });
     }
 
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = (page - 1) * limit;
+
+    const [totalRows] = await pool.query('SELECT COUNT(*) AS total FROM users');
+    const total = Number(totalRows[0]?.total || 0);
+
     const rows = await safeQuery(
       `SELECT id, name, email, role, college, city, created_at
        FROM users
        ORDER BY created_at DESC, id DESC
-       LIMIT 500`
+       LIMIT ${limit} OFFSET ${offset}`
     );
 
     return res.json({
@@ -683,14 +688,18 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
       data: rows.map((row) => ({
         ...row,
         name: formatDisplayName(row.name)
-      }))
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
     });
   } catch (error) {
     console.error('Admin user list error:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Could not load users'
-    });
+    return res.status(500).json({ success: false, message: 'Could not load users' });
   }
 });
 
