@@ -90,7 +90,7 @@ To keep the codebase maintainable and prevent security/cost drift:
 - **In-Memory & Self-Contained Only**: Any rate limiting, state tracking, or caching logic must be fully self-contained in-memory (e.g., using sliding-window `Map` objects) or leverage the central MySQL database.
 
 ---
-*By following these rules, we ensure TAKE ONE Nexus remains a robust, maintainable, and professional open-source project.*
+*By following these rules, we ensure TAKE ONE Nexus remains a robust, maintainable, and professional source-available project.*
 ## Critical Fix Rules
 
 - Never trust a frontend payment success state. Verify Razorpay signatures on the backend before creating scripts.
@@ -100,9 +100,9 @@ To keep the codebase maintainable and prevent security/cost drift:
 
 ---
 
-## 🌐 Open Source Programs
+## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26.
 
-Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
 

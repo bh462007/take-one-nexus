@@ -22,7 +22,7 @@
     "express"
   ],
   "author": "TAKE ONE",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@sentry/nextjs": "^10.53.1",

@@ -13,7 +13,7 @@
 
   <p>
     <img alt="Version" src="https://img.shields.io/badge/version-2.0.0-blue.svg?cacheSeconds=2592000" />
-    <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" />
+    <img alt="License: Source-Available" src="https://img.shields.io/badge/License-Source--Available-red.svg" />
     <img alt="Production Ready" src="https://img.shields.io/badge/PRODUCTION_READY-FF4D1A?style=flat&logo=vercel" />
   </p>
 </div>
@@ -195,11 +195,21 @@ TAKE ONE Nexus is optimized for deployment on **Vercel**.
 
 ---
 
-## 🌐 Open Source Programs
+## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26.
 
-Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
+
+---
+
+## ⚖️ Licensing & Usage
+
+* The source code is publicly visible for community contributions, issue reporting, and project improvement.
+* Copyright remains with Take One Nexus.
+* Commercial use, redistribution, hosting of modified versions, and creation of competing services are prohibited without written permission.
+
+For full licensing terms, please refer to [LICENSE.md](LICENSE.md).
 
 ---
 
