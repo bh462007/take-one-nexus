@@ -703,6 +703,87 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
   }
 });
 
+router.put('/:id', authenticateUser, requireSameUser, profileUpdateLimiter, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const {
+      name,
+      role,
+      college,
+      city,
+      bio,
+      skills,
+      portfolio,
+      avatar_url,
+      gender,
+      screen_name,
+      display_preference,
+      social_links,
+      availability
+    } = req.body;
+
+    if (name && typeof name === 'string' && !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Display name cannot be empty'
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(name && { name: name.trim() }),
+        role: typeof role === 'string' ? role.trim() : undefined,
+        college: typeof college === 'string' ? college.trim() : undefined,
+        city: typeof city === 'string' ? city.trim() : undefined,
+        bio: typeof bio === 'string' ? bio.trim() : undefined,
+        skills: typeof skills === 'string' ? skills.trim() : undefined,
+        portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
+        avatar_url: typeof avatar_url === 'string' ? avatar_url.trim() : undefined,
+        gender: typeof gender === 'string' ? gender.trim() : undefined,
+        screen_name: typeof screen_name === 'string' ? screen_name.trim() : undefined,
+        display_preference: typeof display_preference === 'string' ? display_preference.trim() : undefined,
+        social_links: typeof social_links === 'string' ? social_links.trim() : undefined,
+        availability: typeof availability === 'string' ? availability.trim() : undefined,
+      },
+      include: {
+        scripts: {
+          orderBy: { created_at: 'desc' }
+        }
+      }
+    });
+
+    // Trigger Pusher update for admin dashboard
+    if (process.env.PUSHER_APP_ID) {
+      pusher.trigger('admin-dashboard', 'update', {
+        type: 'USER_UPDATED',
+        user: {
+          id: updatedUser.id,
+          name: formatDisplayName(updatedUser.name),
+          role: updatedUser.role,
+          college: updatedUser.college,
+          city: updatedUser.city
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully via Prisma',
+      data: {
+        ...updatedUser,
+        name: formatDisplayName(updatedUser.name)
+      }
+    });
+  } catch (error) {
+    console.error('Profile update error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Could not update profile'
+    });
+  }
+});
+
 router.get('/:id', authenticateUser, requireSameUser, async (req, res) => {
   try {
     const userId = Number(req.params.id);
