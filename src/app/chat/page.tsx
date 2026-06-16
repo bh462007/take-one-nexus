@@ -2203,6 +2203,7 @@ export default function ChatPage() {
     <div className="chat-page">
       <header className="global-header">
         <nav>
+          <a href="/" className="logo">TAKE <span>ONE</span></a>
           <a href="/#explore">Discover Projects</a>
           <a href="/crew">Find Crew</a>
           <a href="/leaderboard">Leaderboard</a>
