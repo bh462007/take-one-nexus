@@ -213,6 +213,7 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const isFounder = user?.secondary_role?.toLowerCase() === 'founder';
@@ -232,6 +233,7 @@ export default function ChatPage() {
   const [mutedConvIds, setMutedConvIds] = useState<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
 
   // Task states
   const [activeTab, setActiveTab] = useState<'chat' | 'tasks'>('chat');
@@ -971,6 +973,7 @@ export default function ChatPage() {
 
   const setActiveConversation = useCallback((conversation: Conversation, updateUrl = true) => {
     setActiveConv(conversation);
+    setShowMobileSidebar(false);
     setMessages([]);
     setTasks([]);
     setActiveTab('chat');
@@ -2005,7 +2008,11 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <aside className="chat-sidebar">
+        <aside
+  className={`chat-sidebar ${
+    !showMobileSidebar ? 'mobile-hidden' : ''
+  }`}
+>
           <div className="sidebar-header">
             <div className="sidebar-title-row">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2619,6 +2626,12 @@ export default function ChatPage() {
           ) : activeConv ? (
             <>
               <header className="chat-header">
+                <button
+  className="mobile-back-btn"
+  onClick={() => setShowMobileSidebar(true)}
+>
+  ←
+</button>
                 <div className="header-left">
                   <div className="header-avatar-container" onClick={() => setShowDetails(!showDetails)} style={{ cursor: 'pointer' }}>
                     <img

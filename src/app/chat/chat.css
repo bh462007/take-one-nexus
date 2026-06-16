@@ -802,6 +802,21 @@ nav a:hover::after { width: 100%; }
   .chat-sidebar {
     width: 70px;
   }
+  .mobile-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--cream);
+  font-size: 22px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.chat-sidebar.mobile-hidden {
+  display: none;
+}
   
   .sidebar-header {
     padding: 15px;
@@ -854,7 +869,9 @@ nav a:hover::after { width: 100%; }
     max-width: 85%;
   }
 }
-
+.mobile-back-btn {
+  display: none;
+}
 /* ── INTERACTION OVERLAYS ── */
 .chat-message-search {
   position: absolute;
