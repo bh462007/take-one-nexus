@@ -51,6 +51,7 @@ model User {
   invitee_invitations     CommunityInvitation[]  @relation("InviteeInvitations")
   inviter_invitations     CommunityInvitation[]  @relation("InviterInvitations")
   community_join_requests CommunityJoinRequest[]
+  group_join_requests     GroupJoinRequest[]
 
   @@index([secondary_role], map: "idx_users_secondary_role")
   @@index([email_verified], map: "idx_users_email_verified")
@@ -390,11 +391,14 @@ model CommunityGroup {
   community_id    Int          @db.UnsignedInt
   conversation_id Int          @db.UnsignedInt
   name            String       @db.VarChar(255)
+  canMembersMessage Boolean    @default(true)
+  groupSettings   Json?
   created_at      DateTime     @default(now()) @db.Timestamp(0)
   updated_at      DateTime     @default(now()) @updatedAt @db.Timestamp(0)
   
   community       Community    @relation(fields: [community_id], references: [id], onDelete: Cascade)
   conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  join_requests   GroupJoinRequest[]
 
   @@unique([community_id, conversation_id])
   @@map("community_groups")
@@ -451,6 +455,7 @@ model CommunityInvitation {
   invitee_id      Int          @db.UnsignedInt
   inviter_id      Int          @db.UnsignedInt
   status          String       @default("PENDING") @db.VarChar(50)
+  expires_at      DateTime?    @db.Timestamp(0)
   created_at      DateTime     @default(now()) @db.Timestamp(0)
   updated_at      DateTime     @default(now()) @updatedAt @db.Timestamp(0)
 
@@ -479,6 +484,21 @@ model CommunityJoinRequest {
   @@index([user_id])
   @@index([community_id])
   @@map("community_join_requests")
+}
+
+model GroupJoinRequest {
+  id              Int            @id @default(autoincrement()) @db.UnsignedInt
+  group_id        Int            @db.UnsignedInt
+  user_id         Int            @db.UnsignedInt
+  status          String         @default("PENDING") @db.VarChar(50)
+  created_at      DateTime       @default(now()) @db.Timestamp(0)
+  updated_at      DateTime       @default(now()) @updatedAt @db.Timestamp(0)
+
+  group           CommunityGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([group_id, user_id])
+  @@map("group_join_requests")
 }
 
 

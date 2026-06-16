@@ -39,7 +39,6 @@ interface LeaderboardClientProps {
 
 export default function LeaderboardClient({ initialUsers, pusherConfig }: LeaderboardClientProps) {
   const [users, setUsers] = useState<User[]>(initialUsers);
-  const [loading, setLoading] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [creditTasks, setCreditTasks] = useState<CreditTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);

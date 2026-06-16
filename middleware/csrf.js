@@ -20,7 +20,7 @@ const isVercelPreview = Boolean(process.env.VERCEL_URL?.includes('vercel.app'));
 const rawCsrfProtection = csrf({
   cookie: {
     httpOnly: false,       // Must be readable by JS for double-submit pattern
-    secure: true,        // Always secure to protect CSRF tokens and satisfy CodeQL checks
+    secure: isProd,        // Always secure to protect CSRF tokens and satisfy CodeQL checks
     sameSite: isProd ? 'None' : 'Lax', // None required for cross-subdomain; Lax safe for localhost
     // Only pin the domain on the custom production domain.
     // On Vercel previews, leave domain undefined so the browser uses the

@@ -43,12 +43,14 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
     if (!ipStore.has(key)) {
       ipStore.set(key, []);
     }
+    const timestamps = ipStore.get(key);
 
-    let timestamps = ipStore.get(key);
-
-    // 2. Sliding Window Calculation: Evict ticks outside the active sliding timeline
+    // 2. OPTIMIZED INLINE PRUNING: Evict ticks outside the active sliding timeline
+    // Chronological order guarantees old entries sit exclusively at index 0.
     const windowStart = now - finalWindowMs;
-    timestamps = timestamps.filter(timestamp => timestamp > windowStart);
+    while (timestamps.length > 0 && timestamps[0] <= windowStart) {
+      timestamps.shift(); // Amortized O(1) removal, dramatically faster than .filter()
+    }
 
     const currentRequestCount = timestamps.length;
 
@@ -99,15 +101,21 @@ function createRateLimiter({ limit, windowMs, keyPrefix = 'rl', keyFn }) {
   };
 }
 
-// 6. Memory Eviction Daemon to prevent leaks from dead connection keys
-setInterval(() => {
+// 6. Non-Blocking Memory Eviction Daemon
+// Periodically eliminates dead client keys whose request history has decayed down to zero.
+const intervalId = setInterval(() => {
   const now = Date.now();
   for (const [key, timestamps] of ipStore.entries()) {
-    // Evict entirely if stagnant for more than 15 minutes
+    // Check if the latest registered hit for the tracking context falls out of scope
     if (timestamps.length === 0 || now - timestamps[timestamps.length - 1] > 15 * 60 * 1000) {
       ipStore.delete(key);
     }
   }
 }, 5 * 60 * 1000); // Runs every 5 minutes
+
+// Prevent the daemon timer from keeping the primary Node event loop open during test suites
+if (typeof intervalId.unref === 'function') {
+  intervalId.unref();
+}
 
 module.exports = { createRateLimiter };

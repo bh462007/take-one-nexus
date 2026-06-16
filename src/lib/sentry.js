@@ -24,7 +24,7 @@ function initSentry() {
     environment: process.env.NODE_ENV || 'development',
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.05 : 1.0,
 
-    beforeSend(event, hint) {
+    beforeSend(event) {
       // 1. Scrub request data
       if (event.request?.data) {
         try {
