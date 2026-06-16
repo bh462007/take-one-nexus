@@ -34,7 +34,8 @@ function getConversationInclude() {
       select: {
         id: true,
         community_id: true,
-        canMembersMessage: true
+        canMembersMessage: true,
+        groupSettings: true
       }
     },
     members: {
@@ -76,10 +77,23 @@ function getConversationInclude() {
 function transformConversation(c, userId) {
   const myMember = (c.members || []).find(m => m.user_id === userId);
   const communityGroup = c.community_groups?.[0] || null;
+  const rawSettings = communityGroup?.groupSettings;
+  const parsedSettings = rawSettings ? (typeof rawSettings === 'string' ? JSON.parse(rawSettings) : rawSettings) : null;
+  
+  const groupSettings = parsedSettings || {
+    visibility: 'Public',
+    joinPolicy: 'Everyone',
+    canMembersMessage: communityGroup ? (communityGroup.canMembersMessage ? 'Everyone' : 'Admins Only') : 'Everyone',
+    canMembersInvite: 'Everyone',
+    canMembersEdit: 'Admins and Owner',
+    requireApproval: false
+  };
+
   return {
     ...c,
     my_role: myMember ? myMember.role : 'Member',
-    canMembersMessage: communityGroup ? communityGroup.canMembersMessage : true,
+    canMembersMessage: groupSettings ? (groupSettings.canMembersMessage === 'Everyone' || groupSettings.canMembersMessage === true) : (communityGroup ? communityGroup.canMembersMessage : true),
+    groupSettings,
     community_id: communityGroup ? communityGroup.community_id : null,
     users: (c.members || []).map(m => ({ 
       ...m.user, 
@@ -406,20 +420,35 @@ router.post('/messages', authenticateUser, messageValidation, async (req, res) =
         const communityGroup = await prisma.communityGroup.findFirst({
           where: { conversation_id: conversation.id }
         });
-        if (communityGroup && communityGroup.canMembersMessage === false) {
-          // Check if sender is an Owner or Moderator in the associated Community
-          const senderMembership = await prisma.communityMember.findFirst({
-            where: {
-              user_id: senderId,
-              community_id: communityGroup.community_id,
-              role: { in: ['Owner', 'Moderator'] }
-            }
-          });
-          if (!senderMembership) {
-            return res.status(403).json({
-              success: false,
-              message: 'Only admins can send messages in this group.'
+        if (communityGroup) {
+          const rawSettings = communityGroup.groupSettings;
+          const parsedSettings = rawSettings ? (typeof rawSettings === 'string' ? JSON.parse(rawSettings) : rawSettings) : null;
+          const canMessageSetting = parsedSettings ? parsedSettings.canMembersMessage : (communityGroup.canMembersMessage ? 'Everyone' : 'Admins Only');
+          
+          if (canMessageSetting === 'Admins Only') {
+            // Check if sender is an Owner or Moderator in the associated Community
+            const senderMembership = await prisma.communityMember.findFirst({
+              where: {
+                user_id: senderId,
+                community_id: communityGroup.community_id,
+                role: { in: ['Owner', 'Moderator'] }
+              }
             });
+            // Or if sender is Admin/Director in group conversation
+            const myConvMember = await prisma.conversationMember.findFirst({
+              where: {
+                conversation_id: conversation.id,
+                user_id: senderId
+              }
+            });
+            const isGroupAdmin = myConvMember && (myConvMember.role === 'Admin' || myConvMember.role === 'Director');
+            
+            if (!senderMembership && !isGroupAdmin) {
+              return res.status(403).json({
+                success: false,
+                message: 'Only admins can send messages in this group.'
+              });
+            }
           }
         }
       }
@@ -745,17 +774,16 @@ router.patch('/conversations/:id/avatar', authenticateUser, [
 
 /**
  * PATCH /api/chat/conversations/:id/settings
- * Update group conversation settings (canMembersMessage) (Owner/Moderator only)
+ * Update group conversation settings (visibility, joinPolicy, etc.)
  */
 router.patch('/conversations/:id/settings', authenticateUser, [
   param('id').isNumeric(),
-  body('canMembersMessage').isBoolean(),
   validateRequest
 ], async (req, res) => {
   try {
     const conversationId = Number(req.params.id);
     const userId = Number(req.user.id);
-    const { canMembersMessage } = req.body;
+    const { name, visibility, joinPolicy, canMembersMessage, canMembersInvite, canMembersEdit, requireApproval } = req.body;
 
     // Check if user is part of the conversation
     const conversation = await prisma.conversation.findFirst({
@@ -782,23 +810,73 @@ router.patch('/conversations/:id/settings', authenticateUser, [
       return res.status(404).json({ success: false, message: 'Community group not found' });
     }
 
-    // Verify caller is Owner or Moderator of the community
-    const myMembership = await prisma.communityMember.findFirst({
+    // Check current settings policy for edits
+    const currentSettings = communityGroup.groupSettings ? (typeof communityGroup.groupSettings === 'string' ? JSON.parse(communityGroup.groupSettings) : communityGroup.groupSettings) : null;
+    const canEditPolicy = currentSettings?.canMembersEdit || 'Admins and Owner';
+
+    // Verify caller permissions
+    const communityMembership = await prisma.communityMember.findFirst({
       where: {
         user_id: userId,
-        community_id: communityGroup.community_id,
-        role: { in: ['Owner', 'Moderator'] }
+        community_id: communityGroup.community_id
       }
     });
 
-    if (!myMembership) {
-      return res.status(403).json({ success: false, message: 'Access denied: Community Management permissions required' });
+    const conversationMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: userId
+      }
+    });
+
+    const isCommunityOwner = communityMembership?.role === 'Owner';
+    const isCommunityModerator = communityMembership?.role === 'Moderator';
+    const isGroupDirector = conversationMember?.role === 'Director';
+    const isGroupAdmin = conversationMember?.role === 'Admin';
+
+    let hasEditPermission = false;
+    if (isCommunityOwner || isGroupDirector) {
+      hasEditPermission = true;
+    } else if (canEditPolicy === 'Admins and Owner') {
+      if (isCommunityModerator || isGroupAdmin) {
+        hasEditPermission = true;
+      }
+    }
+
+    if (!hasEditPermission) {
+      return res.status(403).json({ success: false, message: 'Access denied: Insufficient permissions to edit group details' });
+    }
+
+    // Prepare updated settings
+    const updatedSettings = {
+      visibility: visibility || currentSettings?.visibility || 'Public',
+      joinPolicy: joinPolicy || currentSettings?.joinPolicy || 'Everyone',
+      canMembersMessage: canMembersMessage !== undefined ? canMembersMessage : (currentSettings?.canMembersMessage !== undefined ? currentSettings.canMembersMessage : 'Everyone'),
+      canMembersInvite: canMembersInvite !== undefined ? canMembersInvite : (currentSettings?.canMembersInvite !== undefined ? currentSettings.canMembersInvite : 'Everyone'),
+      canMembersEdit: canMembersEdit || currentSettings?.canMembersEdit || 'Admins and Owner',
+      requireApproval: requireApproval !== undefined ? requireApproval : (joinPolicy === 'Approval Required' || currentSettings?.requireApproval || false)
+    };
+
+    const updateData = {
+      groupSettings: updatedSettings
+    };
+
+    if (name) {
+      updateData.name = name;
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { name }
+      });
+    }
+
+    if (canMembersMessage !== undefined) {
+      updateData.canMembersMessage = (canMembersMessage === 'Everyone' || canMembersMessage === true);
     }
 
     // Update community group
     await prisma.communityGroup.update({
       where: { id: communityGroup.id },
-      data: { canMembersMessage }
+      data: updateData
     });
 
     // Reload conversation to get fresh include data
@@ -812,7 +890,7 @@ router.patch('/conversations/:id/settings', authenticateUser, [
     // Broadcast the update via Pusher to the conversation channel
     pusher.trigger(`conversation-${conversationId}`, 'settings-updated', {
       conversationId,
-      canMembersMessage,
+      canMembersMessage: updatedSettings.canMembersMessage,
       conversation: transformed
     });
 
@@ -831,6 +909,722 @@ router.patch('/conversations/:id/settings', authenticateUser, [
   } catch (error) {
     console.error('Update settings error:', error.message);
     res.status(500).json({ success: false, message: 'Could not update group settings' });
+  }
+});
+
+/**
+ * GET /api/chat/conversations/:id/settings
+ * Fetch settings for a group conversation
+ */
+router.get('/conversations/:id/settings', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userId = Number(req.user.id);
+
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        members: { some: { user_id: userId } }
+      }
+    });
+
+    if (!conversation) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Community group not found' });
+    }
+
+    const rawSettings = communityGroup.groupSettings;
+    const groupSettings = rawSettings ? (typeof rawSettings === 'string' ? JSON.parse(rawSettings) : rawSettings) : {
+      visibility: 'Public',
+      joinPolicy: 'Everyone',
+      canMembersMessage: communityGroup.canMembersMessage ? 'Everyone' : 'Admins Only',
+      canMembersInvite: 'Everyone',
+      canMembersEdit: 'Admins and Owner',
+      requireApproval: false
+    };
+
+    return res.json({ success: true, settings: groupSettings });
+  } catch (error) {
+    console.error('Fetch settings error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not fetch settings' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/:id/join
+ * Join or request to join a community group
+ */
+router.post('/conversations/:id/join', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userId = Number(req.user.id);
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    // Check community membership
+    const communityMember = await prisma.communityMember.findFirst({
+      where: {
+        user_id: userId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    if (!communityMember) {
+      return res.status(403).json({ success: false, message: 'Must be a member of the community to join this group' });
+    }
+
+    // Check if already in conversation
+    const existingMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: userId
+      }
+    });
+
+    if (existingMember) {
+      return res.status(400).json({ success: false, message: 'You are already a member of this group' });
+    }
+
+    const rawSettings = communityGroup.groupSettings;
+    const settings = rawSettings ? (typeof rawSettings === 'string' ? JSON.parse(rawSettings) : rawSettings) : { joinPolicy: 'Everyone' };
+    const joinPolicy = settings.joinPolicy || 'Everyone';
+
+    if (joinPolicy === 'Invite Only') {
+      return res.status(403).json({ success: false, message: 'This group is invite-only' });
+    }
+
+    if (joinPolicy === 'Approval Required') {
+      // Check if join request already exists
+      const existingRequest = await prisma.groupJoinRequest.findFirst({
+        where: {
+          group_id: communityGroup.id,
+          user_id: userId
+        }
+      });
+
+      if (existingRequest) {
+        return res.json({ success: true, status: 'PENDING', message: 'Join request already pending' });
+      }
+
+      await prisma.groupJoinRequest.create({
+        data: {
+          group_id: communityGroup.id,
+          user_id: userId,
+          status: 'PENDING'
+        }
+      });
+
+      pusher.trigger(`conversation-${conversationId}`, 'join-requests-updated', { conversationId });
+
+      return res.json({ success: true, status: 'PENDING', message: 'Join request submitted. Awaiting approval.' });
+    }
+
+    // Join directly
+    await prisma.conversationMember.create({
+      data: {
+        conversation_id: conversationId,
+        user_id: userId,
+        role: 'Member'
+      }
+    });
+
+    const updatedConv = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: getConversationInclude()
+    });
+    const transformed = transformConversation(updatedConv, userId);
+
+    // Notify Pusher channel
+    pusher.trigger(`conversation-${conversationId}`, 'member-joined', {
+      userId,
+      conversationId,
+      conversation: transformed
+    });
+
+    // Notify all member channels
+    const members = await prisma.conversationMember.findMany({
+      where: { conversation_id: conversationId },
+      select: { user_id: true }
+    });
+
+    for (const member of members) {
+      const memberTransformed = transformConversation(updatedConv, member.user_id);
+      pusher.trigger(`user-${member.user_id}-chats`, 'conversation-update', memberTransformed);
+    }
+
+    return res.json({ success: true, status: 'JOINED', conversation: transformed });
+  } catch (error) {
+    console.error('Join group error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not join group' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/:id/add-member
+ * Add/Invite a member to a group conversation
+ */
+router.post('/conversations/:id/add-member', authenticateUser, [
+  param('id').isNumeric(),
+  body('userId').isNumeric(),
+  validateRequest
+], async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userIdToAdd = Number(req.body.userId);
+    const requesterId = Number(req.user.id);
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    // Check if requester is in the group
+    const requesterMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: requesterId
+      }
+    });
+
+    if (!requesterMember) {
+      return res.status(403).json({ success: false, message: 'You must be in the group to invite members' });
+    }
+
+    // Check if user to add is in community
+    const targetCommunityMember = await prisma.communityMember.findFirst({
+      where: {
+        user_id: userIdToAdd,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    if (!targetCommunityMember) {
+      return res.status(400).json({ success: false, message: 'User must be a member of the community to join this group' });
+    }
+
+    // Check if user to add is already in group
+    const existingMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: userIdToAdd
+      }
+    });
+
+    if (existingMember) {
+      return res.status(400).json({ success: false, message: 'User is already a member of this group' });
+    }
+
+    // Check invitation permission policy
+    const rawSettings = communityGroup.groupSettings;
+    const settings = rawSettings ? (typeof rawSettings === 'string' ? JSON.parse(rawSettings) : rawSettings) : null;
+    const canInvitePolicy = settings?.canMembersInvite || 'Everyone';
+
+    const communityMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: requesterId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    const isCommunityAdmin = communityMembership?.role === 'Owner' || communityMembership?.role === 'Moderator';
+    const isGroupAdmin = requesterMember.role === 'Admin' || requesterMember.role === 'Director';
+
+    if (canInvitePolicy === 'Admins Only' && !isCommunityAdmin && !isGroupAdmin) {
+      return res.status(403).json({ success: false, message: 'Only admins/owners can add members to this group' });
+    }
+
+    // Add member
+    await prisma.conversationMember.create({
+      data: {
+        conversation_id: conversationId,
+        user_id: userIdToAdd,
+        role: 'Member'
+      }
+    });
+
+    // Clean up join request if any
+    await prisma.groupJoinRequest.deleteMany({
+      where: {
+        group_id: communityGroup.id,
+        user_id: userIdToAdd
+      }
+    });
+
+    const updatedConv = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: getConversationInclude()
+    });
+
+    // Notify Pusher channel
+    pusher.trigger(`conversation-${conversationId}`, 'member-joined', {
+      userId: userIdToAdd,
+      conversationId
+    });
+
+    // Notify all member channels
+    const members = await prisma.conversationMember.findMany({
+      where: { conversation_id: conversationId },
+      select: { user_id: true }
+    });
+
+    for (const member of members) {
+      const memberTransformed = transformConversation(updatedConv, member.user_id);
+      pusher.trigger(`user-${member.user_id}-chats`, 'conversation-update', memberTransformed);
+    }
+
+    return res.json({ success: true, conversation: transformConversation(updatedConv, requesterId) });
+  } catch (error) {
+    console.error('Add member error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not add member to group' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/:id/remove-member
+ * Remove a member from a group conversation (Admins/Owner only)
+ */
+router.post('/conversations/:id/remove-member', authenticateUser, [
+  param('id').isNumeric(),
+  body('userId').isNumeric(),
+  validateRequest
+], async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const targetUserId = Number(req.body.userId);
+    const requesterId = Number(req.user.id);
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    if (communityGroup.name === 'General') {
+      return res.status(400).json({ success: false, message: 'Cannot remove members from the General channel' });
+    }
+
+    // Verify requester role
+    const requesterMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: requesterId
+      }
+    });
+
+    const targetMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: targetUserId
+      }
+    });
+
+    if (!targetMember) {
+      return res.status(404).json({ success: false, message: 'Member not found in group' });
+    }
+
+    const communityMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: requesterId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    const isCommunityAdmin = communityMembership?.role === 'Owner' || communityMembership?.role === 'Moderator';
+    const isGroupAdmin = requesterMember && (requesterMember.role === 'Admin' || requesterMember.role === 'Director');
+
+    if (!isCommunityAdmin && !isGroupAdmin) {
+      return res.status(403).json({ success: false, message: 'Access denied: Admin privileges required to remove members' });
+    }
+
+    // Prevent demoting/removing higher-level roles by lower-level roles
+    const targetCommunityMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: targetUserId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    const isTargetCommunityOwner = targetCommunityMembership?.role === 'Owner';
+    const isTargetGroupDirector = targetMember.role === 'Director';
+
+    if ((isTargetCommunityOwner || isTargetGroupDirector) && requesterId !== targetUserId) {
+      return res.status(403).json({ success: false, message: 'Cannot remove the group Owner/Director' });
+    }
+
+    // Perform removal
+    await prisma.conversationMember.delete({
+      where: { id: targetMember.id }
+    });
+
+    const updatedConv = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: getConversationInclude()
+    });
+
+    // Notify Pusher channel
+    pusher.trigger(`conversation-${conversationId}`, 'member-left', {
+      userId: targetUserId,
+      conversationId
+    });
+
+    // Notify the removed user
+    pusher.trigger(`user-${targetUserId}-chats`, 'conversation-removed', { conversationId });
+
+    // Notify all remaining member channels
+    const members = await prisma.conversationMember.findMany({
+      where: { conversation_id: conversationId },
+      select: { user_id: true }
+    });
+
+    for (const member of members) {
+      const memberTransformed = transformConversation(updatedConv, member.user_id);
+      pusher.trigger(`user-${member.user_id}-chats`, 'conversation-update', memberTransformed);
+    }
+
+    return res.json({ success: true, message: 'Member removed successfully' });
+  } catch (error) {
+    console.error('Remove member error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not remove member' });
+  }
+});
+
+/**
+ * PATCH /api/chat/conversations/:id/member-role
+ * Update role of a member in a group (Promote/Demote)
+ */
+router.patch('/conversations/:id/member-role', authenticateUser, [
+  param('id').isNumeric(),
+  body('userId').isNumeric(),
+  body('role').isIn(['Admin', 'Member']),
+  validateRequest
+], async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const targetUserId = Number(req.body.userId);
+    const newRole = req.body.role;
+    const requesterId = Number(req.user.id);
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    // Verify requester role
+    const requesterMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: requesterId
+      }
+    });
+
+    const targetMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: targetUserId
+      }
+    });
+
+    if (!targetMember) {
+      return res.status(404).json({ success: false, message: 'Member not found in group' });
+    }
+
+    const communityMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: requesterId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    const isCommunityOwner = communityMembership?.role === 'Owner';
+    const isGroupDirector = requesterMember && requesterMember.role === 'Director';
+
+    // Only Community Owner or Group Director can promote/demote group Admins
+    if (!isCommunityOwner && !isGroupDirector) {
+      return res.status(403).json({ success: false, message: 'Access denied: Only group Creator/Director or Community Owner can manage roles' });
+    }
+
+    if (targetMember.role === 'Director') {
+      return res.status(400).json({ success: false, message: 'Cannot modify the group Director\'s role' });
+    }
+
+    await prisma.conversationMember.update({
+      where: { id: targetMember.id },
+      data: { role: newRole }
+    });
+
+    const updatedConv = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: getConversationInclude()
+    });
+
+    // Notify Pusher channel
+    pusher.trigger(`conversation-${conversationId}`, 'member-role-updated', {
+      userId: targetUserId,
+      role: newRole,
+      conversationId
+    });
+
+    // Notify all member channels
+    const members = await prisma.conversationMember.findMany({
+      where: { conversation_id: conversationId },
+      select: { user_id: true }
+    });
+
+    for (const member of members) {
+      const memberTransformed = transformConversation(updatedConv, member.user_id);
+      pusher.trigger(`user-${member.user_id}-chats`, 'conversation-update', memberTransformed);
+    }
+
+    return res.json({ success: true, message: `Member successfully updated to ${newRole}` });
+  } catch (error) {
+    console.error('Update member role error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not update member role' });
+  }
+});
+
+/**
+ * GET /api/chat/conversations/:id/join-requests
+ * Fetch all pending join requests for a group
+ */
+router.get('/conversations/:id/join-requests', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userId = Number(req.user.id);
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    // Verify user is group admin/owner
+    const myMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: userId
+      }
+    });
+
+    const communityMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: userId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    const isCommunityAdmin = communityMembership?.role === 'Owner' || communityMembership?.role === 'Moderator';
+    const isGroupAdmin = myMember && (myMember.role === 'Admin' || myMember.role === 'Director');
+
+    if (!isCommunityAdmin && !isGroupAdmin) {
+      return res.status(403).json({ success: false, message: 'Access denied: Admin privileges required' });
+    }
+
+    const requests = await prisma.groupJoinRequest.findMany({
+      where: {
+        group_id: communityGroup.id,
+        status: 'PENDING'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatar_url: true,
+            role: true
+          }
+        }
+      }
+    });
+
+    return res.json({ success: true, data: requests });
+  } catch (error) {
+    console.error('Fetch join requests error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not fetch join requests' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/:id/join-requests/:requestId/approve
+ * Approve a pending join request
+ */
+router.post('/conversations/:id/join-requests/:requestId/approve', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const requestId = Number(req.params.requestId);
+    const userId = Number(req.user.id);
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    // Verify permissions
+    const myMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: userId
+      }
+    });
+
+    const communityMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: userId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    const isCommunityAdmin = communityMembership?.role === 'Owner' || communityMembership?.role === 'Moderator';
+    const isGroupAdmin = myMember && (myMember.role === 'Admin' || myMember.role === 'Director');
+
+    if (!isCommunityAdmin && !isGroupAdmin) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Find join request
+    const joinRequest = await prisma.groupJoinRequest.findFirst({
+      where: {
+        id: requestId,
+        group_id: communityGroup.id
+      }
+    });
+
+    if (!joinRequest) {
+      return res.status(404).json({ success: false, message: 'Join request not found' });
+    }
+
+    // Add user to group conversation
+    await prisma.conversationMember.create({
+      data: {
+        conversation_id: conversationId,
+        user_id: joinRequest.user_id,
+        role: 'Member'
+      }
+    });
+
+    // Delete request
+    await prisma.groupJoinRequest.delete({
+      where: { id: requestId }
+    });
+
+    const updatedConv = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: getConversationInclude()
+    });
+
+    // Notify Pusher channel
+    pusher.trigger(`conversation-${conversationId}`, 'member-joined', {
+      userId: joinRequest.user_id,
+      conversationId
+    });
+
+    pusher.trigger(`conversation-${conversationId}`, 'join-requests-updated', { conversationId });
+
+    // Notify all member channels
+    const members = await prisma.conversationMember.findMany({
+      where: { conversation_id: conversationId },
+      select: { user_id: true }
+    });
+
+    for (const member of members) {
+      const memberTransformed = transformConversation(updatedConv, member.user_id);
+      pusher.trigger(`user-${member.user_id}-chats`, 'conversation-update', memberTransformed);
+    }
+
+    return res.json({ success: true, message: 'Join request approved' });
+  } catch (error) {
+    console.error('Approve join request error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not approve join request' });
+  }
+});
+
+/**
+ * POST /api/chat/conversations/:id/join-requests/:requestId/reject
+ * Reject a pending join request
+ */
+router.post('/conversations/:id/join-requests/:requestId/reject', authenticateUser, async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const requestId = Number(req.params.requestId);
+    const userId = Number(req.user.id);
+
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
+
+    // Verify permissions
+    const myMember = await prisma.conversationMember.findFirst({
+      where: {
+        conversation_id: conversationId,
+        user_id: userId
+      }
+    });
+
+    const communityMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: userId,
+        community_id: communityGroup.community_id
+      }
+    });
+
+    const isCommunityAdmin = communityMembership?.role === 'Owner' || communityMembership?.role === 'Moderator';
+    const isGroupAdmin = myMember && (myMember.role === 'Admin' || myMember.role === 'Director');
+
+    if (!isCommunityAdmin && !isGroupAdmin) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Find and delete join request
+    const joinRequest = await prisma.groupJoinRequest.findFirst({
+      where: {
+        id: requestId,
+        group_id: communityGroup.id
+      }
+    });
+
+    if (!joinRequest) {
+      return res.status(404).json({ success: false, message: 'Join request not found' });
+    }
+
+    await prisma.groupJoinRequest.delete({
+      where: { id: requestId }
+    });
+
+    pusher.trigger(`conversation-${conversationId}`, 'join-requests-updated', { conversationId });
+
+    return res.json({ success: true, message: 'Join request rejected' });
+  } catch (error) {
+    console.error('Reject join request error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not reject join request' });
   }
 });
 

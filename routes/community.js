@@ -473,7 +473,15 @@ router.post('/instantiate', authenticateUser, instantiateValidation, async (req,
         data: {
           community_id: community.id,
           conversation_id: conversation.id,
-          name: 'General'
+          name: 'General',
+          groupSettings: {
+            visibility: 'Public',
+            joinPolicy: 'Everyone',
+            canMembersMessage: 'Everyone',
+            canMembersInvite: 'Everyone',
+            canMembersEdit: 'Admins and Owner',
+            requireApproval: false
+          }
         }
       });
 
@@ -1466,7 +1474,15 @@ router.post('/groups', authenticateUser, createGroupValidation, async (req, res)
         data: {
           community_id: community.id,
           conversation_id: conversation.id,
-          name: name
+          name: name,
+          groupSettings: {
+            visibility: 'Public',
+            joinPolicy: 'Everyone',
+            canMembersMessage: 'Everyone',
+            canMembersInvite: 'Everyone',
+            canMembersEdit: 'Admins and Owner',
+            requireApproval: false
+          }
         },
         include: {
           conversation: true

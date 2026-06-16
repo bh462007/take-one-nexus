@@ -75,6 +75,7 @@ interface Conversation {
   my_role?: 'Director' | 'Admin' | 'Member';
   canMembersMessage?: boolean;
   community_id?: number;
+  groupSettings?: string | any;
 }
 
 interface Task {
@@ -240,6 +241,7 @@ export default function ChatPage() {
   // New interaction states
   const [showSearch, setShowSearch] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<'members' | 'settings'>('members');
   const [showMenu, setShowMenu] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [mutedConvIds, setMutedConvIds] = useState<Set<number>>(new Set());
@@ -318,15 +320,19 @@ export default function ChatPage() {
   const [invitationsLoading, setInvitationsLoading] = useState(false);
 
   const isMessagingRestricted = useMemo(() => {
-    return activeConv?.is_group && activeConv?.canMembersMessage === false && !['Owner', 'Moderator'].includes(communityRole || '');
+    if (!activeConv?.is_group) return false;
+    const isOwnerOrMod = ['Owner', 'Moderator'].includes(communityRole || '');
+    const isGrpAdminOrDir = activeConv.my_role === 'Admin' || activeConv.my_role === 'Director';
+    return activeConv.canMembersMessage === false && !isOwnerOrMod && !isGrpAdminOrDir;
   }, [activeConv, communityRole]);
 
+  const communityIdForInvitations = communityData?.id;
   const fetchCommunityInvitations = useCallback(async () => {
-    if (!communityData?.id) return;
+    if (!communityIdForInvitations) return;
     setInvitationsLoading(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/invitations?communityId=${communityData.id}`, {
+      const res = await fetch(`/api/community/invitations?communityId=${communityIdForInvitations}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       const data = await res.json();
@@ -338,7 +344,7 @@ export default function ChatPage() {
     } finally {
       setInvitationsLoading(false);
     }
-  }, [communityData?.id]);
+  }, [communityIdForInvitations]);
 
   const cancelInvitation = async (inviteId: number) => {
     try {
@@ -379,6 +385,163 @@ export default function ChatPage() {
       alert('Failed to resend invitation');
     }
   };
+
+  const [pendingJoinRequests, setPendingJoinRequests] = useState<any[]>([]);
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
+
+  const fetchPendingJoinRequests = useCallback(async (convId: number) => {
+    setJoinRequestsLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/chat/conversations/${convId}/join-requests`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingJoinRequests(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching pending requests:', err);
+    } finally {
+      setJoinRequestsLoading(false);
+    }
+  }, []);
+
+  const handleApproveJoinRequest = async (convId: number, requestId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/join-requests/${requestId}/approve`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Request approved successfully!');
+        fetchPendingJoinRequests(convId);
+      } else {
+        alert(data.message || 'Failed to approve request');
+      }
+    } catch (err) {
+      console.error('Approve request error:', err);
+      alert('Failed to approve request');
+    }
+  };
+
+  const handleRejectJoinRequest = async (convId: number, requestId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/join-requests/${requestId}/reject`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Request rejected successfully!');
+        fetchPendingJoinRequests(convId);
+      } else {
+        alert(data.message || 'Failed to reject request');
+      }
+    } catch (err) {
+      console.error('Reject request error:', err);
+      alert('Failed to reject request');
+    }
+  };
+
+  const handlePromoteMember = async (convId: number, memberUserId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/member-role`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId, role: 'Admin' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member promoted to Admin successfully.');
+      } else {
+        alert(data.message || 'Failed to promote member');
+      }
+    } catch (err) {
+      console.error('Promote member error:', err);
+      alert('Failed to promote member');
+    }
+  };
+
+  const handleDemoteMember = async (convId: number, memberUserId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/member-role`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId, role: 'Member' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member demoted successfully.');
+      } else {
+        alert(data.message || 'Failed to demote member');
+      }
+    } catch (err) {
+      console.error('Demote member error:', err);
+      alert('Failed to demote member');
+    }
+  };
+
+  const handleRemoveGroupMember = async (convId: number, memberUserId: number) => {
+    if (!confirm('Are you sure you want to remove this member from the group?')) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/remove-member`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member removed successfully.');
+      } else {
+        alert(data.message || 'Failed to remove member');
+      }
+    } catch (err) {
+      console.error('Remove member error:', err);
+      alert('Failed to remove member');
+    }
+  };
+
+  const handleUpdateSetting = async (convId: number, key: string, value: any) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/settings`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActiveConv(prev => {
+          if (!prev) return null;
+          const currentSettings = prev.groupSettings ? (typeof prev.groupSettings === 'string' ? JSON.parse(prev.groupSettings) : prev.groupSettings) : {};
+          const updatedSettings = { ...currentSettings, [key]: value };
+          return {
+            ...prev,
+            groupSettings: updatedSettings,
+            ...(key === 'canMembersMessage' ? { canMembersMessage: value === 'Everyone' || value === true } : {})
+          };
+        });
+      } else {
+        alert(data.message || 'Failed to update setting');
+      }
+    } catch (err) {
+      console.error('Failed to update setting', err);
+      alert('Failed to update setting');
+    }
+  };
+
+  useEffect(() => {
+    if (activeConv?.is_group && showDetails && (activeConv?.my_role === 'Admin' || activeConv?.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || ''))) {
+      fetchPendingJoinRequests(activeConv.id);
+    }
+  }, [activeConv?.id, activeConv?.is_group, activeConv?.my_role, showDetails, communityRole, fetchPendingJoinRequests]);
 
   const fetchAllCommunities = useCallback(async (search = '') => {
     setAllCommunitiesLoading(true);
@@ -1056,6 +1219,7 @@ export default function ChatPage() {
     setMessages([]);
     setTasks([]);
     setActiveTab('chat');
+    setDetailsTab('members');
     localStorage.setItem('take_one_last_conversation', String(conversation.id));
 
     // Clear unread for this conversation locally
@@ -1902,16 +2066,16 @@ export default function ChatPage() {
       }
     };
 
-    const handleSettingsUpdated = (data: { conversationId: number, canMembersMessage: boolean }) => {
+    const handleSettingsUpdated = (data: { conversationId: number, canMembersMessage: boolean, conversation?: any }) => {
       setActiveConv(prev => {
         if (prev && prev.id === data.conversationId) {
-          return { ...prev, canMembersMessage: data.canMembersMessage };
+          return { ...prev, canMembersMessage: data.canMembersMessage, ...(data.conversation || {}) };
         }
         return prev;
       });
       setConversations(prev => prev.map(c => {
         if (c.id === data.conversationId) {
-          return { ...c, canMembersMessage: data.canMembersMessage };
+          return { ...c, canMembersMessage: data.canMembersMessage, ...(data.conversation || {}) };
         }
         return c;
       }));
@@ -3190,69 +3354,231 @@ export default function ChatPage() {
                               Save
                             </button>
                           </div>
-                          {['Owner', 'Moderator'].includes(communityRole || '') && (
-                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', alignItems: 'flex-start' }}>
-                              <label style={{ fontSize: '11px', color: 'rgba(232,232,224,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>Messaging Permissions</label>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#e8e8e0', cursor: 'pointer', width: '100%', userSelect: 'none' }}>
-                                <input 
-                                  type="checkbox" 
-                                  checked={activeConv.canMembersMessage !== false}
-                                  onChange={async (e) => {
-                                    const checked = e.target.checked;
-                                    try {
-                                      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-                                      const res = await fetchWithCSRF(`/api/chat/conversations/${activeConv.id}/settings`, {
-                                        method: 'PATCH',
-                                        headers: token ? { 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ canMembersMessage: checked })
-                                      });
-                                      const data = await res.json();
-                                      if (data.success) {
-                                        // Update state
-                                        setActiveConv(prev => prev ? { ...prev, canMembersMessage: checked } : null);
-                                        setConversations(prev => prev.map(c => c.id === activeConv.id ? { ...c, canMembersMessage: checked } : c));
-                                      } else {
-                                        alert(data.message || 'Failed to update messaging permissions');
-                                      }
-                                    } catch (err) {
-                                      console.error('Settings update failed:', err);
-                                      alert('Failed to update messaging permissions');
-                                    }
-                                  }}
-                                  style={{
-                                    accentColor: 'var(--neon)',
-                                    cursor: 'pointer'
-                                  }}
-                                />
-                                <span>Allow members to message</span>
-                              </label>
-                              <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#888', lineHeight: '1.4' }}>
-                                When disabled, only community Owner and Moderators can post messages to this group.
-                              </p>
-                            </div>
-                          )}
+                          {/* We removed the old Messaging Permissions block here because it is now inside the Settings Tab */}
                         </div>
                       )}
                     </div>
 
-                    {activeConv.is_group ? (
-                      <div className="details-section">
-                        <div className="section-title">Members ({activeConv.users.length})</div>
-                        <div className="details-members-list">
-                          {activeConv.users.map(u => (
-                            <div key={u.id} className="member-item">
-                              <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" loading="lazy" decoding="async" />
-                              <div className="member-info">
-                                <span className="member-name">{u.name}</span>
-                                <span className="member-role">{u.role_in_group || 'Member'}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="details-actions">
-                          <button className="details-btn danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
-                        </div>
+                    {/* Tab Navigation for Group Details */}
+                    {activeConv.is_group && (activeConv.my_role === 'Admin' || activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || '')) && (
+                      <div style={{ display: 'flex', borderBottom: '1px solid rgba(232,232,224,0.1)', width: '100%', marginBottom: '16px' }}>
+                        <button 
+                          onClick={() => setDetailsTab('members')}
+                          style={{
+                            flex: 1,
+                            padding: '10px 0',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: detailsTab === 'members' ? '2px solid var(--neon)' : '2px solid transparent',
+                            color: detailsTab === 'members' ? 'var(--neon)' : '#a0a0a0',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Members
+                        </button>
+                        <button 
+                          onClick={() => setDetailsTab('settings')}
+                          style={{
+                            flex: 1,
+                            padding: '10px 0',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: detailsTab === 'settings' ? '2px solid var(--neon)' : '2px solid transparent',
+                            color: detailsTab === 'settings' ? 'var(--neon)' : '#a0a0a0',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Settings
+                        </button>
                       </div>
+                    )}
+
+                    {activeConv.is_group ? (
+                      detailsTab === 'members' ? (
+                        <div className="details-section">
+                          {/* Pending join requests section */}
+                          {(activeConv.my_role === 'Admin' || activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || '')) && (joinRequestsLoading || pendingJoinRequests.length > 0) && (
+                            <div style={{ marginBottom: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div className="section-title" style={{ color: 'var(--neon)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Join Requests {pendingJoinRequests.length > 0 && `(${pendingJoinRequests.length})`}</span>
+                              </div>
+                              {joinRequestsLoading ? (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>Loading requests...</div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                                  {pendingJoinRequests.map(req => (
+                                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <img src={getAvatarUrl(req.user.name, req.user.gender || 'Other', req.user.avatar_url)} alt="" className="mini-avatar" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                                        <span style={{ fontSize: '13px', color: '#e8e8e0' }}>{req.user.name}</span>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button 
+                                          onClick={() => handleApproveJoinRequest(activeConv.id, req.id)}
+                                          style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                                        >
+                                          Approve
+                                        </button>
+                                        <button 
+                                          onClick={() => handleRejectJoinRequest(activeConv.id, req.id)}
+                                          style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                                        >
+                                          Reject
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="section-title">Members ({activeConv.users.length})</div>
+                          <div className="details-members-list">
+                            {activeConv.users.map(u => {
+                              const isMe = u.id === user?.id;
+                              const canManageUser = !isMe && (activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || ''));
+                              return (
+                                <div key={u.id} className="member-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" loading="lazy" decoding="async" />
+                                    <div className="member-info">
+                                      <span className="member-name" style={{ color: isMe ? 'var(--neon)' : '#e8e8e0' }}>{u.name} {isMe && '(You)'}</span>
+                                      <span className="member-role" style={{ 
+                                        fontSize: '11px', 
+                                        color: u.role_in_group === 'Director' ? '#ef4444' : u.role_in_group === 'Admin' ? 'var(--neon)' : '#888',
+                                        background: u.role_in_group === 'Director' ? 'rgba(239,68,68,0.1)' : u.role_in_group === 'Admin' ? 'rgba(0,255,200,0.1)' : 'transparent',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        marginLeft: '4px'
+                                      }}>
+                                        {u.role_in_group || 'Member'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  {canManageUser && (
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      {u.role_in_group !== 'Admin' && u.role_in_group !== 'Director' && (
+                                        <button 
+                                          onClick={() => handlePromoteMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(0,255,200,0.15)', color: 'var(--neon)', border: '1px solid var(--neon)', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Promote to Admin"
+                                        >
+                                          Promote
+                                        </button>
+                                      )}
+                                      {u.role_in_group === 'Admin' && (
+                                        <button 
+                                          onClick={() => handleDemoteMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(255,255,255,0.1)', color: '#ccc', border: '1px solid #555', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Demote to Member"
+                                        >
+                                          Demote
+                                        </button>
+                                      )}
+                                      {u.role_in_group !== 'Director' && (
+                                        <button 
+                                          onClick={() => handleRemoveGroupMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Remove from Group"
+                                        >
+                                          Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="details-actions" style={{ marginTop: '16px' }}>
+                            <button className="details-btn danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Settings Tab */
+                        <div className="details-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {(() => {
+                            const settings = activeConv.groupSettings ? (typeof activeConv.groupSettings === 'string' ? JSON.parse(activeConv.groupSettings) : activeConv.groupSettings) : {};
+                            return (
+                              <>
+                                {/* 1. Visibility */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Group Visibility</label>
+                                  <select 
+                                    value={settings.visibility || 'Public'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'visibility', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Public">Public (Anyone can view in list)</option>
+                                    <option value="Private">Private (Hidden from lists)</option>
+                                  </select>
+                                </div>
+
+                                {/* 2. Who Can Join */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Join</label>
+                                  <select 
+                                    value={settings.joinPolicy || 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'joinPolicy', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Approval Required">Approval Required</option>
+                                    <option value="Invite Only">Invite Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 3. Who Can Send Messages */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Send Messages</label>
+                                  <select 
+                                    value={settings.canMembersMessage === false || settings.canMembersMessage === 'Admins Only' ? 'Admins Only' : 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersMessage', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Admins Only">Admins Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 4. Who Can Add Members */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Invite Members</label>
+                                  <select 
+                                    value={settings.canMembersInvite === false || settings.canMembersInvite === 'Admins Only' ? 'Admins Only' : 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersInvite', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Admins Only">Admins Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 5. Who Can Edit Group Details */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Edit Group Details</label>
+                                  <select 
+                                    value={settings.canMembersEdit || 'Admins and Owner'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersEdit', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Owner Only">Owner Only</option>
+                                    <option value="Admins and Owner">Admins and Owner</option>
+                                  </select>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )
                     ) : (
                       <div className="details-section">
                         <div className="section-title">Field Intel</div>
