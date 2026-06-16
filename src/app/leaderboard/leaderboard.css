@@ -256,7 +256,7 @@ nav a:hover::after, nav a.active::after { width: 100%; }
 
 .faq-card.active .faq-answer {
     padding: 10px 30px 30px;
-    max-height: 200px;
+    max-height: 1000px;
 }
 
 .top-rank-1 { background: rgba(255, 215, 0, 0.05); }
