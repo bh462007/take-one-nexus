@@ -9,6 +9,16 @@ import TaskModal from '@/components/TaskModal';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 import './chat.css';
 
+const cacheBustUrl = (url: string | null | undefined, updatedAt?: string | Date | number) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('default-group.png') || url.includes('default-avatar')) return url;
+  
+  const t = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${t}`;
+};
+
 
 interface User {
   id: number;
@@ -63,6 +73,8 @@ interface Conversation {
   unread?: number;
   updated_at?: string;
   my_role?: 'Director' | 'Admin' | 'Member';
+  canMembersMessage?: boolean;
+  community_id?: number;
 }
 
 interface Task {
@@ -300,6 +312,73 @@ export default function ChatPage() {
   const [showAutoInviteModal, setShowAutoInviteModal] = useState(false);
   const [autoInviteToHandle, setAutoInviteToHandle] = useState<any | null>(null);
   const [viewingGalaxyLanding, setViewingGalaxyLanding] = useState(false);
+
+  const [isInvitationsManagementModalOpen, setIsInvitationsManagementModalOpen] = useState(false);
+  const [invitationsList, setInvitationsList] = useState<any[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+
+  const isMessagingRestricted = useMemo(() => {
+    return activeConv?.is_group && activeConv?.canMembersMessage === false && !['Owner', 'Moderator'].includes(communityRole || '');
+  }, [activeConv, communityRole]);
+
+  const fetchCommunityInvitations = useCallback(async () => {
+    if (!communityData?.id) return;
+    setInvitationsLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations?communityId=${communityData.id}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInvitationsList(data.invitations || []);
+      }
+    } catch (err) {
+      console.error('Error fetching community invitations:', err);
+    } finally {
+      setInvitationsLoading(false);
+    }
+  }, [communityData?.id]);
+
+  const cancelInvitation = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/community/invitations/${inviteId}/cancel`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation cancelled successfully.');
+        fetchCommunityInvitations();
+      } else {
+        alert(data.message || 'Failed to cancel invitation');
+      }
+    } catch (err) {
+      console.error('Error cancelling invitation:', err);
+      alert('Failed to cancel invitation');
+    }
+  };
+
+  const resendInvitation = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/community/invitations/${inviteId}/resend`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation resent successfully.');
+        fetchCommunityInvitations();
+      } else {
+        alert(data.message || 'Failed to resend invitation');
+      }
+    } catch (err) {
+      console.error('Error resending invitation:', err);
+      alert('Failed to resend invitation');
+    }
+  };
 
   const fetchAllCommunities = useCallback(async (search = '') => {
     setAllCommunitiesLoading(true);
@@ -1506,14 +1585,40 @@ export default function ChatPage() {
       });
     };
 
+    const handleConversationUpdate = (updatedConv: any) => {
+      setConversations(current => {
+        const index = current.findIndex(c => c.id === updatedConv.id);
+        if (index > -1) {
+          const newConvs = [...current];
+          newConvs[index] = {
+            ...newConvs[index],
+            ...updatedConv
+          };
+          return newConvs;
+        }
+        return current;
+      });
+      setActiveConv(current => {
+        if (current && current.id === updatedConv.id) {
+          return {
+            ...current,
+            ...updatedConv
+          };
+        }
+        return current;
+      });
+    };
+
     // Binding reference listeners
     userChannel.bind('credit-update', handleCreditUpdate);
     userChannel.bind('message-notification', handleMessageNotification);
+    userChannel.bind('conversation-update', handleConversationUpdate);
 
     // Strict explicit event teardown block
     return () => {
       userChannel.unbind('credit-update', handleCreditUpdate);
       userChannel.unbind('message-notification', handleMessageNotification);
+      userChannel.unbind('conversation-update', handleConversationUpdate);
       pusherRef.current?.unsubscribe(userChannelName);
     };
   }, [user?.id, activeConv?.id, fetchConversations]);
@@ -1797,16 +1902,33 @@ export default function ChatPage() {
       }
     };
 
+    const handleSettingsUpdated = (data: { conversationId: number, canMembersMessage: boolean }) => {
+      setActiveConv(prev => {
+        if (prev && prev.id === data.conversationId) {
+          return { ...prev, canMembersMessage: data.canMembersMessage };
+        }
+        return prev;
+      });
+      setConversations(prev => prev.map(c => {
+        if (c.id === data.conversationId) {
+          return { ...c, canMembersMessage: data.canMembersMessage };
+        }
+        return c;
+      }));
+    };
+
     // Binding reference handlers
     channel.bind('new-message', handleNewMessage);
     channel.bind('user-typing', handleUserTyping);
     channel.bind('task-update', handleTaskUpdate);
+    channel.bind('settings-updated', handleSettingsUpdated);
 
     // Explicit channel and handler teardown phase
     return () => {
       channel.unbind('new-message', handleNewMessage);
       channel.unbind('user-typing', handleUserTyping);
       channel.unbind('task-update', handleTaskUpdate);
+      channel.unbind('settings-updated', handleSettingsUpdated);
       pusherRef.current?.unsubscribe(channelName);
     };
   }, [activeConv, user?.id]);
@@ -1965,7 +2087,7 @@ export default function ChatPage() {
                   title={comm.name}
                 >
                   {comm.logo_url ? (
-                    <img src={comm.logo_url} alt={comm.name} />
+                    <img src={cacheBustUrl(comm.logo_url, comm.updated_at)} alt={comm.name} />
                   ) : (
                     initials
                   )}
@@ -2087,7 +2209,7 @@ export default function ChatPage() {
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '12px' }}>
                     {communityData.logo_url ? (
-                      <img src={communityData.logo_url} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                      <img src={cacheBustUrl(communityData.logo_url, communityData.updated_at)} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
                     ) : (
                       <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '18px', color: 'var(--neon)' }}>
                         {communityData.name.charAt(0).toUpperCase()}
@@ -2228,12 +2350,23 @@ export default function ChatPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Members ({communityData.members?.length || 0})</h4>
                       {['Owner', 'Moderator'].includes(communityRole || '') && (
-                        <button 
-                          onClick={() => setIsInviteModalOpen(true)} 
-                          style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                          Invite
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => {
+                              fetchCommunityInvitations();
+                              setIsInvitationsManagementModalOpen(true);
+                            }} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--cream)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Manage
+                          </button>
+                          <button 
+                            onClick={() => setIsInviteModalOpen(true)} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Invite
+                          </button>
+                        </div>
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -2335,7 +2468,7 @@ export default function ChatPage() {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {inv.community.logo_url ? (
-                            <img src={inv.community.logo_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
+                            <img src={cacheBustUrl(inv.community.logo_url, inv.community.updated_at)} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
                           ) : (
                             <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', color: 'var(--neon)' }}>
                               {inv.community.name.charAt(0).toUpperCase()}
@@ -2393,7 +2526,7 @@ export default function ChatPage() {
                     aria-pressed={activeConv?.id === conv.id}
                   >
                     <img
-                      src={conv.is_group ? (conv.avatar_url || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
+                      src={conv.is_group ? (cacheBustUrl(conv.avatar_url, conv.updated_at) || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
                       alt=""
                       className="conv-avatar"
                       loading="lazy" decoding="async"
@@ -2635,7 +2768,7 @@ export default function ChatPage() {
                 <div className="header-left">
                   <div className="header-avatar-container" onClick={() => setShowDetails(!showDetails)} style={{ cursor: 'pointer' }}>
                     <img
-                      src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
+                      src={activeConv.is_group ? (cacheBustUrl(activeConv.avatar_url, activeConv.updated_at) || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
                       alt=""
                       className="header-avatar"
                       loading="lazy" decoding="async"
@@ -2985,7 +3118,7 @@ export default function ChatPage() {
                     <div className="details-main-info">
                       <div className="details-avatar-wrapper">
                         <img 
-                          src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
+                          src={activeConv.is_group ? (cacheBustUrl(activeConv.avatar_url, activeConv.updated_at) || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
                           alt="" 
                           className="details-avatar" 
                           loading="lazy" decoding="async"
@@ -3057,6 +3190,47 @@ export default function ChatPage() {
                               Save
                             </button>
                           </div>
+                          {['Owner', 'Moderator'].includes(communityRole || '') && (
+                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', alignItems: 'flex-start' }}>
+                              <label style={{ fontSize: '11px', color: 'rgba(232,232,224,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>Messaging Permissions</label>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#e8e8e0', cursor: 'pointer', width: '100%', userSelect: 'none' }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={activeConv.canMembersMessage !== false}
+                                  onChange={async (e) => {
+                                    const checked = e.target.checked;
+                                    try {
+                                      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                                      const res = await fetchWithCSRF(`/api/chat/conversations/${activeConv.id}/settings`, {
+                                        method: 'PATCH',
+                                        headers: token ? { 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ canMembersMessage: checked })
+                                      });
+                                      const data = await res.json();
+                                      if (data.success) {
+                                        // Update state
+                                        setActiveConv(prev => prev ? { ...prev, canMembersMessage: checked } : null);
+                                        setConversations(prev => prev.map(c => c.id === activeConv.id ? { ...c, canMembersMessage: checked } : c));
+                                      } else {
+                                        alert(data.message || 'Failed to update messaging permissions');
+                                      }
+                                    } catch (err) {
+                                      console.error('Settings update failed:', err);
+                                      alert('Failed to update messaging permissions');
+                                    }
+                                  }}
+                                  style={{
+                                    accentColor: 'var(--neon)',
+                                    cursor: 'pointer'
+                                  }}
+                                />
+                                <span>Allow members to message</span>
+                              </label>
+                              <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#888', lineHeight: '1.4' }}>
+                                When disabled, only community Owner and Moderators can post messages to this group.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -3125,12 +3299,23 @@ export default function ChatPage() {
                       ref={inputRef}
                       type="text"
                       className="chat-input"
-                      placeholder={(!activeConv?.is_group && activeRecipient?.id === -1) ? 'This user is no longer available.' : `Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`}
+                      placeholder={
+                        (!activeConv?.is_group && activeRecipient?.id === -1) 
+                          ? 'This user is no longer available.' 
+                          : isMessagingRestricted 
+                            ? 'Only admins can send messages in this group.' 
+                            : `Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`
+                      }
                       value={newMessage}
                       onChange={onInputChange}
-                      disabled={sending || (!activeConv?.is_group && activeRecipient?.id === -1)}
+                      disabled={sending || (!activeConv?.is_group && activeRecipient?.id === -1) || isMessagingRestricted}
                     />
-                    <button type="submit" className="send-btn" disabled={!newMessage.trim() || sending || (!activeConv?.is_group && activeRecipient?.id === -1)} aria-label="Send message">
+                    <button 
+                      type="submit" 
+                      className="send-btn" 
+                      disabled={!newMessage.trim() || sending || (!activeConv?.is_group && activeRecipient?.id === -1) || isMessagingRestricted} 
+                      aria-label="Send message"
+                    >
                       <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                   </div>
@@ -3624,6 +3809,154 @@ export default function ChatPage() {
         </div>
       )}
 
+      {isInvitationsManagementModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1010, backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '650px', maxWidth: '95%', display: 'flex', flexDirection: 'column', gap: '20px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)', maxHeight: '80vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)', fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>
+                ✉️ Community Invitations Dashboard
+              </h2>
+              <button 
+                onClick={() => setIsInvitationsManagementModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              {invitationsLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '150px', color: 'var(--neon)', fontSize: '14px' }}>
+                  Loading invitations...
+                </div>
+              ) : invitationsList.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '150px', color: '#666', fontStyle: 'italic', gap: '8px' }}>
+                  <span>No invitations found for this community.</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {invitationsList.map((inv: any) => {
+                    const isExpired = inv.expiresAt ? new Date(inv.expiresAt) < new Date() : false;
+                    const canCancel = inv.status === 'PENDING' && !isExpired;
+                    const canResend = inv.status === 'PENDING' || inv.status === 'CANCELLED' || isExpired;
+
+                    return (
+                      <div 
+                        key={inv.id} 
+                        style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '10px', 
+                          background: 'rgba(255,255,255,0.02)', 
+                          padding: '12px 16px', 
+                          borderRadius: '8px', 
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          transition: 'border-color 0.2s ease-in-out' 
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--cream)' }}>
+                              Invited: {inv.invitee ? `${inv.invitee.name} (@${inv.invitee.screen_name})` : inv.email}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>
+                              Sent by: <strong>{inv.inviter?.name || 'Owner'}</strong> • Created: {new Date(inv.createdAt).toLocaleDateString()}
+                            </div>
+                            {inv.expiresAt && (
+                              <div style={{ fontSize: '11px', color: isExpired ? '#ff4d4d' : '#888', marginTop: '2px' }}>
+                                {isExpired ? 'Expired' : `Expires: ${new Date(inv.expiresAt).toLocaleString()}`}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span 
+                              style={{ 
+                                fontSize: '10px', 
+                                padding: '3px 8px', 
+                                borderRadius: '12px', 
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                background: isExpired 
+                                  ? 'rgba(255,77,77,0.1)' 
+                                  : inv.status === 'ACCEPTED' 
+                                    ? 'rgba(77,255,77,0.1)' 
+                                    : inv.status === 'REJECTED' 
+                                      ? 'rgba(255,77,77,0.1)' 
+                                      : 'rgba(255,255,255,0.05)',
+                                color: isExpired 
+                                  ? '#ff4d4d' 
+                                  : inv.status === 'ACCEPTED' 
+                                    ? '#4dff4d' 
+                                    : inv.status === 'REJECTED' 
+                                      ? '#ff4d4d' 
+                                      : '#e8e8e0',
+                                border: `1px solid ${
+                                  isExpired 
+                                    ? 'rgba(255,77,77,0.2)' 
+                                    : inv.status === 'ACCEPTED' 
+                                      ? 'rgba(77,255,77,0.2)' 
+                                      : inv.status === 'REJECTED' 
+                                        ? 'rgba(255,77,77,0.2)' 
+                                        : 'rgba(255,255,255,0.1)'
+                                }`
+                              }}
+                            >
+                              {isExpired ? 'EXPIRED' : inv.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        {(canCancel || canResend) && (
+                          <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px', marginTop: '4px' }}>
+                            {canCancel && (
+                              <button
+                                onClick={() => cancelInvitation(inv.id)}
+                                style={{ 
+                                  padding: '5px 12px', 
+                                  fontSize: '11px', 
+                                  borderRadius: '4px', 
+                                  background: 'transparent', 
+                                  color: '#ff4d4d', 
+                                  border: '1px solid rgba(255,77,77,0.3)', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s' 
+                                }}
+                              >
+                                Cancel Invitation
+                              </button>
+                            )}
+                            {canResend && (
+                              <button
+                                onClick={() => resendInvitation(inv.id)}
+                                style={{ 
+                                  padding: '5px 12px', 
+                                  fontSize: '11px', 
+                                  borderRadius: '4px', 
+                                  background: 'rgba(255,77,26,0.15)', 
+                                  color: '#fff', 
+                                  border: '1px solid var(--neon)', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s' 
+                                }}
+                              >
+                                Resend Invitation
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAutoInviteModal && autoInviteToHandle && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1020, backdropFilter: 'blur(8px)' }}>
           <div style={{ background: '#121212', border: '1px solid var(--neon)', borderRadius: '12px', padding: '30px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', color: '#fff', textAlign: 'center', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.25)' }}>
@@ -3638,7 +3971,7 @@ export default function ChatPage() {
             </div>
 
             {autoInviteToHandle.community?.logo_url ? (
-              <img src={autoInviteToHandle.community.logo_url} alt="" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+              <img src={cacheBustUrl(autoInviteToHandle.community.logo_url, autoInviteToHandle.community.updated_at)} alt="" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
             ) : (
               <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '32px', fontWeight: 'bold', color: 'var(--neon)' }}>
                 {autoInviteToHandle.community?.name?.charAt(0).toUpperCase()}

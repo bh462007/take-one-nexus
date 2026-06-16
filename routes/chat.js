@@ -30,6 +30,13 @@ const pusher = new Pusher({
 
 function getConversationInclude() {
   return {
+    community_groups: {
+      select: {
+        id: true,
+        community_id: true,
+        canMembersMessage: true
+      }
+    },
     members: {
       include: {
         user: {
@@ -68,9 +75,12 @@ function getConversationInclude() {
 
 function transformConversation(c, userId) {
   const myMember = (c.members || []).find(m => m.user_id === userId);
+  const communityGroup = c.community_groups?.[0] || null;
   return {
     ...c,
     my_role: myMember ? myMember.role : 'Member',
+    canMembersMessage: communityGroup ? communityGroup.canMembersMessage : true,
+    community_id: communityGroup ? communityGroup.community_id : null,
     users: (c.members || []).map(m => ({ 
       ...m.user, 
       name: formatDisplayName(m.user.name),
@@ -392,6 +402,28 @@ router.post('/messages', authenticateUser, messageValidation, async (req, res) =
         return res.status(403).json({ success: false, message: 'Access denied' });
       }
 
+      if (conversation.is_group) {
+        const communityGroup = await prisma.communityGroup.findFirst({
+          where: { conversation_id: conversation.id }
+        });
+        if (communityGroup && communityGroup.canMembersMessage === false) {
+          // Check if sender is an Owner or Moderator in the associated Community
+          const senderMembership = await prisma.communityMember.findFirst({
+            where: {
+              user_id: senderId,
+              community_id: communityGroup.community_id,
+              role: { in: ['Owner', 'Moderator'] }
+            }
+          });
+          if (!senderMembership) {
+            return res.status(403).json({
+              success: false,
+              message: 'Only admins can send messages in this group.'
+            });
+          }
+        }
+      }
+
       if (!conversation.is_group && conversation.members.length < 2) {
         return res.status(400).json({ success: false, message: 'This user is no longer available.' });
       }
@@ -710,6 +742,98 @@ router.patch('/conversations/:id/avatar', authenticateUser, [
     res.status(500).json({ success: false, message: 'Could not update group avatar' });
   }
 });
+
+/**
+ * PATCH /api/chat/conversations/:id/settings
+ * Update group conversation settings (canMembersMessage) (Owner/Moderator only)
+ */
+router.patch('/conversations/:id/settings', authenticateUser, [
+  param('id').isNumeric(),
+  body('canMembersMessage').isBoolean(),
+  validateRequest
+], async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    const userId = Number(req.user.id);
+    const { canMembersMessage } = req.body;
+
+    // Check if user is part of the conversation
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        members: { some: { user_id: userId } }
+      }
+    });
+
+    if (!conversation) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    if (!conversation.is_group) {
+      return res.status(400).json({ success: false, message: 'Can only update group settings' });
+    }
+
+    // Find the community group associated with this conversation
+    const communityGroup = await prisma.communityGroup.findFirst({
+      where: { conversation_id: conversationId }
+    });
+
+    if (!communityGroup) {
+      return res.status(404).json({ success: false, message: 'Community group not found' });
+    }
+
+    // Verify caller is Owner or Moderator of the community
+    const myMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: userId,
+        community_id: communityGroup.community_id,
+        role: { in: ['Owner', 'Moderator'] }
+      }
+    });
+
+    if (!myMembership) {
+      return res.status(403).json({ success: false, message: 'Access denied: Community Management permissions required' });
+    }
+
+    // Update community group
+    await prisma.communityGroup.update({
+      where: { id: communityGroup.id },
+      data: { canMembersMessage }
+    });
+
+    // Reload conversation to get fresh include data
+    const updatedConversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: getConversationInclude()
+    });
+
+    const transformed = transformConversation(updatedConversation, userId);
+
+    // Broadcast the update via Pusher to the conversation channel
+    pusher.trigger(`conversation-${conversationId}`, 'settings-updated', {
+      conversationId,
+      canMembersMessage,
+      conversation: transformed
+    });
+
+    // Also notify all member channels with full conversation-update
+    const members = await prisma.conversationMember.findMany({
+      where: { conversation_id: conversationId },
+      select: { user_id: true }
+    });
+
+    for (const member of members) {
+      const memberTransformed = transformConversation(updatedConversation, member.user_id);
+      pusher.trigger(`user-${member.user_id}-chats`, 'conversation-update', memberTransformed);
+    }
+
+    res.json({ success: true, data: transformed });
+  } catch (error) {
+    console.error('Update settings error:', error.message);
+    res.status(500).json({ success: false, message: 'Could not update group settings' });
+  }
+});
+
 
 /**
  * POST /api/pusher/auth

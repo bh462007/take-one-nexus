@@ -746,8 +746,12 @@ router.post('/members/invite', authenticateUser, inviteLimiter, inviteMemberVali
       }
     });
 
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
     if (existingInvitation) {
-      if (existingInvitation.status === 'PENDING') {
+      const isExpired = existingInvitation.expires_at && new Date(existingInvitation.expires_at) < new Date();
+      if (existingInvitation.status === 'PENDING' && !isExpired) {
         return res.status(400).json({
           success: false,
           message: 'An invitation is already pending for this crew member.'
@@ -760,6 +764,7 @@ router.post('/members/invite', authenticateUser, inviteLimiter, inviteMemberVali
         data: {
           status: 'PENDING',
           inviter_id: callerId,
+          expires_at: expiresAt,
           updated_at: new Date()
         }
       });
@@ -770,7 +775,8 @@ router.post('/members/invite', authenticateUser, inviteLimiter, inviteMemberVali
           community_id: communityId,
           invitee_id: targetUser.id,
           inviter_id: callerId,
-          status: 'PENDING'
+          status: 'PENDING',
+          expires_at: expiresAt
         }
       });
     }
@@ -888,6 +894,251 @@ router.get('/invitations/my-invitations', authenticateUser, async (req, res) => 
 });
 
 /**
+ * GET /api/community/invitations
+ * Get all invitations for a community (Owner/Moderator only)
+ */
+router.get('/invitations', authenticateUser, async (req, res) => {
+  try {
+    const callerId = Number(req.user.id);
+    const communityId = Number(req.query.communityId);
+
+    if (!communityId) {
+      return res.status(400).json({ success: false, message: 'Community ID is required' });
+    }
+
+    // Verify caller is Owner or Moderator of this specific community
+    const myMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: callerId,
+        community_id: communityId,
+        role: { in: ['Owner', 'Moderator'] }
+      }
+    });
+
+    if (!myMembership) {
+      return res.status(403).json({ success: false, message: 'Access denied: Community Management permissions required' });
+    }
+
+    const invitations = await prisma.communityInvitation.findMany({
+      where: {
+        community_id: communityId
+      },
+      include: {
+        invitee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            screen_name: true
+          }
+        }
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    // Map to include display status (dynamic EXPIRED calculation)
+    const mapped = invitations.map(inv => {
+      const isExpired = inv.status === 'PENDING' && inv.expires_at && new Date(inv.expires_at) < new Date();
+      return {
+        id: inv.id,
+        email: inv.invitee.email,
+        name: inv.invitee.name,
+        status: isExpired ? 'EXPIRED' : inv.status,
+        created_at: inv.created_at,
+        expires_at: inv.expires_at
+      };
+    });
+
+    return res.json({ success: true, invitations: mapped });
+  } catch (error) {
+    console.error('[Community] Get invitations error:', error.message);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/community/invitations/:id/cancel
+ * Cancel/revoke a community invitation (Owner/Moderator only)
+ */
+router.post('/invitations/:id/cancel', authenticateUser, async (req, res) => {
+  try {
+    const callerId = Number(req.user.id);
+    const invitationId = Number(req.params.id);
+
+    const invitation = await prisma.communityInvitation.findUnique({
+      where: { id: invitationId }
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ success: false, message: 'Invitation not found' });
+    }
+
+    // Verify caller is Owner or Moderator of this specific community
+    const myMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: callerId,
+        community_id: invitation.community_id,
+        role: { in: ['Owner', 'Moderator'] }
+      }
+    });
+
+    if (!myMembership) {
+      return res.status(403).json({ success: false, message: 'Access denied: Community Management permissions required' });
+    }
+
+    // Update invitation status to CANCELLED (revoked)
+    await prisma.communityInvitation.update({
+      where: { id: invitationId },
+      data: {
+        status: 'CANCELLED',
+        updated_at: new Date()
+      }
+    });
+
+    return res.json({ success: true, message: 'Invitation cancelled successfully' });
+  } catch (error) {
+    console.error('[Community] Cancel invitation error:', error.message);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/community/invitations/:id/resend
+ * Resend a community invitation (Owner/Moderator only)
+ */
+router.post('/invitations/:id/resend', authenticateUser, async (req, res) => {
+  try {
+    const callerId = Number(req.user.id);
+    const invitationId = Number(req.params.id);
+
+    const invitation = await prisma.communityInvitation.findUnique({
+      where: { id: invitationId },
+      include: {
+        community: true,
+        invitee: true
+      }
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ success: false, message: 'Invitation not found' });
+    }
+
+    // Verify caller is Owner or Moderator of this specific community
+    const myMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: callerId,
+        community_id: invitation.community_id,
+        role: { in: ['Owner', 'Moderator'] }
+      }
+    });
+
+    if (!myMembership) {
+      return res.status(403).json({ success: false, message: 'Access denied: Community Management permissions required' });
+    }
+
+    // Check if invitee is already in this community
+    const targetMembership = await prisma.communityMember.findFirst({
+      where: {
+        user_id: invitation.invitee_id,
+        community_id: invitation.community_id
+      }
+    });
+
+    if (targetMembership) {
+      return res.status(400).json({
+        success: false,
+        message: 'This crew member is already a member of this community.'
+      });
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Update invitation
+    await prisma.communityInvitation.update({
+      where: { id: invitationId },
+      data: {
+        status: 'PENDING',
+        expires_at: expiresAt,
+        inviter_id: callerId,
+        updated_at: new Date()
+      }
+    });
+
+    // Get caller user info
+    const callerUser = await prisma.user.findUnique({
+      where: { id: callerId },
+      select: { name: true }
+    });
+    const inviterName = callerUser ? callerUser.name : 'A crew leader';
+
+    // Send notification email via Resend
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const { Resend } = require('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+
+        await resend.emails.send({
+          from: 'TAKE ONE NEXUS <community@takeone-nexus.net.in>',
+          to: [invitation.invitee.email],
+          subject: `INVITATION: Join ${invitation.community.name} on TAKE ONE NEXUS`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+                body { background-color: #06080a; color: #e0e0e0; font-family: 'Space Mono', monospace; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; border: 1px solid #00D4FF; background: linear-gradient(180deg, #0e1218 0%, #06080a 100%); }
+                .header { text-align: center; padding-bottom: 30px; border-bottom: 1px solid rgba(0, 212, 255, 0.2); }
+                .logo { font-size: 32px; font-weight: 700; letter-spacing: 0.2em; color: #ffffff; }
+                .logo span { color: #00D4FF; }
+                .content { padding: 30px 0; line-height: 1.6; }
+                .greeting { font-size: 18px; color: #00D4FF; margin-bottom: 20px; }
+                .cta-wrap { text-align: center; margin: 40px 0; }
+                .cta { background-color: #00D4FF; color: #06080a !important; padding: 15px 30px; text-decoration: none; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; display: inline-block; border-radius: 4px; }
+                .footer { font-size: 10px; color: #888888; text-align: center; padding-top: 30px; border-top: 1px solid rgba(0, 212, 255, 0.1); }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <div class="logo">TAKE <span>ONE</span></div>
+                </div>
+                <div class="content">
+                  <div class="greeting">COMMUNITY INVITE: ${invitation.community.name}</div>
+                  <p>Hi ${invitation.invitee.name},</p>
+                  <p>You have been invited by <strong>${inviterName}</strong> to join the community <strong>${invitation.community.name}</strong> on the TAKE ONE platform.</p>
+                  <p>Accept this invitation to unlock shared chat spaces, crew call listings, and collaborative tools for this community.</p>
+                  <div class="cta-wrap">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://takeone-nexus.net.in'}/chat" class="cta">Accept Invitation</a>
+                  </div>
+                </div>
+                <div class="footer">
+                  © 2026 TAKE ONE NEXUS. ALL RIGHTS RESERVED.
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+        });
+      } catch (emailErr) {
+        console.error('[Community] Failed to resend invitation email:', emailErr.message);
+      }
+    }
+
+    logCommunityEvent('member_invited', { communityId: invitation.community_id, inviteeId: invitation.invitee_id, inviterId: callerId });
+
+    return res.json({ success: true, message: 'Invitation resent successfully' });
+  } catch (error) {
+    console.error('[Community] Resend invitation error:', error.message);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+/**
  * POST /api/community/invitations/:id/accept
  * Accept a community invitation
  */
@@ -914,6 +1165,11 @@ router.post('/invitations/:id/accept', authenticateUser, async (req, res) => {
 
     if (!invitation) {
       return res.status(404).json({ success: false, message: 'Invitation not found or already processed.' });
+    }
+
+    // Check expiration
+    if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+      return res.status(400).json({ success: false, message: 'This invitation has expired.' });
     }
 
     const { community } = invitation;
