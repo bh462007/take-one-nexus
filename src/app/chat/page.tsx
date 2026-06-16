@@ -2202,8 +2202,8 @@ export default function ChatPage() {
   return (
     <div className="chat-page">
       <header className="global-header">
+        <a href="/" className="logo">TAKE <span>ONE</span></a>
         <nav>
-          <a href="/" className="logo">TAKE <span>ONE</span></a>
           <a href="/#explore">Discover Projects</a>
           <a href="/crew">Find Crew</a>
           <a href="/leaderboard">Leaderboard</a>
