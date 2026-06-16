@@ -31,8 +31,13 @@ body {
   background: var(--void);
   color: var(--cream);
   font-family: 'Space Mono', monospace;
-  cursor: none;
+  
   overflow-x: hidden;
+}
+@media (pointer: fine) {
+  body {
+    cursor: none;
+  }
 }
 
 .scroll-progress {

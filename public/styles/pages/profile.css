@@ -27,8 +27,13 @@ body {
     background: var(--void);
     color: var(--cream);
     font-family: 'Space Mono', monospace;
-    cursor: none;
     min-height: 100vh;
+}
+
+@media (pointer: fine) {
+    body {
+        cursor: none;
+    }
 }
 
 /* ── SCAN LINES OVERLAY ── */
