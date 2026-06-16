@@ -6,7 +6,11 @@ const { createNotification } = require('../utils/notifications');
 const { getCanonicalDisplayName } = require('../utils/formatting');
 const router = express.Router();
 
+let initialized = false;
+
 async function ensureRequestsTable() {
+  if (initialized) return;
+  
   await pool.query(`
     CREATE TABLE IF NOT EXISTS collaboration_requests (
       id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -38,6 +42,8 @@ async function ensureRequestsTable() {
         ON UPDATE CASCADE
     )
   `);
+  
+  initialized = true;
 }
 
 router.post('/', authenticateUser, requireVerified, async (req, res) => {
