@@ -357,6 +357,11 @@ nav a:hover::after {
         grid-template-columns: 1fr;
         margin-top: -32px;
     }
+
+    .profile-sidebar {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 24px;
+    }
 }
 
 /* ── SIDEBAR ── */
