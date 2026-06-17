@@ -8,11 +8,11 @@ We welcome contributions of all kinds: bug fixes, feature additions, documentati
 
 ---
 
-## 🌐 Open Source Programs
+## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26 and GSSoC 2026.
+TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26 and GSSoC 2026.
 
-Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
 
 ---
 
@@ -115,5 +115,14 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 ## 📋 Issue Assignment Policy
 - Assigned contributors are expected to show progress regularly.
 - If there is no activity, update, draft PR, or communication for 7 days, the issue may be unassigned automatically.
-- This helps keep issues active and available for other contributors during community-driven open-source initiatives like NSoC'26 and GSSoC 2026.
+- This helps keep issues active and available for other contributors during community-driven development initiatives like NSoC'26 and GSSoC 2026.
 - Contributors can request reassignment later if needed.
+
+---
+
+## ⚖️ Contribution License Agreement
+
+By contributing to TAKE ONE Nexus (including submitting pull requests, issues, feedback, or code), you agree and acknowledge that:
+* Your contributions may be incorporated into the project and remain under the project's source-available license.
+* You grant TAKE ONE Nexus a perpetual, irrevocable, worldwide, royalty-free, non-exclusive, sub-licensable license to incorporate, modify, distribute, and utilize your contribution within the project.
+* You represent that you are the sole author of your contribution and have the legal right to submit it.

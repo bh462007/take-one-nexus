@@ -6,11 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [Unreleased / Open Source Prep] - 2026-05
+## [Unreleased / Source-Available Prep] - 2026-05
 
 ### Added
 - **NSoC'26 Integration**: Audited and updated the entire documentation workspace to properly acknowledge and integrate support for NSoC'26 (Nexus Summer of Code '26). Added `Open Source Programs` sections across core repo manuals.
-- **Open Source Documentation**: Complete overhaul of documentation to make the repository production-grade and friendly for NSoC'26 and GSSoC 2026 contributors. Added `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`, and `SECURITY.md`.
+- **Source-Available Documentation**: Complete overhaul of documentation to make the repository production-grade and friendly for NSoC'26 and GSSoC 2026 contributors. Added `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`, and `SECURITY.md`.
 
 ---
 
@@ -51,7 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 - **Global Timezone Support**: Admin analytics and charts now natively support Indian Standard Time (IST) out of the box, ensuring midnight resets occur correctly for the target demographic.
-- **Cinematic Markdown Documentation**: Complete rewrite of all standard open-source documentation including README, CONTRIBUTING, SECURITY, and ROADMAP.
+- **Cinematic Markdown Documentation**: Complete rewrite of all standard documentation including README, CONTRIBUTING, SECURITY, and ROADMAP.
 - **Authentication Engine Solidified**: Cleaned up pre-migration references to third-party identity providers, optimizing our secure JWT session architecture and reducing configuration footprints.
 
 ### Changed

@@ -9,6 +9,16 @@ import TaskModal from '@/components/TaskModal';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 import './chat.css';
 
+const cacheBustUrl = (url: string | null | undefined, updatedAt?: string | Date | number) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('default-group.png') || url.includes('default-avatar')) return url;
+  
+  const t = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${t}`;
+};
+
 
 interface User {
   id: number;
@@ -63,6 +73,9 @@ interface Conversation {
   unread?: number;
   updated_at?: string;
   my_role?: 'Director' | 'Admin' | 'Member';
+  canMembersMessage?: boolean;
+  community_id?: number;
+  groupSettings?: string | any;
 }
 
 interface Task {
@@ -87,37 +100,6 @@ type ChatState = 'loading' | 'ready' | 'error' | 'not-found';
 // Custom Hooks for Resilient Message Queue System
 // ───────────────────────────────────────────────────────────────
 
-/**
- * Hook: usePusherConnectionState
- * Monitors Pusher connection state and provides callback on reconnection
- */
-const usePusherConnectionState = (pusher: Pusher | null, onConnected?: () => void) => {
-  const [connectionState, setConnectionState] = useState<PusherConnectionState>('disconnected');
-  
-  useEffect(() => {
-    if (!pusher) return;
-    
-    const handleConnectionStateChange = (state: PusherConnectionState) => {
-      setConnectionState(state);
-      if (state === 'connected' && onConnected) {
-        onConnected();
-      }
-    };
-    
-    pusher.connection.bind('state_change', (state: any) => {
-      handleConnectionStateChange(state.current);
-    });
-    
-    const currentState = pusher.connection.state as PusherConnectionState;
-    setConnectionState(currentState);
-    
-    return () => {
-      pusher.connection.unbind('state_change', handleConnectionStateChange);
-    };
-  }, [pusher, onConnected]);
-  
-  return connectionState;
-};
 
 /**
  * Hook: useMessageQueue
@@ -244,6 +226,7 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const isFounder = user?.secondary_role?.toLowerCase() === 'founder';
@@ -258,11 +241,13 @@ export default function ChatPage() {
   // New interaction states
   const [showSearch, setShowSearch] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<'members' | 'settings'>('members');
   const [showMenu, setShowMenu] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [mutedConvIds, setMutedConvIds] = useState<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
 
   // Task states
   const [activeTab, setActiveTab] = useState<'chat' | 'tasks'>('chat');
@@ -313,7 +298,6 @@ export default function ChatPage() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [selectedUserForInvite, setSelectedUserForInvite] = useState<any | null>(null);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
@@ -326,11 +310,238 @@ export default function ChatPage() {
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
   const [allCommunitiesLoading, setAllCommunitiesLoading] = useState(false);
   const [myRequests, setMyRequests] = useState<any[]>([]);
-  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [isJoinRequestModalOpen, setIsJoinRequestModalOpen] = useState(false);
   const [showAutoInviteModal, setShowAutoInviteModal] = useState(false);
   const [autoInviteToHandle, setAutoInviteToHandle] = useState<any | null>(null);
   const [viewingGalaxyLanding, setViewingGalaxyLanding] = useState(false);
+
+  const [isInvitationsManagementModalOpen, setIsInvitationsManagementModalOpen] = useState(false);
+  const [invitationsList, setInvitationsList] = useState<any[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+
+  const isMessagingRestricted = useMemo(() => {
+    if (!activeConv?.is_group) return false;
+    const isOwnerOrMod = ['Owner', 'Moderator'].includes(communityRole || '');
+    const isGrpAdminOrDir = activeConv.my_role === 'Admin' || activeConv.my_role === 'Director';
+    return activeConv.canMembersMessage === false && !isOwnerOrMod && !isGrpAdminOrDir;
+  }, [activeConv, communityRole]);
+
+  const communityIdForInvitations = communityData?.id;
+  const fetchCommunityInvitations = useCallback(async () => {
+    if (!communityIdForInvitations) return;
+    setInvitationsLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations?communityId=${communityIdForInvitations}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInvitationsList(data.invitations || []);
+      }
+    } catch (err) {
+      console.error('Error fetching community invitations:', err);
+    } finally {
+      setInvitationsLoading(false);
+    }
+  }, [communityIdForInvitations]);
+
+  const cancelInvitation = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/community/invitations/${inviteId}/cancel`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation cancelled successfully.');
+        fetchCommunityInvitations();
+      } else {
+        alert(data.message || 'Failed to cancel invitation');
+      }
+    } catch (err) {
+      console.error('Error cancelling invitation:', err);
+      alert('Failed to cancel invitation');
+    }
+  };
+
+  const resendInvitation = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/community/invitations/${inviteId}/resend`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation resent successfully.');
+        fetchCommunityInvitations();
+      } else {
+        alert(data.message || 'Failed to resend invitation');
+      }
+    } catch (err) {
+      console.error('Error resending invitation:', err);
+      alert('Failed to resend invitation');
+    }
+  };
+
+  const [pendingJoinRequests, setPendingJoinRequests] = useState<any[]>([]);
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
+
+  const fetchPendingJoinRequests = useCallback(async (convId: number) => {
+    setJoinRequestsLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/chat/conversations/${convId}/join-requests`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingJoinRequests(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching pending requests:', err);
+    } finally {
+      setJoinRequestsLoading(false);
+    }
+  }, []);
+
+  const handleApproveJoinRequest = async (convId: number, requestId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/join-requests/${requestId}/approve`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Request approved successfully!');
+        fetchPendingJoinRequests(convId);
+      } else {
+        alert(data.message || 'Failed to approve request');
+      }
+    } catch (err) {
+      console.error('Approve request error:', err);
+      alert('Failed to approve request');
+    }
+  };
+
+  const handleRejectJoinRequest = async (convId: number, requestId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/join-requests/${requestId}/reject`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Request rejected successfully!');
+        fetchPendingJoinRequests(convId);
+      } else {
+        alert(data.message || 'Failed to reject request');
+      }
+    } catch (err) {
+      console.error('Reject request error:', err);
+      alert('Failed to reject request');
+    }
+  };
+
+  const handlePromoteMember = async (convId: number, memberUserId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/member-role`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId, role: 'Admin' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member promoted to Admin successfully.');
+      } else {
+        alert(data.message || 'Failed to promote member');
+      }
+    } catch (err) {
+      console.error('Promote member error:', err);
+      alert('Failed to promote member');
+    }
+  };
+
+  const handleDemoteMember = async (convId: number, memberUserId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/member-role`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId, role: 'Member' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member demoted successfully.');
+      } else {
+        alert(data.message || 'Failed to demote member');
+      }
+    } catch (err) {
+      console.error('Demote member error:', err);
+      alert('Failed to demote member');
+    }
+  };
+
+  const handleRemoveGroupMember = async (convId: number, memberUserId: number) => {
+    if (!confirm('Are you sure you want to remove this member from the group?')) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/remove-member`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member removed successfully.');
+      } else {
+        alert(data.message || 'Failed to remove member');
+      }
+    } catch (err) {
+      console.error('Remove member error:', err);
+      alert('Failed to remove member');
+    }
+  };
+
+  const handleUpdateSetting = async (convId: number, key: string, value: any) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/settings`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActiveConv(prev => {
+          if (!prev) return null;
+          const currentSettings = prev.groupSettings ? (typeof prev.groupSettings === 'string' ? JSON.parse(prev.groupSettings) : prev.groupSettings) : {};
+          const updatedSettings = { ...currentSettings, [key]: value };
+          return {
+            ...prev,
+            groupSettings: updatedSettings,
+            ...(key === 'canMembersMessage' ? { canMembersMessage: value === 'Everyone' || value === true } : {})
+          };
+        });
+      } else {
+        alert(data.message || 'Failed to update setting');
+      }
+    } catch (err) {
+      console.error('Failed to update setting', err);
+      alert('Failed to update setting');
+    }
+  };
+
+  useEffect(() => {
+    if (activeConv?.is_group && showDetails && (activeConv?.my_role === 'Admin' || activeConv?.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || ''))) {
+      fetchPendingJoinRequests(activeConv.id);
+    }
+  }, [activeConv?.id, activeConv?.is_group, activeConv?.my_role, showDetails, communityRole, fetchPendingJoinRequests]);
 
   const fetchAllCommunities = useCallback(async (search = '') => {
     setAllCommunitiesLoading(true);
@@ -365,20 +576,6 @@ export default function ChatPage() {
     }
   }, []);
 
-  const fetchIncomingRequests = useCallback(async (communityId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/incoming-requests?communityId=${communityId}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIncomingRequests(data.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching incoming requests:', err);
-    }
-  }, []);
 
   const handleRequestJoin = async (communityId: number) => {
     try {
@@ -405,54 +602,6 @@ export default function ChatPage() {
     }
   };
 
-  const handleApproveRequest = async (requestId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/join-request/${requestId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Request approved successfully!');
-        if (communityData?.id) {
-          await fetchIncomingRequests(communityData.id);
-          await fetchMyCommunity();
-        }
-      } else {
-        alert(data.message || 'Failed to approve request');
-      }
-    } catch (err) {
-      console.error('Error approving request:', err);
-      alert('Error approving request');
-    }
-  };
-
-  const handleRejectRequest = async (requestId: number) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetch(`/api/community/join-request/${requestId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Request rejected successfully!');
-        if (communityData?.id) {
-          await fetchIncomingRequests(communityData.id);
-        }
-      } else {
-        alert(data.message || 'Failed to reject request');
-      }
-    } catch (err) {
-      console.error('Error rejecting request:', err);
-      alert('Error rejecting request');
-    }
-  };
 
   const handleAcceptInvite = async (inviteId: number) => {
     try {
@@ -617,11 +766,10 @@ export default function ChatPage() {
         setInviteSuccess(data.message);
         setUserSearchQuery('');
         setUserSearchResults([]);
-        setSelectedUserForInvite(null);
       } else {
         setInviteError(data.message || 'Invitation failed');
       }
-    } catch (err) {
+    } catch {
       setInviteError('Error inviting member');
     } finally {
       setInviteLoading(false);
@@ -1067,9 +1215,11 @@ export default function ChatPage() {
 
   const setActiveConversation = useCallback((conversation: Conversation, updateUrl = true) => {
     setActiveConv(conversation);
+    setShowMobileSidebar(false);
     setMessages([]);
     setTasks([]);
     setActiveTab('chat');
+    setDetailsTab('members');
     localStorage.setItem('take_one_last_conversation', String(conversation.id));
 
     // Clear unread for this conversation locally
@@ -1383,32 +1533,6 @@ export default function ChatPage() {
     }, 2000);
   };
 
-  const createGroupConversation = useCallback(async (name: string, userIds: number[]) => {
-    setState('loading');
-    setStatusText('Creating group transmission...');
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-    const res = await fetchWithCSRF('/api/chat/conversations/group', {
-      method: 'POST',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      body: JSON.stringify({ name, userIds })
-    });
-    
-    if (res.status === 401) { window.location.href = '/?auth=login'; return; }
-    const json = await res.json();
-
-    if (!res.ok || !json.success) {
-      setState('error');
-      setStatusText(json.message || 'Could not create group.');
-      return;
-    }
-
-    const conversation = json.data as Conversation;
-    setConversations((current) => [conversation, ...current]);
-    setActiveConversation(conversation);
-    setState('ready');
-  }, [setActiveConversation]);
-
   const handleNavigateToCommunity = async (comm: any) => {
     setInCommunity(true);
     setCommunityData(comm);
@@ -1625,14 +1749,40 @@ export default function ChatPage() {
       });
     };
 
+    const handleConversationUpdate = (updatedConv: any) => {
+      setConversations(current => {
+        const index = current.findIndex(c => c.id === updatedConv.id);
+        if (index > -1) {
+          const newConvs = [...current];
+          newConvs[index] = {
+            ...newConvs[index],
+            ...updatedConv
+          };
+          return newConvs;
+        }
+        return current;
+      });
+      setActiveConv(current => {
+        if (current && current.id === updatedConv.id) {
+          return {
+            ...current,
+            ...updatedConv
+          };
+        }
+        return current;
+      });
+    };
+
     // Binding reference listeners
     userChannel.bind('credit-update', handleCreditUpdate);
     userChannel.bind('message-notification', handleMessageNotification);
+    userChannel.bind('conversation-update', handleConversationUpdate);
 
     // Strict explicit event teardown block
     return () => {
       userChannel.unbind('credit-update', handleCreditUpdate);
       userChannel.unbind('message-notification', handleMessageNotification);
+      userChannel.unbind('conversation-update', handleConversationUpdate);
       pusherRef.current?.unsubscribe(userChannelName);
     };
   }, [user?.id, activeConv?.id, fetchConversations]);
@@ -1916,16 +2066,33 @@ export default function ChatPage() {
       }
     };
 
+    const handleSettingsUpdated = (data: { conversationId: number, canMembersMessage: boolean, conversation?: any }) => {
+      setActiveConv(prev => {
+        if (prev && prev.id === data.conversationId) {
+          return { ...prev, canMembersMessage: data.canMembersMessage, ...(data.conversation || {}) };
+        }
+        return prev;
+      });
+      setConversations(prev => prev.map(c => {
+        if (c.id === data.conversationId) {
+          return { ...c, canMembersMessage: data.canMembersMessage, ...(data.conversation || {}) };
+        }
+        return c;
+      }));
+    };
+
     // Binding reference handlers
     channel.bind('new-message', handleNewMessage);
     channel.bind('user-typing', handleUserTyping);
     channel.bind('task-update', handleTaskUpdate);
+    channel.bind('settings-updated', handleSettingsUpdated);
 
     // Explicit channel and handler teardown phase
     return () => {
       channel.unbind('new-message', handleNewMessage);
       channel.unbind('user-typing', handleUserTyping);
       channel.unbind('task-update', handleTaskUpdate);
+      channel.unbind('settings-updated', handleSettingsUpdated);
       pusherRef.current?.unsubscribe(channelName);
     };
   }, [activeConv, user?.id]);
@@ -2035,6 +2202,7 @@ export default function ChatPage() {
   return (
     <div className="chat-page">
       <header className="global-header">
+        <a href="/" className="logo">TAKE <span>ONE</span></a>
         <nav>
           <a href="/#explore">Discover Projects</a>
           <a href="/crew">Find Crew</a>
@@ -2084,7 +2252,7 @@ export default function ChatPage() {
                   title={comm.name}
                 >
                   {comm.logo_url ? (
-                    <img src={comm.logo_url} alt={comm.name} />
+                    <img src={cacheBustUrl(comm.logo_url, comm.updated_at)} alt={comm.name} />
                   ) : (
                     initials
                   )}
@@ -2127,7 +2295,11 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <aside className="chat-sidebar">
+        <aside
+  className={`chat-sidebar ${
+    !showMobileSidebar ? 'mobile-hidden' : ''
+  }`}
+>
           <div className="sidebar-header">
             <div className="sidebar-title-row">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2202,7 +2374,7 @@ export default function ChatPage() {
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '12px' }}>
                     {communityData.logo_url ? (
-                      <img src={communityData.logo_url} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                      <img src={cacheBustUrl(communityData.logo_url, communityData.updated_at)} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
                     ) : (
                       <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '18px', color: 'var(--neon)' }}>
                         {communityData.name.charAt(0).toUpperCase()}
@@ -2343,12 +2515,23 @@ export default function ChatPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Members ({communityData.members?.length || 0})</h4>
                       {['Owner', 'Moderator'].includes(communityRole || '') && (
-                        <button 
-                          onClick={() => setIsInviteModalOpen(true)} 
-                          style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                          Invite
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => {
+                              fetchCommunityInvitations();
+                              setIsInvitationsManagementModalOpen(true);
+                            }} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--cream)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Manage
+                          </button>
+                          <button 
+                            onClick={() => setIsInviteModalOpen(true)} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Invite
+                          </button>
+                        </div>
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -2450,7 +2633,7 @@ export default function ChatPage() {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {inv.community.logo_url ? (
-                            <img src={inv.community.logo_url} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
+                            <img src={cacheBustUrl(inv.community.logo_url, inv.community.updated_at)} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
                           ) : (
                             <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', color: 'var(--neon)' }}>
                               {inv.community.name.charAt(0).toUpperCase()}
@@ -2508,7 +2691,7 @@ export default function ChatPage() {
                     aria-pressed={activeConv?.id === conv.id}
                   >
                     <img
-                      src={conv.is_group ? (conv.avatar_url || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
+                      src={conv.is_group ? (cacheBustUrl(conv.avatar_url, conv.updated_at) || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
                       alt=""
                       className="conv-avatar"
                       loading="lazy" decoding="async"
@@ -2741,10 +2924,16 @@ export default function ChatPage() {
           ) : activeConv ? (
             <>
               <header className="chat-header">
+                <button
+  className="mobile-back-btn"
+  onClick={() => setShowMobileSidebar(true)}
+>
+  ←
+</button>
                 <div className="header-left">
                   <div className="header-avatar-container" onClick={() => setShowDetails(!showDetails)} style={{ cursor: 'pointer' }}>
                     <img
-                      src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
+                      src={activeConv.is_group ? (cacheBustUrl(activeConv.avatar_url, activeConv.updated_at) || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
                       alt=""
                       className="header-avatar"
                       loading="lazy" decoding="async"
@@ -3094,7 +3283,7 @@ export default function ChatPage() {
                     <div className="details-main-info">
                       <div className="details-avatar-wrapper">
                         <img 
-                          src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
+                          src={activeConv.is_group ? (cacheBustUrl(activeConv.avatar_url, activeConv.updated_at) || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
                           alt="" 
                           className="details-avatar" 
                           loading="lazy" decoding="async"
@@ -3166,28 +3355,231 @@ export default function ChatPage() {
                               Save
                             </button>
                           </div>
+                          {/* We removed the old Messaging Permissions block here because it is now inside the Settings Tab */}
                         </div>
                       )}
                     </div>
 
-                    {activeConv.is_group ? (
-                      <div className="details-section">
-                        <div className="section-title">Members ({activeConv.users.length})</div>
-                        <div className="details-members-list">
-                          {activeConv.users.map(u => (
-                            <div key={u.id} className="member-item">
-                              <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" loading="lazy" decoding="async" />
-                              <div className="member-info">
-                                <span className="member-name">{u.name}</span>
-                                <span className="member-role">{u.role_in_group || 'Member'}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="details-actions">
-                          <button className="details-btn danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
-                        </div>
+                    {/* Tab Navigation for Group Details */}
+                    {activeConv.is_group && (activeConv.my_role === 'Admin' || activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || '')) && (
+                      <div style={{ display: 'flex', borderBottom: '1px solid rgba(232,232,224,0.1)', width: '100%', marginBottom: '16px' }}>
+                        <button 
+                          onClick={() => setDetailsTab('members')}
+                          style={{
+                            flex: 1,
+                            padding: '10px 0',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: detailsTab === 'members' ? '2px solid var(--neon)' : '2px solid transparent',
+                            color: detailsTab === 'members' ? 'var(--neon)' : '#a0a0a0',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Members
+                        </button>
+                        <button 
+                          onClick={() => setDetailsTab('settings')}
+                          style={{
+                            flex: 1,
+                            padding: '10px 0',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: detailsTab === 'settings' ? '2px solid var(--neon)' : '2px solid transparent',
+                            color: detailsTab === 'settings' ? 'var(--neon)' : '#a0a0a0',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Settings
+                        </button>
                       </div>
+                    )}
+
+                    {activeConv.is_group ? (
+                      detailsTab === 'members' ? (
+                        <div className="details-section">
+                          {/* Pending join requests section */}
+                          {(activeConv.my_role === 'Admin' || activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || '')) && (joinRequestsLoading || pendingJoinRequests.length > 0) && (
+                            <div style={{ marginBottom: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div className="section-title" style={{ color: 'var(--neon)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Join Requests {pendingJoinRequests.length > 0 && `(${pendingJoinRequests.length})`}</span>
+                              </div>
+                              {joinRequestsLoading ? (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>Loading requests...</div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                                  {pendingJoinRequests.map(req => (
+                                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <img src={getAvatarUrl(req.user.name, req.user.gender || 'Other', req.user.avatar_url)} alt="" className="mini-avatar" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                                        <span style={{ fontSize: '13px', color: '#e8e8e0' }}>{req.user.name}</span>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button 
+                                          onClick={() => handleApproveJoinRequest(activeConv.id, req.id)}
+                                          style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                                        >
+                                          Approve
+                                        </button>
+                                        <button 
+                                          onClick={() => handleRejectJoinRequest(activeConv.id, req.id)}
+                                          style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                                        >
+                                          Reject
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="section-title">Members ({activeConv.users.length})</div>
+                          <div className="details-members-list">
+                            {activeConv.users.map(u => {
+                              const isMe = u.id === user?.id;
+                              const canManageUser = !isMe && (activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || ''));
+                              return (
+                                <div key={u.id} className="member-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" loading="lazy" decoding="async" />
+                                    <div className="member-info">
+                                      <span className="member-name" style={{ color: isMe ? 'var(--neon)' : '#e8e8e0' }}>{u.name} {isMe && '(You)'}</span>
+                                      <span className="member-role" style={{ 
+                                        fontSize: '11px', 
+                                        color: u.role_in_group === 'Director' ? '#ef4444' : u.role_in_group === 'Admin' ? 'var(--neon)' : '#888',
+                                        background: u.role_in_group === 'Director' ? 'rgba(239,68,68,0.1)' : u.role_in_group === 'Admin' ? 'rgba(0,255,200,0.1)' : 'transparent',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        marginLeft: '4px'
+                                      }}>
+                                        {u.role_in_group || 'Member'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  {canManageUser && (
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      {u.role_in_group !== 'Admin' && u.role_in_group !== 'Director' && (
+                                        <button 
+                                          onClick={() => handlePromoteMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(0,255,200,0.15)', color: 'var(--neon)', border: '1px solid var(--neon)', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Promote to Admin"
+                                        >
+                                          Promote
+                                        </button>
+                                      )}
+                                      {u.role_in_group === 'Admin' && (
+                                        <button 
+                                          onClick={() => handleDemoteMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(255,255,255,0.1)', color: '#ccc', border: '1px solid #555', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Demote to Member"
+                                        >
+                                          Demote
+                                        </button>
+                                      )}
+                                      {u.role_in_group !== 'Director' && (
+                                        <button 
+                                          onClick={() => handleRemoveGroupMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Remove from Group"
+                                        >
+                                          Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="details-actions" style={{ marginTop: '16px' }}>
+                            <button className="details-btn danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Settings Tab */
+                        <div className="details-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {(() => {
+                            const settings = activeConv.groupSettings ? (typeof activeConv.groupSettings === 'string' ? JSON.parse(activeConv.groupSettings) : activeConv.groupSettings) : {};
+                            return (
+                              <>
+                                {/* 1. Visibility */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Group Visibility</label>
+                                  <select 
+                                    value={settings.visibility || 'Public'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'visibility', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Public">Public (Anyone can view in list)</option>
+                                    <option value="Private">Private (Hidden from lists)</option>
+                                  </select>
+                                </div>
+
+                                {/* 2. Who Can Join */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Join</label>
+                                  <select 
+                                    value={settings.joinPolicy || 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'joinPolicy', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Approval Required">Approval Required</option>
+                                    <option value="Invite Only">Invite Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 3. Who Can Send Messages */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Send Messages</label>
+                                  <select 
+                                    value={settings.canMembersMessage === false || settings.canMembersMessage === 'Admins Only' ? 'Admins Only' : 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersMessage', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Admins Only">Admins Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 4. Who Can Add Members */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Invite Members</label>
+                                  <select 
+                                    value={settings.canMembersInvite === false || settings.canMembersInvite === 'Admins Only' ? 'Admins Only' : 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersInvite', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Admins Only">Admins Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 5. Who Can Edit Group Details */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Edit Group Details</label>
+                                  <select 
+                                    value={settings.canMembersEdit || 'Admins and Owner'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersEdit', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Owner Only">Owner Only</option>
+                                    <option value="Admins and Owner">Admins and Owner</option>
+                                  </select>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )
                     ) : (
                       <div className="details-section">
                         <div className="section-title">Field Intel</div>
@@ -3234,12 +3626,23 @@ export default function ChatPage() {
                       ref={inputRef}
                       type="text"
                       className="chat-input"
-                      placeholder={(!activeConv?.is_group && activeRecipient?.id === -1) ? 'This user is no longer available.' : `Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`}
+                      placeholder={
+                        (!activeConv?.is_group && activeRecipient?.id === -1) 
+                          ? 'This user is no longer available.' 
+                          : isMessagingRestricted 
+                            ? 'Only admins can send messages in this group.' 
+                            : `Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`
+                      }
                       value={newMessage}
                       onChange={onInputChange}
-                      disabled={sending || (!activeConv?.is_group && activeRecipient?.id === -1)}
+                      disabled={sending || (!activeConv?.is_group && activeRecipient?.id === -1) || isMessagingRestricted}
                     />
-                    <button type="submit" className="send-btn" disabled={!newMessage.trim() || sending || (!activeConv?.is_group && activeRecipient?.id === -1)} aria-label="Send message">
+                    <button 
+                      type="submit" 
+                      className="send-btn" 
+                      disabled={!newMessage.trim() || sending || (!activeConv?.is_group && activeRecipient?.id === -1) || isMessagingRestricted} 
+                      aria-label="Send message"
+                    >
                       <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                   </div>
@@ -3286,9 +3689,6 @@ export default function ChatPage() {
         conversationId={activeConv?.id || 0} 
         members={activeConv?.users || []} 
         onCreate={createTask} 
-        myRole={activeConv?.my_role || 'Member'}
-        isGroup={activeConv?.is_group || false}
-        globalRole={user?.role || 'Member'}
       />
 
       {isCommunityModalOpen && (
@@ -3499,7 +3899,7 @@ export default function ChatPage() {
           <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Invite Members</h3>
-              <button onClick={() => { setIsInviteModalOpen(false); setUserSearchQuery(''); setUserSearchResults([]); setSelectedUserForInvite(null); setInviteError(''); setInviteSuccess(''); }} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => { setIsInviteModalOpen(false); setUserSearchQuery(''); setUserSearchResults([]); setInviteError(''); setInviteSuccess(''); }} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -3736,6 +4136,154 @@ export default function ChatPage() {
         </div>
       )}
 
+      {isInvitationsManagementModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1010, backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '650px', maxWidth: '95%', display: 'flex', flexDirection: 'column', gap: '20px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)', maxHeight: '80vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)', fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>
+                ✉️ Community Invitations Dashboard
+              </h2>
+              <button 
+                onClick={() => setIsInvitationsManagementModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              {invitationsLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '150px', color: 'var(--neon)', fontSize: '14px' }}>
+                  Loading invitations...
+                </div>
+              ) : invitationsList.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '150px', color: '#666', fontStyle: 'italic', gap: '8px' }}>
+                  <span>No invitations found for this community.</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {invitationsList.map((inv: any) => {
+                    const isExpired = inv.expiresAt ? new Date(inv.expiresAt) < new Date() : false;
+                    const canCancel = inv.status === 'PENDING' && !isExpired;
+                    const canResend = inv.status === 'PENDING' || inv.status === 'CANCELLED' || isExpired;
+
+                    return (
+                      <div 
+                        key={inv.id} 
+                        style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '10px', 
+                          background: 'rgba(255,255,255,0.02)', 
+                          padding: '12px 16px', 
+                          borderRadius: '8px', 
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          transition: 'border-color 0.2s ease-in-out' 
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--cream)' }}>
+                              Invited: {inv.invitee ? `${inv.invitee.name} (@${inv.invitee.screen_name})` : inv.email}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>
+                              Sent by: <strong>{inv.inviter?.name || 'Owner'}</strong> • Created: {new Date(inv.createdAt).toLocaleDateString()}
+                            </div>
+                            {inv.expiresAt && (
+                              <div style={{ fontSize: '11px', color: isExpired ? '#ff4d4d' : '#888', marginTop: '2px' }}>
+                                {isExpired ? 'Expired' : `Expires: ${new Date(inv.expiresAt).toLocaleString()}`}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span 
+                              style={{ 
+                                fontSize: '10px', 
+                                padding: '3px 8px', 
+                                borderRadius: '12px', 
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                background: isExpired 
+                                  ? 'rgba(255,77,77,0.1)' 
+                                  : inv.status === 'ACCEPTED' 
+                                    ? 'rgba(77,255,77,0.1)' 
+                                    : inv.status === 'REJECTED' 
+                                      ? 'rgba(255,77,77,0.1)' 
+                                      : 'rgba(255,255,255,0.05)',
+                                color: isExpired 
+                                  ? '#ff4d4d' 
+                                  : inv.status === 'ACCEPTED' 
+                                    ? '#4dff4d' 
+                                    : inv.status === 'REJECTED' 
+                                      ? '#ff4d4d' 
+                                      : '#e8e8e0',
+                                border: `1px solid ${
+                                  isExpired 
+                                    ? 'rgba(255,77,77,0.2)' 
+                                    : inv.status === 'ACCEPTED' 
+                                      ? 'rgba(77,255,77,0.2)' 
+                                      : inv.status === 'REJECTED' 
+                                        ? 'rgba(255,77,77,0.2)' 
+                                        : 'rgba(255,255,255,0.1)'
+                                }`
+                              }}
+                            >
+                              {isExpired ? 'EXPIRED' : inv.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        {(canCancel || canResend) && (
+                          <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px', marginTop: '4px' }}>
+                            {canCancel && (
+                              <button
+                                onClick={() => cancelInvitation(inv.id)}
+                                style={{ 
+                                  padding: '5px 12px', 
+                                  fontSize: '11px', 
+                                  borderRadius: '4px', 
+                                  background: 'transparent', 
+                                  color: '#ff4d4d', 
+                                  border: '1px solid rgba(255,77,77,0.3)', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s' 
+                                }}
+                              >
+                                Cancel Invitation
+                              </button>
+                            )}
+                            {canResend && (
+                              <button
+                                onClick={() => resendInvitation(inv.id)}
+                                style={{ 
+                                  padding: '5px 12px', 
+                                  fontSize: '11px', 
+                                  borderRadius: '4px', 
+                                  background: 'rgba(255,77,26,0.15)', 
+                                  color: '#fff', 
+                                  border: '1px solid var(--neon)', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s' 
+                                }}
+                              >
+                                Resend Invitation
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAutoInviteModal && autoInviteToHandle && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1020, backdropFilter: 'blur(8px)' }}>
           <div style={{ background: '#121212', border: '1px solid var(--neon)', borderRadius: '12px', padding: '30px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', color: '#fff', textAlign: 'center', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.25)' }}>
@@ -3750,7 +4298,7 @@ export default function ChatPage() {
             </div>
 
             {autoInviteToHandle.community?.logo_url ? (
-              <img src={autoInviteToHandle.community.logo_url} alt="" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+              <img src={cacheBustUrl(autoInviteToHandle.community.logo_url, autoInviteToHandle.community.updated_at)} alt="" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
             ) : (
               <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '32px', fontWeight: 'bold', color: 'var(--neon)' }}>
                 {autoInviteToHandle.community?.name?.charAt(0).toUpperCase()}

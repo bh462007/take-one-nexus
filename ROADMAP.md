@@ -15,7 +15,7 @@ Welcome to the TAKE ONE Nexus Roadmap! This document outlines our strategic visi
 - [🟡 Phase 2: Production Hardening & Decoupling](#-phase-2-production-hardening--decoupling-completed)
 - [🔵 Phase 3: The AI Production Board](#-phase-3-the-ai-production-board-upcoming)
 - [🟣 Phase 4: Expansion & Ecosystem](#-phase-4-expansion--ecosystem)
-- [🌐 Open Source Programs](#-open-source-programs)
+- [🌐 Community & Collaboration Programs](#-community--collaboration-programs)
 
 ---
 
@@ -54,9 +54,9 @@ Welcome to the TAKE ONE Nexus Roadmap! This document outlines our strategic visi
 
 ---
 
-## 🌐 Open Source Programs
+## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26.
 
-Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
 

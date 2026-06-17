@@ -37,7 +37,7 @@ export default function DeveloperIssuesPage() {
       } else {
         setError(data.message || 'Failed to load issues');
       }
-    } catch (err) {
+    } catch {
       setError('Network error');
     } finally {
       setLoading(false);
@@ -46,7 +46,6 @@ export default function DeveloperIssuesPage() {
 
   useEffect(() => {
     fetchIssues();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateStatus = async (id: number, status: string) => {

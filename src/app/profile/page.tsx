@@ -1,5 +1,5 @@
 import React from 'react';
-import { Metadata, ResolvingMetadata } from 'next';
+import { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { getCanonicalDisplayName } from '@/utils/formatting';
@@ -17,8 +17,7 @@ type Props = {
 }
 
 export async function generateMetadata(
-  { params, searchParams }: Props,
-  parent: ResolvingMetadata
+  { params, searchParams }: Props
 ): Promise<Metadata> {
   try {
     await params;
@@ -33,16 +32,14 @@ export async function generateMetadata(
       title: `${user.name || 'Creator'} — TAKE ONE`,
       description: user.bio || `Creator profile on TAKE ONE.`,
     };
-  } catch (error) {
+  } catch {
     return { title: 'Profile — TAKE ONE' };
   }
 }
 
 export default async function ProfilePage({ 
-  params, 
   searchParams 
 }: { 
-  params: Promise<{ id?: string }>, 
   searchParams: Promise<{ [key: string]: string | string[] | undefined }> 
 }) {
   try {
@@ -118,7 +115,6 @@ export default async function ProfilePage({
     
     // Display Name Logic
     const displayName = getCanonicalDisplayName(user);
-    const credits = user?.credits || 0;
     const availability = user?.availability || 'Available';
 
     return (
@@ -982,9 +978,7 @@ export default async function ProfilePage({
   } catch (criticalError: any) {
     console.error('[CRITICAL_PROFILE_RENDER_FAILURE]:', criticalError?.message);
     
-    // Attempt to extract helpful details for debugging
     const errorMsg = criticalError?.message || 'Unknown render failure';
-    const errorStack = criticalError?.stack || '';
 
     return (
       <div className="profile-error-fallback" style={{ background: '#06080A', color: '#E8DFC8', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center', position: 'relative' }}>
