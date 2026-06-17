@@ -868,6 +868,10 @@ nav a:hover::after { width: 100%; }
   .message-bubble {
     max-width: 85%;
   }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 .mobile-back-btn {
   display: none;
