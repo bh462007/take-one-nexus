@@ -491,13 +491,8 @@ router.post('/logout', (req, res) => {
     console.log(`[AUTH_DEBUG] Logout request received. Clearing auth token cookie.`);
   }
 
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'None' : 'Lax',
-    path: '/',
-    domain: isProd && !Boolean(process.env.VERCEL_URL?.includes('vercel.app')) ? '.takeone-nexus.net.in' : undefined
-  });
+  res.clearCookie('token', getCookieOptions());
+  
   res.json({
     success: true,
     message: 'Logged out successfully'
