@@ -491,7 +491,9 @@ router.post('/logout', (req, res) => {
     console.log(`[AUTH_DEBUG] Logout request received. Clearing auth token cookie.`);
   }
 
-  res.clearCookie('token', getCookieOptions());
+  const cookieOpts = getCookieOptions();
+  delete cookieOpts.maxAge;
+  res.clearCookie('token', cookieOpts);
   
   res.json({
     success: true,
