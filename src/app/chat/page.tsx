@@ -2231,7 +2231,12 @@ export default function ChatPage() {
           <a href="/#explore">Discover Projects</a>
           <a href="/crew">Find Crew</a>
           <a href="/leaderboard">Leaderboard</a>
-          <a href="/#upload">Share Your Script</a>
+          <a href="/chat" className="active">Community</a>
+          {(!user?.role || ['director', 'writer', 'producer'].includes(user.role.toLowerCase())) ? (
+            <a href="/#upload">Share Your Script</a>
+          ) : (
+            <a href="/#explore">Workspace</a>
+          )}
           <a href="/profile">Profile</a>
           {user?.role && ['admin', 'developer', 'moderator'].includes(user.role.toLowerCase()) && (
             <a href="https://admin.takeone-nexus.net.in" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>

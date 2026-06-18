@@ -132,7 +132,13 @@ export default async function ProfilePage({
             <a href="/#explore">Discover Projects</a>
             <a href="/crew">Find Crew</a>
             <a href="/leaderboard">Leaderboard</a>
-            <a href="/chat" className="nav-chat-link">Messages</a>
+            <a href="/chat" className="nav-chat-link">Community</a>
+            {(!user?.role || ['director', 'writer', 'producer'].includes(user.role.toLowerCase())) ? (
+              <a href="/#upload">Share Your Script</a>
+            ) : (
+              <a href="/#explore">Workspace</a>
+            )}
+            <a href="/profile" className="active">Profile</a>
             {isOwner && <button className="profile-logout" id="profileLogoutBtn" type="button">Logout</button>}
           </nav>
         </header>

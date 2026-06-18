@@ -1,6 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import prisma from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 import LeaderboardClient from './LeaderboardClient';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,7 @@ async function getLeaderboardData() {
 
 export default async function LeaderboardPage() {
   const initialUsers = await getLeaderboardData();
+  const user = await getCurrentUser();
   
   const pusherConfig = {
     key: process.env.NEXT_PUBLIC_PUSHER_KEY || '',
@@ -52,9 +54,13 @@ export default async function LeaderboardPage() {
           <a href="/#explore">Discover Projects</a>
           <a href="/crew">Find Crew</a>
           <a href="/leaderboard" className="active">Leaderboard</a>
-          <a href="/#upload">Share Your Script</a>
+          <a href="/chat" className="nav-chat-link">Community</a>
+          {(!user?.role || ['director', 'writer', 'producer'].includes(user.role.toLowerCase())) ? (
+            <a href="/#upload">Share Your Script</a>
+          ) : (
+            <a href="/#explore">Workspace</a>
+          )}
           <a href="/profile">Profile</a>
-          <a href="/chat" className="nav-chat-link">Messages</a>
         </nav>
       </header>
 

@@ -7,6 +7,8 @@ const Navbar = {
     config: [
         { label: 'Discover Projects', href: '/#explore' },
         { label: 'Find Crew', href: '/crew', id: 'navCrewLink' },
+        { label: 'Leaderboard', href: '/leaderboard' },
+        { label: 'Community', href: '/chat' },
         { label: 'Share Your Script', href: '/#upload', id: 'navUploadLink' },
         { label: 'Profile', href: '/profile' }
     ],
@@ -31,10 +33,7 @@ const Navbar = {
                 const creatorRoles = ['director', 'writer', 'producer'];
                 
                 if (creatorRoles.includes(role)) {
-                    label = user.role; // Use specific role like 'Director'
-                } else if (role && role !== 'crew' && role !== 'admin') {
-                    label = user.role; // Use specific role like 'Cinematographer'
-                    href = '/#explore';
+                    label = 'Share Your Script';
                 } else {
                     label = 'Workspace';
                     href = '/#explore';
