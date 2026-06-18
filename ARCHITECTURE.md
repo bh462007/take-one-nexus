@@ -190,9 +190,13 @@ Strict HTTP headers are enforced globally via Next.js configurations and Helmet 
 
 ## 8. Observability
 
+### Graphifyy Analytics
+- **Used for**: Privacy-friendly web telemetry, user engagement tracking, and page load performance insights.
+- **Privacy**: Cookies-free, lightweight tracker executing client-side with full user privacy conservation.
+
 ### PostHog (`src/lib/posthog.ts`)
-- **Used for**: Frontend analytics, session replay, feature flags.
-- **Privacy**: Input masking enabled by default. Sensitive fields (passwords, tokens, keys) are stripped from attributes prior to transmission.
+- **Used for**: Frontend behavioral analytics, session replay, and feature flags.
+- **Privacy**: Input masking enabled by default. Sensitive fields (passwords, tokens, keys) are stripped from attributes prior to transmission. Gated by GDPR cookie consent.
 
 ### Sentry (`src/lib/sentry.ts`)
 - **Used for**: Backend API failure logging, database execution error monitoring.
@@ -229,7 +233,9 @@ Pusher WebSockets drive the live creative interaction layers:
 
 ## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26.
+TAKE ONE – NEXUS is developed as an open-source collaboration platform and participates in community-driven development initiatives:
+* **NSoC'26 (Nexus Spring of Code 2026)**: Supported development of the core architecture, real-time chat, security layers, and moderation modules.
+* **GSSoC'26 (GirlScript Summer of Code 2026)**: Participating to build out community discovery features, invite/request boards, and advanced crew analytics.
 
 Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
 

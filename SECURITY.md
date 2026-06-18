@@ -8,6 +8,7 @@ We currently provide security updates and patches for the following versions of 
 
 | Version | Supported          |
 | ------- | ------------------ |
+| v2.1.x  | :white_check_mark: |
 | v2.0.x  | :white_check_mark: |
 | v1.x.x  | :x:                |
 
@@ -23,6 +24,8 @@ If you discover a security vulnerability, we kindly ask that you do **not** repo
 
 We will work diligently to validate and fix the vulnerability. Once resolved, we will notify you and may publicly acknowledge your contribution (with your permission).
 
+---
+
 ## 🔒 Security Architecture & Best Practices
 
 To maintain a secure ecosystem, we adhere to the following security architectures:
@@ -32,7 +35,8 @@ We implement a stateless **Double-Submit Cookie Pattern** globally on all state-
 - On every response, the server sets a JS-readable cookie `csrf_token` with `SameSite: strict` (and `Secure` in production).
 - The client-side (Next.js/admin panel) reads this token from the cookie and must include it in the `X-CSRF-Token` request header.
 - The server checks if the header matches the cookie in constant-time to block unauthorized cross-site requests.
-- Razorpay Webhooks and GET/OPTIONS routes are exempt.
+- **Local Dev Exception**: In local development (`NODE_ENV !== 'production'`), the `secure` cookie flag is disabled to support requests made on unencrypted `http://localhost`.
+- Razorpay Webhooks and GET/OPTIONS routes are exempt from CSRF validation.
 
 ### 2. Authentication & Subdomain Session Sharing
 - Session validation uses JSON Web Tokens (JWT) signed with a robust key (`JWT_SECRET`).
@@ -42,7 +46,7 @@ We implement a stateless **Double-Submit Cookie Pattern** globally on all state-
 
 ### 3. Granular Rate Limiting
 Endpoint-specific rate limiters are applied on both the Next.js API router and Express middleware:
-**Persistence**: Rate limit counters are stored in an in-memory sliding-window store, ensuring lightweight execution with no external infrastructure dependencies.
+- **Persistence**: Rate limit counters are stored in an in-memory sliding-window store, ensuring lightweight execution with no external infrastructure dependencies (e.g. Redis).
 - **Authentication**: Login requests are limited to 5 requests per 15 minutes. Registration is limited to 3 attempts per hour.
 - **Payments**: Order creation, verification, and cancellations are strictly restricted to 10 requests per 15 minutes to prevent order-flooding and brute-forcing.
 - **Portfolios**: Portfolio script uploads bypass the moderation queue but are limited to 20 uploads per hour.
@@ -62,7 +66,8 @@ Endpoint-specific rate limiters are applied on both the Next.js API router and E
 
 ## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26.
+TAKE ONE – NEXUS is developed as an open-source collaboration platform and participates in community-driven development initiatives:
+* **NSoC'26 (Nexus Spring of Code 2026)**: Supported development of the core security architecture, double-submit CSRF, and JWT authorization rules.
+* **GSSoC'26 (GirlScript Summer of Code 2026)**: Participating to build secure member management boards and invite/request validations.
 
 Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
-
