@@ -4,34 +4,8 @@ const { authenticateUser, requireRole, requireVerified } = require('../middlewar
 
 const router = express.Router();
 
-async function ensureReportsTable() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS moderation_reports (
-      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-      reporter_id INT UNSIGNED NOT NULL,
-      target_type VARCHAR(40) NOT NULL,
-      target_id INT UNSIGNED DEFAULT NULL,
-      reason VARCHAR(160) NOT NULL,
-      details TEXT DEFAULT NULL,
-      status VARCHAR(40) NOT NULL DEFAULT 'open',
-      moderator_notes TEXT DEFAULT NULL,
-      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      KEY idx_reports_status (status, created_at),
-      KEY idx_reports_reporter (reporter_id),
-      CONSTRAINT fk_reports_reporter
-        FOREIGN KEY (reporter_id)
-        REFERENCES users(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-    )
-  `);
-}
-
 router.post('/reports', authenticateUser, requireVerified, async (req, res) => {
   try {
-    await ensureReportsTable();
 
     const targetType = String(req.body.target_type || 'general').trim().toLowerCase();
     const reason = String(req.body.reason || '').trim();
@@ -75,8 +49,6 @@ router.post('/reports', authenticateUser, requireVerified, async (req, res) => {
 
 router.get('/reports', authenticateUser, requireRole(['Moderator', 'Admin', 'Developer']), async (req, res) => {
   try {
-    await ensureReportsTable();
-
     const status = String(req.query.status || '').trim().toLowerCase();
     const params = [];
     let where = '';
@@ -95,11 +67,15 @@ router.get('/reports', authenticateUser, requireRole(['Moderator', 'Admin', 'Dev
         moderation_reports.details,
         moderation_reports.status,
         moderation_reports.moderator_notes,
+        moderation_reports.moderator_id,
         moderation_reports.created_at,
-        users.name AS reporter_name,
-        users.email AS reporter_email
+        reporter.name AS reporter_name,
+        reporter.email AS reporter_email,
+        moderator.name AS moderator_name,
+        moderator.email AS moderator_email
        FROM moderation_reports
-       JOIN users ON users.id = moderation_reports.reporter_id
+       JOIN users reporter ON reporter.id = moderation_reports.reporter_id
+       LEFT JOIN users moderator ON moderator.id = moderation_reports.moderator_id
        ${where}
        ORDER BY moderation_reports.created_at DESC
        LIMIT 80`,
@@ -122,8 +98,6 @@ router.get('/reports', authenticateUser, requireRole(['Moderator', 'Admin', 'Dev
 
 router.patch('/reports/:id', authenticateUser, requireRole(['Moderator', 'Admin', 'Developer']), async (req, res) => {
   try {
-    await ensureReportsTable();
-
     const status = String(req.body.status || '').trim().toLowerCase();
     const notes = String(req.body.moderator_notes || '').trim();
     const allowed = ['open', 'reviewing', 'resolved', 'dismissed'];
@@ -138,9 +112,10 @@ router.patch('/reports/:id', authenticateUser, requireRole(['Moderator', 'Admin'
     const [result] = await pool.query(
       `UPDATE moderation_reports
        SET status = ?,
-           moderator_notes = ?
+           moderator_notes = ?,
+           moderator_id = ?
        WHERE id = ?`,
-      [status, notes || null, Number(req.params.id)]
+      [status, notes || null, req.user.id, Number(req.params.id)]
     );
 
     if (result.affectedRows === 0) {

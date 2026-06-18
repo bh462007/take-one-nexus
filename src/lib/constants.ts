@@ -1,5 +1,6 @@
 export const USER_ROLES = [
   "Director",
+  "Photographer",
   "Cinematographer / DP",
   "Writer",
   "Editor",

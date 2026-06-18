@@ -47,15 +47,15 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ---
 
-## [Unreleased / Open Source Prep] - 2026-05
+## [Unreleased / Source-Available Prep] - 2026-05
 
 ### Added
-- **NSoC'26 Integration:** Audited and updated the entire documentation workspace to properly acknowledge and integrate support for NSoC'26 (Nexus Summer of Code '26). Added `Open Source Programs` sections across core repo manuals.
-- **Open Source Documentation:** Complete overhaul of documentation to make the repository production-grade and friendly for NSoC'26 and GSSoC 2026 contributors. Added `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`, and `SECURITY.md`.
+- **NSoC'26 Integration:** Audited and updated the entire documentation workspace to properly acknowledge and integrate support for NSoC'26 (Nexus Summer of Code '26). Added `Community Programs` sections across core repo manuals.
+- **Source-Available Documentation:** Complete overhaul of documentation to make the repository production-grade and friendly for NSoC'26 and GSSoC 2026 contributors. Added `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`, and `SECURITY.md`.
 - **GitHub Templates:** Added standard Issue and Pull Request templates in `.github`.
 
 ### Changed
-- Refactored `PROJECT_CONTEXT.md`, `ARCHITECTURE.md`, and `CODING_RULES.md` to align with professional open-source standards.
+- Refactored `PROJECT_CONTEXT.md`, `ARCHITECTURE.md`, and `CODING_RULES.md` to align with professional source-available standards.
 - Cleaned up legacy documentation and removed duplicated or incomplete markdown files.
 
 ---

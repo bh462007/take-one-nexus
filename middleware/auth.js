@@ -29,7 +29,14 @@ function authenticateUser(req, res, next) {
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'takeone_fallback_secret_32_chars_long';
+    // JWT_SECRET must be set explicitly. The fallback string was public in the
+    // repository; any deployment that omits the variable would silently use it
+    // and be vulnerable to token forgery. Throw early so the misconfiguration
+    // surfaces immediately rather than allowing forged tokens through.
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
     const decoded = jwt.verify(token, secret);
     
     // Attach user to request
@@ -57,6 +64,13 @@ function authenticateUser(req, res, next) {
     }
     console.error(`[AUTH_FAILURE] Token verification failed:`, error.message);
     
+    if (error.message === 'JWT_SECRET is not configured') {
+      return res.status(500).json({
+        success: false,
+        message: 'Authentication system is not configured. Please contact the administrator.'
+      });
+    }
+    
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
@@ -82,15 +96,11 @@ function requireRole(allowedRoles) {
     }
 
     const userRole = String(req.user.role || '').toLowerCase();
-    const isAuthorized = allowedRoles.some(role => role.toLowerCase() === userRole);
+    const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
+    const isAuthorized = allowedRoles.some(role => role.toLowerCase() === userRole) || secondaryRole === 'founder';
 
     // Special case for lead dev email override
-    const email = String(req.user.email || '').toLowerCase();
-    const isAdminOverride = 
-      email === 'aarushgupta289@gmail.com' || 
-      email === 'alok.r25012@csds.rishihood.edu.in';
-
-    if (!isAuthorized && !isAdminOverride) {
+    if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Requires one of these roles: ${allowedRoles.join(', ')}`
@@ -113,19 +123,13 @@ function requireSecondaryRole(allowedRoles) {
 
     const primaryRole = String(req.user.role || '').toLowerCase();
     const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
-    const email = String(req.user.email || '').toLowerCase();
-
-    // Admin email override always passes
-    const isAdminOverride =
-      email === 'aarushgupta289@gmail.com' ||
-      email === 'alok.r25012@csds.rishihood.edu.in';
 
     const isAuthorized = allowedRoles.some(role => {
       const r = role.toLowerCase();
       return primaryRole === r || secondaryRole === r;
-    });
+    }) || secondaryRole === 'founder';
 
-    if (!isAuthorized && !isAdminOverride) {
+    if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Requires one of: ${allowedRoles.join(', ')}`
@@ -140,14 +144,14 @@ function requireSecondaryRole(allowedRoles) {
  * Convenience middleware: requires primary role 'admin' OR secondary_role 'admin'
  */
 function requireAdmin(req, res, next) {
-  return requireSecondaryRole(['admin'])(req, res, next);
+  return requireSecondaryRole(['admin', 'founder'])(req, res, next);
 }
 
 /**
  * Convenience middleware: requires primary or secondary role 'moderator' or 'admin'
  */
 function requireModerator(req, res, next) {
-  return requireSecondaryRole(['admin', 'moderator'])(req, res, next);
+  return requireSecondaryRole(['admin', 'moderator', 'founder'])(req, res, next);
 }
 
 /**
@@ -158,9 +162,11 @@ function requireVerified(req, res, next) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
 
-  // Allow access if email_verified is true OR missing (for legacy tokens)
-  // If explicitly false, block access
-  if (req.user.email_verified === false) {
+  // Only grant access when email_verified is explicitly true.
+  // The previous logic allowed access when the field was absent (undefined),
+  // which let users with old tokens that were issued before email verification
+  // was introduced bypass the verification requirement entirely.
+  if (req.user.email_verified !== true) {
     return res.status(403).json({
       success: false,
       message: 'Email verification required. Please check your inbox.',
@@ -178,7 +184,7 @@ function requireSameUser(req, res, next) {
   const targetId = Number(req.params.id || req.body.userId);
   const authId = Number(req.user?.id);
 
-  if (targetId !== authId && req.user?.role?.toLowerCase() !== 'admin') {
+  if (targetId !== authId && req.user?.role?.toLowerCase() !== 'admin' && req.user?.secondary_role?.toLowerCase() !== 'founder') {
     return res.status(403).json({
       success: false,
       message: 'Unauthorized access attempt'

@@ -113,6 +113,13 @@ const forgotPasswordLimiter = createRateLimiter({
   keyPrefix: 'forgot-password'
 });
 
+// Rate limiter for reset password.
+const resetPasswordLimiter = createRateLimiter({
+  limit: 5,
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'reset-password'
+});
+
 function generateSecureToken() {
   return crypto.randomBytes(32).toString('hex');
 }
@@ -213,7 +220,7 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   }
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
   try {
     const { token, password } = req.body;
 

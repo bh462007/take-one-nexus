@@ -21,6 +21,11 @@
 <body>
   <header>
     <a href="/" class="logo">TAKE <span>ONE</span></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <nav>
       <a href="/#explore">Discover Projects</a>
       <a href="/crew" class="active">Find Crew</a>
@@ -90,11 +95,14 @@
         <div class="crew-grid" id="crewGrid">
           <div class="crew-empty">Loading crew...</div>
         </div>
+
+        <div class="pagination-container" id="crewPagination"></div>
       </section>
     </section>
   </main>
 
   <script src="/scripts/constants/roles.js" defer></script>
+  <script src="/scripts/constants/themes.js" defer></script>
   <script src="/scripts/api/api.js" defer></script>
   <script src="/scripts/utils/helpers.js" defer></script>
   <script src="/scripts/components/ui.js" defer></script>

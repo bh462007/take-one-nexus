@@ -1,12 +1,12 @@
 const express = require('express');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { authenticateUser } = require('../middleware/auth');
 const { createRateLimiter } = require('../middleware/rateLimiter');
 const { Resend } = require('resend');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Rate limiter: max 3 OTP send attempts per 15 minutes per user
@@ -204,15 +204,31 @@ router.post('/confirm', authenticateUser, otpConfirmLimiter, async (req, res) =>
     }
 
     // Mark email as verified and clear the token
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         email_verified: true,
         email_verified_at: new Date(),
         verification_token: null,
         verification_token_expires: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        secondary_role: true,
+        email_verified: true
       }
     });
+
+    // Generate new token & set cookie immediately
+    try {
+      const { createToken, getCookieOptions } = require('./users');
+      const token = createToken(updatedUser);
+      res.cookie('token', token, getCookieOptions());
+    } catch (cookieErr) {
+      console.error('[OTP] Failed to update cookie after verification:', cookieErr.message);
+    }
 
     // Trigger credit reward for 'verify_email' task (non-blocking)
     triggerCreditTask(userId, 'verify_email').catch(err =>

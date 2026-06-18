@@ -58,8 +58,18 @@ body::after {
 
 /* ── CUSTOM CURSOR ── */
 .cur-dot {
-    display: none;
+    width: 6px;
+    height: 6px;
+    background: var(--neon);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 10001;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px var(--neon), 0 0 16px var(--neon);
+    transition: opacity 0.2s ease;
 }
+
 
 /* ── HEADER ── */
 header {
@@ -347,6 +357,11 @@ nav a:hover::after {
         grid-template-columns: 1fr;
         margin-top: -32px;
     }
+
+    .profile-sidebar {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 24px;
+    }
 }
 
 /* ── SIDEBAR ── */
@@ -572,7 +587,14 @@ nav a:hover::after {
     letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--silver);
-      text-transform: uppercase;
+    margin-top: 4px;
+}
+
+.btn-edit-profile {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--neon);
@@ -581,6 +603,10 @@ nav a:hover::after {
     width: 100%;
     clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
     transition: all 0.3s;
+    margin-top: 16px;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
 }
 
 .btn-edit-profile:hover {
@@ -766,6 +792,13 @@ nav a:hover::after {
     .profile-content {
         padding: 28px 22px;
     }
+    .pstat-text {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    }
 }
 
 .project-card {
@@ -928,6 +961,12 @@ nav a:hover::after {
 .save-btn:hover {
     background: var(--amber);
     box-shadow: 0 0 35px rgba(255, 166, 32, 0.4);
+}
+
+.save-btn:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    filter: saturate(0.75);
 }
 
 /* ── COLLABORATE TAB ── */
@@ -1374,6 +1413,10 @@ nav a:hover::after {
         flex-wrap: wrap;
         justify-content: center;
     }
+    nav a {
+        font-size: 8px;
+        letter-spacing: 0.15em;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1606,6 +1649,9 @@ nav a:hover::after {
     width: min(600px, calc(100% - 40px));
     max-height: 90vh;
     overflow-y: auto;
+    color-scheme: dark;
+    scrollbar-color: var(--neon) var(--void);
+    scrollbar-width: thin;
     position: relative;
     transform: translateY(30px) scale(0.98);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1707,10 +1753,24 @@ nav a:hover::after {
 
 .form-group select {
     appearance: none;
+    color-scheme: dark;
+    background-color: var(--machine);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FF4D1A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     padding-right: 40px;
+}
+
+.form-group select option,
+.profile-role-dropdown option {
+    background: #06080A;
+    color: var(--cream);
+}
+
+.form-group select option:checked,
+.form-group select option:hover {
+    background: var(--neon);
+    color: var(--void);
 }
 
 .modal-footer {
@@ -1747,16 +1807,17 @@ nav a:hover::after {
 
 /* Custom Scrollbar for Modal */
 .modal-content::-webkit-scrollbar {
-    width: 4px;
+    width: 8px;
 }
 
 .modal-content::-webkit-scrollbar-track {
-    background: var(--void);
+    background: #06080A;
 }
 
 .modal-content::-webkit-scrollbar-thumb {
-    background: var(--rail);
-    border-radius: 2px;
+    background: var(--neon);
+    border: 2px solid #06080A;
+    border-radius: 999px;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
@@ -1896,4 +1957,19 @@ nav a:hover::after {
         grid-template-columns: 1fr;
     }
 }
+
+:root.role-theme-photographer,
+.role-theme-photographer {
+  --neon: #8B5CF6;
+  --neon2: #A78BFA;
+  --border: rgba(139, 92, 246, 0.18);
+  --glow: rgba(139, 92, 246, 0.25);
+  
+  --theme-primary: #8B5CF6;
+  --theme-primary-rgb: 139, 92, 246;
+  --theme-secondary: #7C3AED;
+  --theme-secondary-rgb: 124, 58, 237;
+  --theme-glow: rgba(139, 92, 246, 0.15);
+}
+
 

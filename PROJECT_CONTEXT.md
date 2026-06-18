@@ -6,7 +6,7 @@
 
 ## 🎯 Product Vision
 
-**TAKE ONE Nexus** is an open-source, role-based creative ecosystem designed specifically for the next generation of filmmakers, screenwriters, and creative technocrats.
+**TAKE ONE Nexus** is a source-available, role-based creative ecosystem designed specifically for the next generation of filmmakers, screenwriters, and creative technocrats.
 
 Our goal is to solve a fundamental problem in independent and student filmmaking: **Crew Discovery**. By building a highly stylized, cinematic digital platform, we provide a unified space where creatives can:
 - Showcase their work in a professional **Portfolio**.
@@ -123,11 +123,11 @@ As the platform grows, we plan to decouple the monolithic architecture:
 
 ---
 
-## 🌐 Open Source Programs
+## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26 and GSSoC 2026.
+TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26 and GSSoC 2026.
 
-Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
 
 ---
 

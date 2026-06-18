@@ -1,8 +1,9 @@
 const { pool } = require('../config/db');
-
+let tableEnsured = false;
 async function ensureNotificationsTable() {
+  if (tableEnsured) return;
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS notifications (
+   CREATE TABLE IF NOT EXISTS notifications (
       id INT UNSIGNED NOT NULL AUTO_INCREMENT,
       user_id INT UNSIGNED NOT NULL,
       type VARCHAR(80) NOT NULL,
@@ -21,6 +22,7 @@ async function ensureNotificationsTable() {
         ON UPDATE CASCADE
     )
   `);
+  tableEnsured = true;
 }
 
 async function createNotification({ userId, type, title, body = null, linkUrl = null }) {

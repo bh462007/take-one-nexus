@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { getAvatarUrl } from '@/lib/avatars';
 
 interface User {
   id: number;
@@ -14,9 +13,6 @@ interface TaskModalProps {
   conversationId: number;
   members: User[];
   onCreate: (taskData: any) => Promise<void>;
-  myRole: string;
-  isGroup: boolean;
-  globalRole: string;
 }
 
 export default function TaskModal({ 
@@ -24,10 +20,7 @@ export default function TaskModal({
   onClose, 
   conversationId, 
   members, 
-  onCreate,
-  myRole,
-  isGroup,
-  globalRole
+  onCreate
 }: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

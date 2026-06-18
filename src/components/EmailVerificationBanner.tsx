@@ -17,7 +17,7 @@ export default function EmailVerificationBanner() {
     const check = async () => {
       try {
         const data = await getCurrentUser();
-        if (data.success && data.user && data.user.email_verified === false) {
+        if (data.success && data.user && data.user.email_verified !== true) {
           setEmail(data.user.email || '');
           setShow(true);
         }
@@ -124,7 +124,7 @@ export default function EmailVerificationBanner() {
               ? `Verification uplink transmitted to ${email}.`
               : error
               ? error
-              : 'Messaging, projects, and leaderboard are locked until email signal is confirmed.'}
+              : 'Crew discovery, projects, and leaderboard are locked until email signal is confirmed.'}
           </div>
         </div>
       </div>

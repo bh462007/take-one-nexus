@@ -32,6 +32,59 @@ const LOCAL_ASSET_ROOTS = [
   path.resolve(__dirname, '..', 'uploads')
 ];
 
+// Restrict deletion to uploads directory only to prevent deletion of core application assets
+const DELETION_SAFE_ROOTS = [
+  path.resolve(__dirname, '..', 'public', 'assets', 'uploads')
+];
+
+// ---------------------------------------------------------------------
+// Rate limiters
+// CodeQL: every route that performs authorization should be rate-limited
+// to prevent brute-force / spam / abuse of authenticated endpoints.
+// ---------------------------------------------------------------------
+
+// Search rate limit — public, read-only, but still needs throttling
+const searchLimiter = createRateLimiter({
+  limit: 60,
+  windowMs: 60 * 1000, // 1 minute
+  keyPrefix: 'script_search'
+});
+
+// Portfolio rate limit — prevents spam upload of unmoderated portfolio entries
+const portfolioLimiter = createRateLimiter({
+  limit: 20,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'portfolio'
+});
+
+// Script create rate limit
+const createLimiter = createRateLimiter({
+  limit: 20,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'script_create'
+});
+
+// Script update rate limit
+const updateLimiter = createRateLimiter({
+  limit: 30,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'script_update'
+});
+
+// Script delete rate limit
+const deleteLimiter = createRateLimiter({
+  limit: 10,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'script_delete'
+});
+
+// Moderation rate limit (admin/developer actions)
+const moderationLimiter = createRateLimiter({
+  limit: 100,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyPrefix: 'script_moderate'
+});
+
 async function safeQuery(sql, params = []) {
   try {
     const [rows] = await pool.query(sql, params);
@@ -82,12 +135,49 @@ function toSafeLocalPath(assetPath) {
   ) || null;
 }
 
+// Strict path validation for deletion operations - only allows uploads directory
+function toSafeDeletionPath(assetPath) {
+  if (/^https?:\/\//i.test(assetPath) || assetPath.startsWith('data:')) return null;
+
+  const cleanPath = assetPath.split('?')[0].split('#')[0];
+
+  // Additional check: prevent path traversal attempts
+  const hasTraversal = cleanPath.includes('..') || cleanPath.includes('~');
+  if (hasTraversal) return null;
+
+  let candidates;
+  // Handle absolute paths starting with /uploads/ specially
+  if (cleanPath.startsWith('/uploads/')) {
+    // Resolve directly against uploads directory
+    candidates = [path.resolve(__dirname, '..', 'public', 'assets', 'uploads', cleanPath.replace(/^\/+uploads\/+/, ''))];
+  } else if (cleanPath.startsWith('/')) {
+    // Other absolute paths resolve against public (will be rejected by root check)
+    candidates = [path.resolve(__dirname, '..', 'public', cleanPath.replace(/^\/+/, ''))];
+  } else {
+    // Relative paths resolve normally
+    candidates = [path.resolve(__dirname, '..', cleanPath)];
+  }
+
+  // Normalize paths for comparison
+  const normalizedCandidates = candidates.map(c => path.normalize(c));
+
+  return normalizedCandidates.find((candidate) => {
+    // Ensure the path is within one of the deletion-safe roots
+    const isWithinSafeRoot = DELETION_SAFE_ROOTS.some((root) => {
+      const normalizedRoot = path.normalize(root);
+      return candidate.startsWith(`${normalizedRoot}${path.sep}`);
+    });
+
+    return isWithinSafeRoot;
+  }) || null;
+}
+
 async function deleteLocalAssets(script) {
   const deleted = [];
   const failed = [];
 
   for (const asset of parseAssetCandidates(script)) {
-    const localPath = toSafeLocalPath(asset);
+    const localPath = toSafeDeletionPath(asset);
     if (!localPath) continue;
 
     try {
@@ -120,11 +210,19 @@ async function getFreshUser(userId) {
 
 function hasElevatedScriptDeleteAccess(user) {
   const roles = [user?.role, user?.secondary_role].map((role) => String(role || '').toLowerCase());
-  const email = String(user?.email || '').toLowerCase();
   return roles.includes('admin') ||
     roles.includes('moderator') ||
-    email === 'aarushgupta289@gmail.com' ||
-    email === 'alok.r25012@csds.rishihood.edu.in';
+    roles.includes('founder');
+}
+
+function isVerifiedUser(user) {
+  return user?.email_verified === true || user?.email_verified === 1;
+}
+
+function isPortfolioScript(script) {
+  return String(script?.payment_status || '').toLowerCase() === 'portfolio' ||
+    String(script?.approval_status || '').toLowerCase() === 'portfolio' ||
+    String(script?.status || '').toLowerCase() === 'portfolio item';
 }
 
 router.get('/', async (req, res) => {
@@ -142,9 +240,6 @@ router.get('/', async (req, res) => {
         scripts.work_type,
         scripts.media_links,
         scripts.role_data,
-        scripts.payment_status,
-        scripts.payment_id,
-        scripts.payment_verified,
         users.name AS author_name,
         users.screen_name,
         users.display_preference
@@ -167,7 +262,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/search', async (req, res) => {
+router.get('/search', searchLimiter, async (req, res) => {
   try {
     const query = String(req.query.q || '').trim();
     const genre = String(req.query.genre || '').trim();
@@ -185,9 +280,6 @@ router.get('/search', async (req, res) => {
         scripts.work_type,
         scripts.media_links,
         scripts.role_data,
-        scripts.payment_status,
-        scripts.payment_id,
-        scripts.payment_verified,
         users.name AS author_name,
         users.screen_name,
         users.display_preference
@@ -222,13 +314,6 @@ router.get('/search', async (req, res) => {
       message: 'Could not search scripts'
     });
   }
-});
-
-// Portfolio rate limit — prevents spam upload of unmoderated portfolio entries
-const portfolioLimiter = createRateLimiter({
-  limit: 20,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  keyPrefix: 'portfolio'
 });
 
 router.post('/portfolio', authenticateUser, requireVerified, portfolioLimiter, async (req, res) => {
@@ -310,8 +395,45 @@ router.post('/portfolio', authenticateUser, requireVerified, portfolioLimiter, a
   }
 });
 
-router.post('/', authenticateUser, requireVerified, async (req, res) => {
+router.post('/', authenticateUser, requireVerified, createLimiter, async (req, res) => {
   try {
+    const userId = Number(req.user.id);
+    const [userRows] = await pool.query('SELECT secondary_role FROM users WHERE id = ? LIMIT 1', [userId]);
+    const isFounder = userRows && userRows[0] && userRows[0].secondary_role?.toLowerCase() === 'founder';
+
+    if (isFounder) {
+      const { title, genre, synopsis, poster_url, roles_needed, status, media_links, role_data, work_type } = req.body;
+      if (!title) {
+        return res.status(400).json({ success: false, message: 'Script title is required' });
+      }
+
+      const [insertResult] = await pool.query(
+        `INSERT INTO scripts (
+          user_id, title, genre, synopsis, poster_url, roles_needed, 
+          status, media_links, role_data, work_type, approval_status, payment_status, payment_id, payment_verified, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'free', 'founder_bypass', TRUE, NOW(), NOW())`,
+        [
+          userId,
+          title,
+          genre || 'General',
+          synopsis || '',
+          poster_url || null,
+          roles_needed || null,
+          status || 'Open for collaboration',
+          media_links || null,
+          role_data || null,
+          work_type || 'Script'
+        ]
+      );
+
+      const scriptId = insertResult.insertId;
+      return res.status(201).json({
+        success: true,
+        message: 'Script uploaded successfully as Founder bypass',
+        scriptId
+      });
+    }
+
     return res.status(402).json({
       success: false,
       message: 'Payment verification required. Use /api/payments/create-order and /api/payments/verify before script submission.',
@@ -326,7 +448,7 @@ router.post('/', authenticateUser, requireVerified, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateUser, requireVerified, async (req, res) => {
+router.put('/:id', authenticateUser, updateLimiter, async (req, res) => {
   try {
     const scriptId = Number(req.params.id);
     const { title, genre, synopsis, roles_needed, status, work_type, media_links, role_data, poster_url } = req.body;
@@ -339,13 +461,20 @@ router.put('/:id', authenticateUser, requireVerified, async (req, res) => {
     }
 
     // Check ownership
-    const [rows] = await pool.query('SELECT user_id FROM scripts WHERE id = ? LIMIT 1', [scriptId]);
+    const [rows] = await pool.query('SELECT user_id, status, payment_status, approval_status FROM scripts WHERE id = ? LIMIT 1', [scriptId]);
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Script not found' });
     }
 
-    if (rows[0].user_id !== req.user.id) {
+    if (Number(rows[0].user_id) !== Number(req.user.id)) {
       return res.status(403).json({ success: false, message: 'Unauthorized to edit this script' });
+    }
+
+    if (!isVerifiedUser(req.user) && !isPortfolioScript(rows[0])) {
+      return res.status(403).json({
+        success: false,
+        message: 'Email verification required to edit submitted scripts.'
+      });
     }
 
     await pool.query(
@@ -386,7 +515,7 @@ router.put('/:id', authenticateUser, requireVerified, async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticateUser, requireVerified, async (req, res) => {
+router.delete('/:id', authenticateUser, deleteLimiter, async (req, res) => {
   const connection = await pool.getConnection();
   try {
     const scriptId = Number(req.params.id);
@@ -406,6 +535,13 @@ router.delete('/:id', authenticateUser, requireVerified, async (req, res) => {
 
     if (!isOwner && !canModerateDelete) {
       return res.status(403).json({ success: false, message: 'Unauthorized to delete this script' });
+    }
+
+    if (isOwner && !isVerifiedUser(req.user) && !isPortfolioScript(script)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Email verification required to delete submitted scripts.'
+      });
     }
 
     await connection.beginTransaction();
@@ -452,7 +588,7 @@ router.delete('/:id', authenticateUser, requireVerified, async (req, res) => {
  * Approve or reject a script (Admin only)
  * Body: { action: 'approved' | 'rejected' | 'pending', moderation_notes?: string }
  */
-router.patch('/:id/moderate', authenticateUser, requireRole(['Admin', 'Developer']), async (req, res) => {
+router.patch('/:id/moderate', authenticateUser, requireRole(['Admin', 'Developer']), moderationLimiter, async (req, res) => {
   try {
     const scriptId = Number(req.params.id);
     const { action, moderation_notes } = req.body;

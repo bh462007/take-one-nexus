@@ -37,13 +37,61 @@ function activateHashTab() {
 }
 
 /* ── AVATAR UPLOAD ── */
-function changeAvatar(input) {
+async function changeAvatar(input) {
     if (!input.files[0]) return;
+    const file = input.files[0];
+
+    // 1. Show immediate local visual feedback (optimistic UI design)
     const reader = new FileReader();
     reader.onload = e => {
         document.getElementById('profilePic').src = e.target.result;
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
+
+    // 2. Wrap file in FormData and upload permanently to your server
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+        if (typeof showToast === 'function') showToast('Uploading picture... ✦');
+        
+        const response = await fetch('/api/users/upload-avatar', {
+            method: 'POST',
+            body: formData,
+             credentials: 'include',  // ← Add this
+    headers: {
+        'Authorization': `Bearer ${API.auth.getToken()}`  // ← Add this
+    }
+            // (Note: If your API uses Bearer JWT headers, be sure to add 'Authorization': 'Bearer <token>' here)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            if (typeof showToast === 'function') showToast('Profile picture saved permanently! ✦');
+            
+            // Update the preview image with the server's permanent URL
+            const picEl = document.getElementById('profilePic');
+            if (picEl) picEl.src = result.avatar_url;
+            if (currentProfileData) {
+                currentProfileData.avatar_url = result.avatar_url;
+            }
+
+            // 3. Keep client-session in sync
+            if (typeof API !== 'undefined' && API.auth) {
+                const user = API.auth.getUser();
+                if (user) {
+                    user.avatar_url = result.avatar_url;
+                    API.auth.saveToken(API.auth.getToken(), user); // Save back to local storage
+                }
+            }
+        } else {
+            if (typeof showToast === 'function') showToast(result.message || 'Upload failed ✦');
+        }
+    } catch (err) {
+        console.error('Upload failed:', err);
+        if (typeof showToast === 'function') showToast('Error linking picture to server. ✦');
+    }
 }
 
 /* ── LIVE NAME PREVIEW ── */
@@ -151,6 +199,17 @@ function renderPortfolio(profile) {
                 <p><a href="${profile.portfolio || '#'}" target="_blank">View Reel →</a></p>
             </div>
         `;
+    } else if (role.includes('Photographer')) {
+         detailsHtml = `
+            <div class="portfolio-card-mini">
+                <strong>Camera & Lenses</strong>
+                <p>${profile.skills || 'Add gear/skills'}</p>
+            </div>
+            <div class="portfolio-card-mini">
+                <strong>Portfolio</strong>
+                <p><a href="${profile.portfolio || '#'}" target="_blank">View Gallery →</a></p>
+            </div>
+        `;
     } else {
         detailsHtml = `
             <div class="portfolio-card-mini">
@@ -214,9 +273,48 @@ function renderPortfolio(profile) {
 
 let currentProfileData = null;
 
+function notifyProfile(message) {
+    if (typeof showToast === 'function') {
+        showToast(message);
+        return;
+    }
+
+    const toast = document.getElementById('toast');
+    if (toast) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+}
+
+function upsertLocalPortfolioItem(script, remove = false) {
+    if (!currentProfileData || !script || !script.id) return;
+
+    const scripts = Array.isArray(currentProfileData.scripts)
+        ? currentProfileData.scripts.slice()
+        : [];
+    const index = scripts.findIndex(item => Number(item.id) === Number(script.id));
+
+    if (remove) {
+        if (index >= 0) scripts.splice(index, 1);
+    } else if (index >= 0) {
+        scripts[index] = { ...scripts[index], ...script };
+    } else {
+        scripts.unshift(script);
+    }
+
+    currentProfileData.scripts = scripts;
+    renderProjects(scripts);
+    renderPortfolio(currentProfileData);
+}
+
 function populateProfile(profile) {
     if (!profile) return;
     currentProfileData = profile;
+    
+    if (typeof applyRoleTheme === 'function') {
+        applyRoleTheme(profile.role);
+    }
     
     const nameEl = document.getElementById('profileName');
     if (nameEl) {
@@ -539,8 +637,14 @@ async function saveProfile() {
     const saveButton = document.querySelector('.save-btn') || document.getElementById('saveProfileBtn');
     const originalText = saveButton ? saveButton.textContent : '';
     
+    let avatarUrl = document.getElementById('profilePic')?.src || '';
+    if (avatarUrl.startsWith('data:')) {
+        avatarUrl = currentProfileData?.avatar_url || '';
+    }
+
     const payload = {
         name: document.getElementById('editName')?.value.trim() || '',
+        avatar_url: avatarUrl,
         role: document.getElementById('editRole')?.value.trim() || '',
         college: document.getElementById('editCollege')?.value.trim() || '',
         city: document.getElementById('editCity')?.value.trim() || '',
@@ -705,6 +809,10 @@ const ROLE_FIELDS = {
     'DP': [
         { id: 'cameraUsed', label: 'Camera Gear', type: 'text', placeholder: 'e.g. RED Komodo, Sony A7SIII' },
         { id: 'visualStyle', label: 'Visual Style', type: 'text', placeholder: 'e.g. High Contrast, Anamorphic' }
+    ],
+    'PHOTOGRAPHER': [
+        { id: 'cameraUsed', label: 'Camera Body & Lenses', type: 'text', placeholder: 'e.g. Sony A7R V, 85mm f/1.4' },
+        { id: 'photographyStyle', label: 'Photography Style', type: 'text', placeholder: 'e.g. Cinematic Stills, BTS, Editorial' }
     ]
 };
 
@@ -767,7 +875,7 @@ window.openEditWorkModal = function(scriptId = null) {
 
     if (scriptId) {
         title.textContent = 'Edit Portfolio Work';
-        const script = currentProfileData?.scripts?.find(s => s.id === scriptId);
+        const script = currentProfileData?.scripts?.find(s => Number(s.id) === Number(scriptId));
         if (script) {
             document.getElementById('workTitle').value = script.title || '';
             document.getElementById('workGenre').value = script.genre || '';
@@ -804,14 +912,15 @@ window.deleteWork = async function(scriptId) {
         const json = await API.scripts.delete(scriptId);
         
         if (json.success) {
-            if (typeof showToast === 'function') showToast('Project removed ✦');
+            notifyProfile('Project removed');
+            upsertLocalPortfolioItem({ id: scriptId }, true);
             loadProfile(); 
         } else {
-            if (typeof showToast === 'function') showToast(json.message || 'Error deleting project');
+            notifyProfile(json.message || 'Error deleting project');
         }
     } catch (err) {
         console.error('Delete error:', err);
-        if (typeof showToast === 'function') showToast('Connection error');
+        notifyProfile(err.message || 'Connection error');
     }
 };
 
@@ -819,6 +928,7 @@ async function handleWorkSubmit(e) {
     e.preventDefault();
     const scriptId = document.getElementById('workId').value;
     const saveBtn = document.getElementById('saveWorkBtn');
+    const originalText = saveBtn ? saveBtn.textContent : 'Save Work';
     
     const dynamicData = {};
     document.querySelectorAll('.dynamic-field').forEach(field => {
@@ -837,7 +947,12 @@ async function handleWorkSubmit(e) {
     };
 
     if (!data.title) {
-        if (typeof showToast === 'function') showToast('Project title is required ✦');
+        notifyProfile('Project title is required');
+        return;
+    }
+
+    if (typeof API === 'undefined' || !API.scripts) {
+        notifyProfile('Project API is not available. Start the API server and try again.');
         return;
     }
 
@@ -852,19 +967,25 @@ async function handleWorkSubmit(e) {
             : await API.scripts.createPortfolio(data);
         
         if (json.success) {
-            if (typeof showToast === 'function') showToast(scriptId ? 'Project updated ✦' : 'Project added ✦');
+            const savedScript = json.data || {
+                ...data,
+                id: scriptId || Date.now(),
+                created_at: new Date().toISOString()
+            };
+            notifyProfile(scriptId ? 'Project updated' : 'Project added');
+            upsertLocalPortfolioItem(savedScript);
             closeWorkModal();
             loadProfile();
         } else {
-            if (typeof showToast === 'function') showToast(json.message || 'Error saving project');
+            notifyProfile(json.message || 'Error saving project');
         }
     } catch (err) {
         console.error('Save error:', err);
-        if (typeof showToast === 'function') showToast('Connection error');
+        notifyProfile(err.message || 'Connection error');
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.textContent = 'Save Work ✦';
+            saveBtn.textContent = originalText || 'Save Work';
         }
     }
 }

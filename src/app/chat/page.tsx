@@ -4,20 +4,43 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Pusher from 'pusher-js';
 import { getAvatarUrl } from '@/lib/avatars';
 import { format } from 'date-fns';
-import CreateGroupModal from '@/components/CreateGroupModal';
+import NewDirectMessageModal from '@/components/NewDirectMessageModal';
 import TaskModal from '@/components/TaskModal';
 import { fetchWithCSRF } from '@/utils/fetchWithCSRF';
 import './chat.css';
 
-// ── SKELETON COMPONENT ──
-const Skeleton = ({ className }: { className: string }) => (
-  <div className={`animate-pulse bg-gray-800/50 rounded ${className}`}></div>
-);
+const cacheBustUrl = (url: string | null | undefined, updatedAt?: string | Date | number) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('default-group.png') || url.includes('default-avatar')) return url;
+  
+  const t = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${t}`;
+};
 
+const getRoleSlug = (role?: string): string => {
+  if (!role) return 'other';
+  const r = role.toLowerCase();
+  if (r.includes('director')) return 'director';
+  if (r.includes('photographer')) return 'photographer';
+  if (r.includes('cinematographer') || r.includes('dp') || r.includes('camera')) return 'cinematographer';
+  if (r.includes('writer')) return 'writer';
+  if (r.includes('editor')) return 'editor';
+  if (r.includes('sound')) return 'sound';
+  if (r.includes('designer')) return 'designer';
+  if (r.includes('developer')) return 'developer';
+  if (r.includes('actor')) return 'actor';
+  if (r.includes('producer')) return 'producer';
+  if (r.includes('lighting') || r.includes('gaffer')) return 'lighting';
+  if (r.includes('support') || r.includes('spot')) return 'support';
+  return 'other';
+};
 
 interface User {
   id: number;
   name: string;
+  email?: string;
   screen_name?: string;
   display_preference?: string;
   avatar_url?: string;
@@ -29,6 +52,7 @@ interface User {
   credits?: number;
   created_at?: string;
   role_in_group?: 'Director' | 'Admin' | 'Member';
+  secondary_role?: string;
 }
 
 
@@ -39,8 +63,22 @@ interface ChatMessage {
   content: string;
   created_at: string;
   sender: User;
-  status?: 'sending' | 'error' | 'sent';
+  status?: 'pending' | 'sending' | 'sent' | 'failed';
+  tempId?: string;
 }
+
+interface QueuedMessage {
+  tempId: string;
+  content: string;
+  conversationId: number;
+  senderId: number;
+  createdAt: string;
+  status: 'pending' | 'sending' | 'sent' | 'failed';
+  retryCount: number;
+  nextRetryAt: number;
+}
+
+type PusherConnectionState = 'connected' | 'connecting' | 'disconnected' | 'unavailable';
 
 interface Conversation {
   id: number;
@@ -52,6 +90,9 @@ interface Conversation {
   unread?: number;
   updated_at?: string;
   my_role?: 'Director' | 'Admin' | 'Member';
+  canMembersMessage?: boolean;
+  community_id?: number;
+  groupSettings?: string | any;
 }
 
 interface Task {
@@ -72,14 +113,149 @@ interface Task {
 
 type ChatState = 'loading' | 'ready' | 'error' | 'not-found';
 
+// ───────────────────────────────────────────────────────────────
+// Custom Hooks for Resilient Message Queue System
+// ───────────────────────────────────────────────────────────────
+
+
+/**
+ * Hook: useMessageQueue
+ * Manages the outbox queue with retry logic and localStorage persistence
+ */
+const useMessageQueue = (enabled: boolean) => {
+  const [queue, setQueue] = useState<QueuedMessage[]>([]);
+  const processingRef = useRef(false);
+  const queueRef = useRef<QueuedMessage[]>([]);
+
+  // Keep queueRef in sync with queue state
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+  
+  // Restore queue from localStorage on mount
+  useEffect(() => {
+    if (!enabled) return;
+    try {
+      const stored = localStorage.getItem('take_one_message_queue');
+      if (stored) {
+        const restoredQueue = JSON.parse(stored);
+        setQueue(restoredQueue);
+      }
+    } catch (err) {
+      console.error('[QUEUE] Failed to restore queue from localStorage', err);
+    }
+  }, [enabled]);
+  
+  // Persist queue to localStorage whenever it changes
+  useEffect(() => {
+    if (!enabled) return;
+    try {
+      localStorage.setItem('take_one_message_queue', JSON.stringify(queue));
+    } catch (err) {
+      console.error('[QUEUE] Failed to persist queue to localStorage', err);
+    }
+  }, [queue, enabled]);
+  
+  const addToQueue = useCallback((message: QueuedMessage) => {
+    setQueue(prev => [...prev, message]);
+  }, []);
+  
+  const updateMessageStatus = useCallback((tempId: string, status: QueuedMessage['status'], retryCount?: number) => {
+    setQueue(prev => prev.map(msg => 
+      msg.tempId === tempId 
+        ? { ...msg, status, retryCount: retryCount !== undefined ? retryCount : msg.retryCount }
+        : msg
+    ));
+  }, []);
+  
+  const removeFromQueue = useCallback((tempId: string) => {
+    setQueue(prev => prev.filter(msg => msg.tempId !== tempId));
+  }, []);
+  
+  const getNextMessageToRetry = useCallback((): QueuedMessage | null => {
+    const now = Date.now();
+    const pending = queueRef.current.find(msg => 
+      (msg.status === 'pending' || msg.status === 'failed') &&
+      msg.retryCount < 5 &&
+      msg.nextRetryAt <= now
+    );
+    return pending || null;
+  }, []);
+  
+  const getExponentialBackoffDelay = (retryCount: number): number => {
+    const delays = [1000, 2000, 4000, 8000, 8000];
+    return delays[Math.min(retryCount, delays.length - 1)];
+  };
+  
+  const scheduleRetry = useCallback((tempId: string, retryCount: number) => {
+    const delay = getExponentialBackoffDelay(retryCount);
+    const nextRetryAt = Date.now() + delay;
+    setQueue(prev => prev.map(msg =>
+      msg.tempId === tempId
+        ? { ...msg, status: 'failed', retryCount, nextRetryAt }
+        : msg
+    ));
+  }, []);
+  
+  const isProcessing = useCallback(() => processingRef.current, []);
+  const setProcessing = useCallback((value: boolean) => { processingRef.current = value; }, []);
+  
+  return useMemo(() => ({
+    queue,
+    addToQueue,
+    updateMessageStatus,
+    removeFromQueue,
+    getNextMessageToRetry,
+    scheduleRetry,
+    isProcessing,
+    setProcessing
+  }), [
+    queue,
+    addToQueue,
+    updateMessageStatus,
+    removeFromQueue,
+    getNextMessageToRetry,
+    scheduleRetry,
+    isProcessing,
+    setProcessing
+  ]);
+};
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve(false);
+      return;
+    }
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (user && typeof (window as any).applyRoleTheme === 'function') {
+      (window as any).applyRoleTheme(user.role);
+    }
+  }, [user]);
+
+  const isFounder = user?.secondary_role?.toLowerCase() === 'founder';
   const [state, setState] = useState<ChatState>('loading');
-  const [statusText, setStatusText] = useState('Synchronizing with Nexus...');
+  const [statusText, setStatusText] = useState('Synchronizing with Community...');
   const [messageLoading, setMessageLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
@@ -89,17 +265,911 @@ export default function ChatPage() {
   // New interaction states
   const [showSearch, setShowSearch] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [detailsTab, setDetailsTab] = useState<'members' | 'settings'>('members');
   const [showMenu, setShowMenu] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
-  const [isMuted, setIsMuted] = useState(false);
+  const [mutedConvIds, setMutedConvIds] = useState<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
 
   // Task states
   const [activeTab, setActiveTab] = useState<'chat' | 'tasks'>('chat');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  // Message Queue System
+  const messageQueue = useMessageQueue(true);
+  const {
+    addToQueue,
+    updateMessageStatus,
+    removeFromQueue,
+    getNextMessageToRetry,
+    scheduleRetry,
+    isProcessing,
+    setProcessing
+  } = messageQueue;
+  const [pusherConnectionState, setPusherConnectionState] = useState<PusherConnectionState>('disconnected');
+
+  // Community System States
+  const [inCommunity, setInCommunity] = useState(false);
+  const [communityRole, setCommunityRole] = useState<string | null>(null);
+  const [communityData, setCommunityData] = useState<any>(null);
+  const communityDataRef = useRef<any>(null);
+  useEffect(() => {
+    communityDataRef.current = communityData;
+  }, [communityData]);
+  const [showCommunityDashboard, setShowCommunityDashboard] = useState(false);
+  
+  // Modals
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+
+  // Community config
+  const [pricingConfigs, setPricingConfigs] = useState<any[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<'Starter' | 'Growth' | 'Custom'>('Starter');
+  const [customMembersCount, setCustomMembersCount] = useState(50);
+  const [newCommunityName, setNewCommunityName] = useState('');
+  const [newCommunityDesc, setNewCommunityDesc] = useState('');
+  const [communityCreationStep, setCommunityCreationStep] = useState(1);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+
+  // Invites & Groups & Multi-Community
+  const [myInvitations, setMyInvitations] = useState<any[]>([]);
+  const [myCommunities, setMyCommunities] = useState<any[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [inviteSuccess, setInviteSuccess] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [groupLoading, setGroupLoading] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+
+  // New Multi-Community and Join Request States
+  const [allCommunities, setAllCommunities] = useState<any[]>([]);
+  const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+  const [allCommunitiesLoading, setAllCommunitiesLoading] = useState(false);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [isJoinRequestModalOpen, setIsJoinRequestModalOpen] = useState(false);
+  const [showAutoInviteModal, setShowAutoInviteModal] = useState(false);
+  const [autoInviteToHandle, setAutoInviteToHandle] = useState<any | null>(null);
+  const [viewingGalaxyLanding, setViewingGalaxyLanding] = useState(false);
+
+  const [isInvitationsManagementModalOpen, setIsInvitationsManagementModalOpen] = useState(false);
+  const [invitationsList, setInvitationsList] = useState<any[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+
+  const isMessagingRestricted = useMemo(() => {
+    if (!activeConv?.is_group) return false;
+    const isOwnerOrMod = ['Owner', 'Moderator'].includes(communityRole || '');
+    const isGrpAdminOrDir = activeConv.my_role === 'Admin' || activeConv.my_role === 'Director';
+    return activeConv.canMembersMessage === false && !isOwnerOrMod && !isGrpAdminOrDir;
+  }, [activeConv, communityRole]);
+
+  const communityIdForInvitations = communityData?.id;
+  const fetchCommunityInvitations = useCallback(async () => {
+    if (!communityIdForInvitations) return;
+    setInvitationsLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations?communityId=${communityIdForInvitations}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInvitationsList(data.invitations || []);
+      }
+    } catch (err) {
+      console.error('Error fetching community invitations:', err);
+    } finally {
+      setInvitationsLoading(false);
+    }
+  }, [communityIdForInvitations]);
+
+  const cancelInvitation = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/community/invitations/${inviteId}/cancel`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation cancelled successfully.');
+        fetchCommunityInvitations();
+      } else {
+        alert(data.message || 'Failed to cancel invitation');
+      }
+    } catch (err) {
+      console.error('Error cancelling invitation:', err);
+      alert('Failed to cancel invitation');
+    }
+  };
+
+  const resendInvitation = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/community/invitations/${inviteId}/resend`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation resent successfully.');
+        fetchCommunityInvitations();
+      } else {
+        alert(data.message || 'Failed to resend invitation');
+      }
+    } catch (err) {
+      console.error('Error resending invitation:', err);
+      alert('Failed to resend invitation');
+    }
+  };
+
+  const [pendingJoinRequests, setPendingJoinRequests] = useState<any[]>([]);
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
+
+  const fetchPendingJoinRequests = useCallback(async (convId: number) => {
+    setJoinRequestsLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/chat/conversations/${convId}/join-requests`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingJoinRequests(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching pending requests:', err);
+    } finally {
+      setJoinRequestsLoading(false);
+    }
+  }, []);
+
+  const handleApproveJoinRequest = async (convId: number, requestId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/join-requests/${requestId}/approve`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Request approved successfully!');
+        fetchPendingJoinRequests(convId);
+      } else {
+        alert(data.message || 'Failed to approve request');
+      }
+    } catch (err) {
+      console.error('Approve request error:', err);
+      alert('Failed to approve request');
+    }
+  };
+
+  const handleRejectJoinRequest = async (convId: number, requestId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/join-requests/${requestId}/reject`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Request rejected successfully!');
+        fetchPendingJoinRequests(convId);
+      } else {
+        alert(data.message || 'Failed to reject request');
+      }
+    } catch (err) {
+      console.error('Reject request error:', err);
+      alert('Failed to reject request');
+    }
+  };
+
+  const handlePromoteMember = async (convId: number, memberUserId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/member-role`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId, role: 'Admin' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member promoted to Admin successfully.');
+      } else {
+        alert(data.message || 'Failed to promote member');
+      }
+    } catch (err) {
+      console.error('Promote member error:', err);
+      alert('Failed to promote member');
+    }
+  };
+
+  const handleDemoteMember = async (convId: number, memberUserId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/member-role`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId, role: 'Member' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member demoted successfully.');
+      } else {
+        alert(data.message || 'Failed to demote member');
+      }
+    } catch (err) {
+      console.error('Demote member error:', err);
+      alert('Failed to demote member');
+    }
+  };
+
+  const handleRemoveGroupMember = async (convId: number, memberUserId: number) => {
+    if (!confirm('Are you sure you want to remove this member from the group?')) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/remove-member`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({ userId: memberUserId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member removed successfully.');
+      } else {
+        alert(data.message || 'Failed to remove member');
+      }
+    } catch (err) {
+      console.error('Remove member error:', err);
+      alert('Failed to remove member');
+    }
+  };
+
+  const handleUpdateSetting = async (convId: number, key: string, value: any) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF(`/api/chat/conversations/${convId}/settings`, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActiveConv(prev => {
+          if (!prev) return null;
+          const currentSettings = prev.groupSettings ? (typeof prev.groupSettings === 'string' ? JSON.parse(prev.groupSettings) : prev.groupSettings) : {};
+          const updatedSettings = { ...currentSettings, [key]: value };
+          return {
+            ...prev,
+            groupSettings: updatedSettings,
+            ...(key === 'canMembersMessage' ? { canMembersMessage: value === 'Everyone' || value === true } : {})
+          };
+        });
+      } else {
+        alert(data.message || 'Failed to update setting');
+      }
+    } catch (err) {
+      console.error('Failed to update setting', err);
+      alert('Failed to update setting');
+    }
+  };
+
+  useEffect(() => {
+    if (activeConv?.is_group && showDetails && (activeConv?.my_role === 'Admin' || activeConv?.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || ''))) {
+      fetchPendingJoinRequests(activeConv.id);
+    }
+  }, [activeConv?.id, activeConv?.is_group, activeConv?.my_role, showDetails, communityRole, fetchPendingJoinRequests]);
+
+  const fetchAllCommunities = useCallback(async (search = '') => {
+    setAllCommunitiesLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/list-all?search=${encodeURIComponent(search)}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAllCommunities(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching communities:', err);
+    } finally {
+      setAllCommunitiesLoading(false);
+    }
+  }, []);
+
+  const fetchMyRequests = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/my-requests', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMyRequests(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching my requests:', err);
+    }
+  }, []);
+
+
+  const handleRequestJoin = async (communityId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/join-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ communityId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message || 'Join request submitted successfully!');
+        await fetchAllCommunities(communitySearchQuery);
+        await fetchMyRequests();
+      } else {
+        alert(data.message || 'Failed to submit join request');
+      }
+    } catch (err) {
+      console.error('Error requesting to join:', err);
+      alert('Error requesting to join community');
+    }
+  };
+
+
+  const handleAcceptInvite = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations/${inviteId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation accepted successfully!');
+        setShowAutoInviteModal(false);
+        setAutoInviteToHandle(null);
+        await fetchMyCommunity();
+        await fetchMyInvitations();
+      } else {
+        alert(data.message || 'Failed to accept invitation');
+      }
+    } catch (err) {
+      console.error('Error accepting invitation:', err);
+      alert('Error accepting invitation');
+    }
+  };
+
+  const handleRejectInvite = async (inviteId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations/${inviteId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation rejected successfully!');
+        setShowAutoInviteModal(false);
+        setAutoInviteToHandle(null);
+        await fetchMyInvitations();
+      } else {
+        alert(data.message || 'Failed to reject invitation');
+      }
+    } catch (err) {
+      console.error('Error rejecting invitation:', err);
+      alert('Error rejecting invitation');
+    }
+  };
+
+  const fetchDashboardStats = useCallback(async (communityId?: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const targetId = communityId || communityDataRef.current?.id;
+      const url = targetId ? `/api/community/dashboard?communityId=${targetId}` : '/api/community/dashboard';
+      const res = await fetch(url, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDashboardStats(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+    }
+  }, []);
+
+  // Fetch Community Info
+  const fetchMyCommunity = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/my-community', {
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const json = await res.json();
+      if (json.success) {
+        setInCommunity(json.inCommunity);
+        if (json.inCommunity && json.communities && json.communities.length > 0) {
+          setMyCommunities(json.communities);
+          setCommunityData((prev: any) => {
+            const found = prev ? json.communities.find((c: any) => c.id === prev.id) : null;
+            if (found) {
+              setCommunityRole(found.role);
+              fetchDashboardStats(found.id);
+              return found;
+            }
+            setCommunityRole(json.communities[0].role);
+            fetchDashboardStats(json.communities[0].id);
+            return json.communities[0];
+          });
+          return json.communities;
+        } else {
+          setMyCommunities([]);
+          setCommunityData(null);
+          setCommunityRole(null);
+          return [];
+        }
+      }
+      return [];
+    } catch (err) {
+      console.error('Error fetching community status:', err);
+      return [];
+    }
+  }, [fetchDashboardStats]);
+
+  const fetchMyInvitations = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/invitations/my-invitations', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMyInvitations(json.invitations);
+        const pending = json.invitations.find((inv: any) => inv.status === 'PENDING');
+        if (pending) {
+          setAutoInviteToHandle(pending);
+          setShowAutoInviteModal(true);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching invitations:', err);
+    }
+  }, []);
+
+  const fetchPricingConfigs = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/pricing-configs', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPricingConfigs(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching pricing config:', err);
+    }
+  }, []);
+
+  const handleInviteMember = async (targetUserId: number) => {
+    if (!communityData?.id) {
+      setInviteError('No active community selected');
+      return;
+    }
+    setInviteLoading(true);
+    setInviteError('');
+    setInviteSuccess('');
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/members/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ userId: targetUserId, communityId: communityData.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInviteSuccess(data.message);
+        setUserSearchQuery('');
+        setUserSearchResults([]);
+      } else {
+        setInviteError(data.message || 'Invitation failed');
+      }
+    } catch {
+      setInviteError('Error inviting member');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleAcceptInvitation = async (invitationId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations/${invitationId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message || 'Joined community successfully!');
+        await fetchMyCommunity();
+        await fetchMyInvitations();
+        await fetchConversations();
+      } else {
+        alert(data.message || 'Failed to accept invitation');
+      }
+    } catch (err) {
+      console.error('Error accepting invitation:', err);
+    }
+  };
+
+  const handleRejectInvitation = async (invitationId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/invitations/${invitationId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Invitation rejected.');
+        await fetchMyInvitations();
+      } else {
+        alert(data.message || 'Failed to reject invitation');
+      }
+    } catch (err) {
+      console.error('Error rejecting invitation:', err);
+    }
+  };
+
+  const handleUserSearch = async (query: string) => {
+    setUserSearchQuery(query);
+    if (!query.trim()) {
+      setUserSearchResults([]);
+      return;
+    }
+    setUserSearchLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUserSearchResults(data.users || []);
+      }
+    } catch (err) {
+      console.error('Error searching users:', err);
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberUserId: number) => {
+    if (!confirm('Are you sure you want to remove this member?')) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/members/${memberUserId}`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Member removed successfully');
+        await fetchMyCommunity();
+        await fetchDashboardStats();
+      } else {
+        alert(data.message || 'Failed to remove member');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error removing member');
+    }
+  };
+
+  const handleCreateCommunityGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+    setGroupLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch('/api/community/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ name: newGroupName })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewGroupName('');
+        setIsCreateGroupModalOpen(false);
+        await fetchConversations();
+        await fetchMyCommunity();
+        await fetchDashboardStats();
+      } else {
+        alert(data.message || 'Failed to create group');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error creating group');
+    } finally {
+      setGroupLoading(false);
+    }
+  };
+
+  const handleDeleteCommunityGroup = async (groupId: number) => {
+    if (!confirm('Are you sure you want to delete this group? This will delete all messages.')) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetch(`/api/community/groups/${groupId}`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Group deleted successfully');
+        await fetchConversations();
+        await fetchMyCommunity();
+        await fetchDashboardStats();
+      } else {
+        alert(data.message || 'Failed to delete group');
+      }
+    } catch {
+      alert('Error deleting group');
+    }
+  };
+
+  const handlePricingProceed = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const payload: any = { planType: selectedPlan };
+      if (selectedPlan === 'Custom') {
+        payload.memberCount = customMembersCount;
+      }
+      const res = await fetchWithCSRF('/api/community/create-order', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        alert(json.message || 'Failed to create order');
+        return;
+      }
+
+      if (json.is_founder) {
+        // Founder role bypass payment verification
+        try {
+          const verifyRes = await fetchWithCSRF('/api/community/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({
+              razorpay_order_id: json.order.id,
+              razorpay_payment_id: 'founder_bypass',
+              razorpay_signature: 'founder_bypass'
+            })
+          });
+
+          const verifyJson = await verifyRes.json();
+          if (verifyJson.success) {
+            setActiveOrderId(json.order.id);
+            setCommunityCreationStep(2);
+          } else {
+            alert(verifyJson.message || 'Payment verification failed');
+          }
+        } catch (verifyErr: any) {
+          console.error('Founder bypass verification error:', verifyErr);
+          alert('Error performing Founder bypass verification.');
+        }
+        return;
+      }
+
+      // Normal user flow: load Razorpay
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        alert('Razorpay SDK failed to load. Are you online?');
+        return;
+      }
+
+      const options = {
+        key: json.keyId,
+        amount: json.order.amount,
+        currency: json.order.currency,
+        name: 'TAKE ONE',
+        description: `Community Subscription - ${selectedPlan}`,
+        order_id: json.order.id,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetchWithCSRF('/api/community/verify-payment', {
+              method: 'POST',
+              headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+
+            const verifyJson = await verifyRes.json();
+            if (verifyJson.success) {
+              setActiveOrderId(json.order.id);
+              setCommunityCreationStep(2);
+            } else {
+              alert(verifyJson.message || 'Payment verification failed');
+            }
+          } catch (verifyErr: any) {
+            console.error('Verification error:', verifyErr);
+            alert('Error verifying payment.');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || ''
+        },
+        theme: {
+          color: '#ff4d1a'
+        }
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
+    } catch (err) {
+      console.error('Order initialization failed:', err);
+      alert('Order initialization failed.');
+    }
+  };
+
+  const handleInstantiateCommunity = async () => {
+    if (!newCommunityName.trim()) {
+      alert('Please enter a community name');
+      return;
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF('/api/community/instantiate', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          razorpay_order_id: activeOrderId,
+          name: newCommunityName,
+          description: newCommunityDesc
+        })
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        alert('Community established and launched!');
+        setIsCommunityModalOpen(false);
+        setCommunityCreationStep(1);
+        setNewCommunityName('');
+        setNewCommunityDesc('');
+        setActiveOrderId(null);
+        await fetchMyCommunity();
+        setShowCommunityDashboard(true);
+        await fetchDashboardStats();
+      } else {
+        alert(json.message || 'Failed to instantiate community.');
+      }
+    } catch (err) {
+      console.error('Instantiation error:', err);
+      alert('Error establishing community.');
+    }
+  };
+  
+  const handleFounderCreateCommunity = async () => {
+    if (!newCommunityName.trim()) {
+      alert('Please enter a community name');
+      return;
+    }
+    setGroupLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      
+      // Step 1: Create Order automatically on Custom plan with 1000 members for founder bypass
+      const orderRes = await fetchWithCSRF('/api/community/create-order', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          planType: 'Custom',
+          memberCount: 1000
+        })
+      });
+      
+      const orderJson = await orderRes.json();
+      if (!orderRes.ok || !orderJson.success) {
+        alert(orderJson.message || 'Failed to initialize community setup.');
+        setGroupLoading(false);
+        return;
+      }
+
+      // Step 2: Verify Payment Bypass
+      const verifyRes = await fetchWithCSRF('/api/community/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          razorpay_order_id: orderJson.order.id,
+          razorpay_payment_id: 'founder_bypass',
+          razorpay_signature: 'founder_bypass'
+        })
+      });
+
+      const verifyJson = await verifyRes.json();
+      if (!verifyRes.ok || !verifyJson.success) {
+        alert(verifyJson.message || 'Failed to verify founder bypass.');
+        setGroupLoading(false);
+        return;
+      }
+
+      // Step 3: Instantiate Community
+      const instRes = await fetchWithCSRF('/api/community/instantiate', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          razorpay_order_id: orderJson.order.id,
+          name: newCommunityName,
+          description: newCommunityDesc
+        })
+      });
+
+      const instJson = await instRes.json();
+      if (instJson.success) {
+        alert('Community established and launched!');
+        setIsCommunityModalOpen(false);
+        setNewCommunityName('');
+        setNewCommunityDesc('');
+        await fetchMyCommunity();
+        setShowCommunityDashboard(true);
+        await fetchDashboardStats();
+      } else {
+        alert(instJson.message || 'Failed to establish community.');
+      }
+    } catch (err) {
+      console.error('Founder community creation error:', err);
+      alert('Error establishing community.');
+    } finally {
+      setGroupLoading(false);
+    }
+  };
 
   // Group messages by date
   const groupMessagesByDate = (msgs: ChatMessage[]) => {
@@ -123,6 +1193,8 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -167,9 +1239,11 @@ export default function ChatPage() {
 
   const setActiveConversation = useCallback((conversation: Conversation, updateUrl = true) => {
     setActiveConv(conversation);
+    setShowMobileSidebar(false);
     setMessages([]);
     setTasks([]);
     setActiveTab('chat');
+    setDetailsTab('members');
     localStorage.setItem('take_one_last_conversation', String(conversation.id));
 
     // Clear unread for this conversation locally
@@ -218,7 +1292,7 @@ export default function ChatPage() {
     } catch (err: any) {
       console.error('Failed to fetch messages', err);
       setState('error');
-      setStatusText(err.message || 'The Nexus connection was interrupted.');
+      setStatusText(err.message || 'The Community connection was interrupted.');
     } finally {
       setMessageLoading(false);
       setIsLoadingMore(false);
@@ -339,7 +1413,7 @@ export default function ChatPage() {
       return loaded as Conversation[];
     } catch (err: any) {
       console.error('Fetch conversations failed:', err);
-      throw new Error(err.message || 'The Nexus frequency is unstable. Please retry.');
+      throw new Error(err.message || 'The Community frequency is unstable. Please retry.');
     }
   }, []);
 
@@ -372,6 +1446,8 @@ export default function ChatPage() {
       const withoutDuplicate = current.filter((item) => item.id !== conversation.id);
       return [{ ...conversation, unread: 0 }, ...withoutDuplicate];
     });
+    setViewingGalaxyLanding(false);
+    setShowCommunityDashboard(false);
     setActiveConversation(conversation);
     return conversation;
   }, [setActiveConversation]);
@@ -415,7 +1491,7 @@ export default function ChatPage() {
   };
 
   const handleClearChat = async (id: number) => {
-    if (!confirm('Are you sure you want to clear all messages in this conversation? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to clear all messages in this conversation? This will permanently delete messages for ALL participants. Only Directors and Admins can perform this action.')) return;
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
       const res = await fetchWithCSRF(`/api/chat/conversations/${id}/clear`, { 
@@ -426,6 +1502,9 @@ export default function ChatPage() {
       if (res.ok) {
         setMessages([]);
         setShowMenu(false);
+      } else {
+        const json = await res.json();
+        alert(json.message || 'Failed to clear chat');
       }
     } catch (err) {
       console.error('Failed to clear chat', err);
@@ -433,9 +1512,14 @@ export default function ChatPage() {
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    if (!activeConv) return;
+    setMutedConvIds(prev => {
+      const next = new Set(prev);
+      if (next.has(activeConv.id)) next.delete(activeConv.id);
+      else next.add(activeConv.id);
+      return next;
+    });
     setShowMenu(false);
-    // In a real app, this would call an API
   };
 
 
@@ -473,31 +1557,42 @@ export default function ChatPage() {
     }, 2000);
   };
 
-  const createGroupConversation = useCallback(async (name: string, userIds: number[]) => {
-    setState('loading');
-    setStatusText('Creating group transmission...');
+  const handleNavigateToCommunity = async (comm: any) => {
+    setInCommunity(true);
+    setCommunityData(comm);
+    setCommunityRole(comm.role);
+    setViewingGalaxyLanding(false);
+    setShowCommunityDashboard(true);
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-    const res = await fetchWithCSRF('/api/chat/conversations/group', {
-      method: 'POST',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      body: JSON.stringify({ name, userIds })
-    });
-    
-    if (res.status === 401) { window.location.href = '/?auth=login'; return; }
-    const json = await res.json();
-
-    if (!res.ok || !json.success) {
-      setState('error');
-      setStatusText(json.message || 'Could not create group.');
-      return;
+    try {
+      const statsRes = await fetch(`/api/community/dashboard?communityId=${comm.id}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      const statsJson = await statsRes.json();
+      if (statsJson.success) {
+        setDashboardStats(statsJson.data);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
     }
 
-    const conversation = json.data as Conversation;
-    setConversations((current) => [conversation, ...current]);
-    setActiveConversation(conversation);
-    setState('ready');
-  }, [setActiveConversation]);
+    if (comm.groups && comm.groups.length > 0) {
+      const generalGroup = comm.groups.find((g: any) => g.name.toLowerCase() === 'general') || comm.groups[0];
+      const targetConv = conversations.find(c => c.id === generalGroup.conversation_id);
+      if (targetConv) {
+        setActiveConversation(targetConv);
+        await fetchMessages(targetConv.id);
+      } else {
+        const loaded = await fetchConversations();
+        const found = loaded.find(c => c.id === generalGroup.conversation_id);
+        if (found) {
+          setActiveConversation(found);
+          await fetchMessages(found.id);
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     const initialize = async () => {
@@ -542,6 +1637,10 @@ export default function ChatPage() {
         const targetUserId = Number(params.get('userId') || params.get('user') || 0);
         const targetConversationId = Number(params.get('conversationId') || 0);
         const loadedConversations = await fetchConversations();
+        await fetchMyCommunity();
+        await fetchMyInvitations();
+        await fetchAllCommunities();
+        await fetchMyRequests();
 
         if (targetUserId) {
           const conversation = await openDirectConversation(targetUserId);
@@ -572,15 +1671,32 @@ export default function ChatPage() {
       } catch (err: any) {
         console.error('Failed to initialize chat', err);
         setState('error');
-        setStatusText(err.message || 'Signal Error: Could not synchronize with Nexus.');
+        setStatusText(err.message || 'Signal Error: Could not synchronize with Community.');
       }
     };
 
     initialize();
-  }, [fetchConversations, fetchMessages, openDirectConversation, setActiveConversation]);
+  }, [fetchConversations, fetchMessages, openDirectConversation, setActiveConversation, fetchMyCommunity, fetchMyInvitations, fetchAllCommunities, fetchMyRequests]);
 
+  // =========================================================================
+  // FIX 1: DEDICATED PUSHER CLIENT CONNECTION DISPOSAL LIFECYCLE HOOK
+  // Handles complete websocket disconnection on unmount, layout switches, or logouts.
+  // =========================================================================
   useEffect(() => {
-    if (!user) return;
+    return () => {
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+        pusherRef.current = null;
+      }
+    };
+  }, [user?.id]); // Fires on explicit layout unmount or session invalidation (logout)
+
+  // =========================================================================
+  // FIX 2: REFACTORED USER CHANNEL SUBSCRIPTION (DETERMINISTIC CLEANUP)
+  // =========================================================================
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
 
     if (!pusherRef.current) {
       const pusherKey = pusherConfigRef.current?.key || process.env.NEXT_PUBLIC_PUSHER_KEY;
@@ -588,30 +1704,63 @@ export default function ChatPage() {
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
-          cluster: pusherCluster
+          cluster: pusherCluster,
+          authorizer: (channel) => {
+            return {
+              authorize: (socketId, callback) => {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                fetch('/api/chat/pusher/auth', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({
+                    socket_id: socketId,
+                    channel_name: channel.name
+                  })
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.auth) {
+                    callback(null, data);
+                  } else {
+                    callback(new Error(data.message || 'Authorization failed'), null);
+                  }
+                })
+                .catch(err => {
+                  callback(err, null);
+                });
+              }
+            };
+          }
         });
       }
     }
 
     if (!pusherRef.current) return;
 
-    const userChannelName = `user-${user.id}`;
+    const userChannelName = `user-${userId}`;
     const userChannel = pusherRef.current.subscribe(userChannelName);
 
-    userChannel.bind('credit-update', (data: { credits: number, change: number, reason: string }) => {
+    // Named reference allocation to avoid handler replication
+    const handleCreditUpdate = (data: { credits: number, change: number, reason: string }) => {
       setUser(prev => prev ? { ...prev, credits: data.credits } : null);
+    };
 
-    });
+    const handleMessageNotification = (data: any) => {
+      const msg: ChatMessage = data.message || data;
+      const convId = data.conversationId || msg.conversation_id;
+      if (!msg || !convId) return;
 
-    userChannel.bind('message-notification', (data: { conversationId: number, message: ChatMessage }) => {
       setConversations((current) => {
-        const convIndex = current.findIndex((c) => c.id === data.conversationId);
+        const convIndex = current.findIndex((c) => c.id === convId);
         if (convIndex > -1) {
           const conv = current[convIndex];
-          const isCurrentActive = activeConv?.id === data.conversationId;
+          const isCurrentActive = activeConv?.id === convId;
           const updatedConv = { 
             ...conv, 
-            messages: [data.message], 
+            messages: [msg], 
             unread: isCurrentActive ? 0 : (conv.unread || 0) + 1 
           };
           const newConvs = [...current];
@@ -622,14 +1771,217 @@ export default function ChatPage() {
           return current;
         }
       });
-    });
+    };
 
+    const handleConversationUpdate = (updatedConv: any) => {
+      setConversations(current => {
+        const index = current.findIndex(c => c.id === updatedConv.id);
+        if (index > -1) {
+          const newConvs = [...current];
+          newConvs[index] = {
+            ...newConvs[index],
+            ...updatedConv
+          };
+          return newConvs;
+        }
+        return current;
+      });
+      setActiveConv(current => {
+        if (current && current.id === updatedConv.id) {
+          return {
+            ...current,
+            ...updatedConv
+          };
+        }
+        return current;
+      });
+    };
+
+    // Binding reference listeners
+    userChannel.bind('credit-update', handleCreditUpdate);
+    userChannel.bind('message-notification', handleMessageNotification);
+    userChannel.bind('conversation-update', handleConversationUpdate);
+
+    // Strict explicit event teardown block
     return () => {
-      userChannel.unbind_all();
+      userChannel.unbind('credit-update', handleCreditUpdate);
+      userChannel.unbind('message-notification', handleMessageNotification);
+      userChannel.unbind('conversation-update', handleConversationUpdate);
       pusherRef.current?.unsubscribe(userChannelName);
     };
-  }, [user, activeConv?.id, fetchConversations]);
+  }, [user?.id, activeConv?.id, fetchConversations]);
 
+  // =========================================================================
+  // FIX 3: REFACTORED CONVERSATION ACTIVE CHANNEL (DETERMINISTIC CLEANUP)
+  // =========================================================================
+
+  const attemptSendMessage = useCallback(async (tempId: string, content: string, conversationId: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+      const res = await fetchWithCSRF('/api/chat/messages', {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: JSON.stringify({
+          conversationId,
+          content,
+          tempId
+        })
+      });
+
+      if (res.status === 401) {
+        window.location.href = '/?auth=login';
+        return;
+      }
+
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        // Permanent error (auth, validation) - mark as failed
+        if (res.status === 401 || res.status === 403 || res.status === 400) {
+          setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+          removeFromQueue(tempId);
+          setStatusText(json.message || 'Message failed to send.');
+          return;
+        }
+        
+        // Transient error - schedule retry
+        scheduleRetry(tempId, 0);
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+        setStatusText(json.message || 'Message send failed. Retrying...');
+        return;
+      }
+
+      // Success - remove from queue and mark as sent
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...json.data, status: 'sent' } : m));
+      removeFromQueue(tempId);
+      
+      setConversations((current) => {
+        const index = current.findIndex(c => c.id === json.data.conversation_id);
+        if (index === -1) return current;
+        const updated = { ...current[index], messages: [json.data] };
+        const next = [...current];
+        next.splice(index, 1);
+        return [updated, ...next];
+      });
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err) {
+      console.error('[MESSAGE] Failed to send message', err);
+      // Network error - schedule retry
+      scheduleRetry(tempId, 0);
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+      setStatusText('Network error. Message will be retried.');
+    } finally {
+      setSending(false);
+    }
+  }, [removeFromQueue, scheduleRetry, setMessages, setConversations, setSending, setStatusText]);
+
+  const processMessageQueue = useCallback(async () => {
+    if (isProcessing() || pusherConnectionState !== 'connected') return;
+    
+    setProcessing(true);
+    
+    try {
+      let nextMessage = getNextMessageToRetry();
+      
+      while (nextMessage) {
+        const msg = nextMessage;
+        updateMessageStatus(msg.tempId, 'sending');
+        setMessages(prev => prev.map(m => 
+          m.id === msg.tempId ? { ...m, status: 'sending' } : m
+        ));
+        
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+          const res = await fetchWithCSRF('/api/chat/messages', {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: JSON.stringify({
+              conversationId: msg.conversationId,
+              content: msg.content,
+              tempId: msg.tempId
+            })
+          });
+
+          const json = await res.json();
+
+          if (res.ok && json.success) {
+            // Success
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...json.data, status: 'sent' } : m
+            ));
+            removeFromQueue(msg.tempId);
+            
+            setConversations((current) => {
+              const index = current.findIndex(c => c.id === json.data.conversation_id);
+              if (index === -1) return current;
+              const updated = { ...current[index], messages: [json.data] };
+              const next = [...current];
+              next.splice(index, 1);
+              return [updated, ...next];
+            });
+          } else if (res.status === 401 || res.status === 403 || res.status === 400) {
+            // Permanent error
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...m, status: 'failed' } : m
+            ));
+            removeFromQueue(msg.tempId);
+            break; // Stop processing on auth error
+          } else {
+            // Transient error
+            scheduleRetry(msg.tempId, msg.retryCount + 1);
+            if (msg.retryCount >= 4) {
+              setMessages(prev => prev.map(m => 
+                m.id === msg.tempId ? { ...m, status: 'failed' } : m
+              ));
+              break; // Max retries reached
+            }
+          }
+        } catch (err) {
+          console.error('[QUEUE] Error processing message:', err);
+          scheduleRetry(msg.tempId, msg.retryCount + 1);
+          if (msg.retryCount >= 4) {
+            setMessages(prev => prev.map(m => 
+              m.id === msg.tempId ? { ...m, status: 'failed' } : m
+            ));
+            break;
+          }
+        }
+        
+        // Get next message to retry
+        nextMessage = getNextMessageToRetry();
+        
+        // Small delay between retries
+        if (nextMessage) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    } finally {
+      setProcessing(false);
+    }
+  }, [isProcessing, pusherConnectionState, getNextMessageToRetry, updateMessageStatus, removeFromQueue, scheduleRetry, setMessages, setConversations, setProcessing]);
+
+  // Monitor Pusher connection state and process queue on reconnection
+  useEffect(() => {
+    if (!pusherRef.current) return;
+    
+    const handleConnectionStateChange = (state: any) => {
+      const newState: PusherConnectionState = state.current;
+      setPusherConnectionState(newState);
+      
+      if (newState === 'connected') {
+        processMessageQueue();
+      }
+    };
+    
+    pusherRef.current.connection.bind('state_change', handleConnectionStateChange);
+    
+    const currentState = pusherRef.current.connection.state as PusherConnectionState;
+    setPusherConnectionState(currentState);
+    
+    return () => {
+      pusherRef.current?.connection.unbind('state_change', handleConnectionStateChange);
+    };
+  }, [processMessageQueue]); // Added processMessageQueue safely here
   useEffect(() => {
     if (!activeConv) return;
 
@@ -639,7 +1991,36 @@ export default function ChatPage() {
 
       if (pusherKey && pusherCluster) {
         pusherRef.current = new Pusher(pusherKey, {
-          cluster: pusherCluster
+          cluster: pusherCluster,
+          authorizer: (channel) => {
+            return {
+              authorize: (socketId, callback) => {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                fetch('/api/chat/pusher/auth', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({
+                    socket_id: socketId,
+                    channel_name: channel.name
+                  })
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.auth) {
+                    callback(null, data);
+                  } else {
+                    callback(new Error(data.message || 'Authorization failed'), null);
+                  }
+                })
+                .catch(err => {
+                  callback(err, null);
+                });
+              }
+            };
+          }
         });
       }
     }
@@ -648,21 +2029,37 @@ export default function ChatPage() {
 
     const channelName = `conversation-${activeConv.id}`;
     const channel = pusherRef.current.subscribe(channelName);
-    channel.bind('new-message', (data: { message: ChatMessage }) => {
-      if (activeConv.id === data.message.conversation_id) {
+
+    // Named handlers to allow precise runtime stack unbinding
+    const handleNewMessage = (data: any) => {
+      const msg: ChatMessage = data.message || data;
+      if (!msg || !msg.conversation_id) return;
+
+      if (activeConv.id === msg.conversation_id) {
         setMessages((prev) => {
-          if (prev.find((message) => message.id === data.message.id)) return prev;
-          return [...prev, data.message];
+          // Check if message already exists by ID
+          if (prev.find((message) => message.id === msg.id)) return prev;
+          
+          // Check if this is a reply to a queued message (match by tempId)
+          if (msg.tempId) {
+            return prev.map(m => 
+              m.id === msg.tempId || m.tempId === msg.tempId
+                ? { ...msg, status: 'sent' }
+                : m
+            );
+          }
+          
+          return [...prev, msg];
         });
       }
       
       setConversations((current) => {
-        const convIndex = current.findIndex((c) => c.id === data.message.conversation_id);
+        const convIndex = current.findIndex((c) => c.id === msg.conversation_id);
         if (convIndex > -1) {
           const conv = current[convIndex];
           const updatedConv = { 
             ...conv, 
-            messages: [data.message],
+            messages: [msg],
             unread: activeConv.id === conv.id ? 0 : (conv.unread || 0) + 1
           };
           const newConvs = [...current];
@@ -671,9 +2068,9 @@ export default function ChatPage() {
         }
         return current;
       });
-    });
+    };
 
-    channel.bind('user-typing', (data: { userId: number, userName: string, isTyping: boolean }) => {
+    const handleUserTyping = (data: { userId: number, userName: string, isTyping: boolean }) => {
       if (data.userId === user?.id) return;
       setTypingUsers(prev => {
         const next = { ...prev };
@@ -681,9 +2078,9 @@ export default function ChatPage() {
         else delete next[data.userId];
         return next;
       });
-    });
+    };
 
-    channel.bind('task-update', (data: { type: string, task: Task, taskId?: number }) => {
+    const handleTaskUpdate = (data: { type: string, task: Task, taskId?: number }) => {
       if (data.type === 'TASK_CREATED') {
         setTasks(prev => [data.task, ...prev]);
       } else if (data.type === 'TASK_UPDATED' || data.type === 'TASK_APPROVED') {
@@ -691,14 +2088,38 @@ export default function ChatPage() {
       } else if (data.type === 'TASK_DELETED') {
         setTasks(prev => prev.filter(t => t.id !== data.taskId));
       }
-    });
+    };
 
+    const handleSettingsUpdated = (data: { conversationId: number, canMembersMessage: boolean, conversation?: any }) => {
+      setActiveConv(prev => {
+        if (prev && prev.id === data.conversationId) {
+          return { ...prev, canMembersMessage: data.canMembersMessage, ...(data.conversation || {}) };
+        }
+        return prev;
+      });
+      setConversations(prev => prev.map(c => {
+        if (c.id === data.conversationId) {
+          return { ...c, canMembersMessage: data.canMembersMessage, ...(data.conversation || {}) };
+        }
+        return c;
+      }));
+    };
+
+    // Binding reference handlers
+    channel.bind('new-message', handleNewMessage);
+    channel.bind('user-typing', handleUserTyping);
+    channel.bind('task-update', handleTaskUpdate);
+    channel.bind('settings-updated', handleSettingsUpdated);
+
+    // Explicit channel and handler teardown phase
     return () => {
-      channel.unbind_all();
+      channel.unbind('new-message', handleNewMessage);
+      channel.unbind('user-typing', handleUserTyping);
+      channel.unbind('task-update', handleTaskUpdate);
+      channel.unbind('settings-updated', handleSettingsUpdated);
       pusherRef.current?.unsubscribe(channelName);
     };
   }, [activeConv, user?.id]);
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, messageLoading]);
@@ -712,19 +2133,24 @@ export default function ChatPage() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+    const timeouts = typingTimeoutRef.current;
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       // Clean up all typing timeouts
-      Object.values(typingTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
+      Object.values(timeouts).forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (showMenu) setShowMenu(false);
+      if (!showMenu) return;
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (menuBtnRef.current?.contains(target)) return;
+      setShowMenu(false);
     };
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
   useEffect(() => {
@@ -739,7 +2165,7 @@ export default function ChatPage() {
     if (!newMessage.trim() || !activeConv || sending || !user) return;
 
     const content = newMessage.trim();
-    const tempId = `temp-${Date.now()}`;
+    const tempId = crypto.randomUUID();
     
     const optimisticMessage: ChatMessage = {
       id: tempId,
@@ -748,60 +2174,58 @@ export default function ChatPage() {
       content,
       created_at: new Date().toISOString(),
       sender: user,
-      status: 'sending'
+      status: pusherConnectionState === 'connected' ? 'sending' : 'pending',
+      tempId
     };
 
     setNewMessage('');
     setMessages(prev => [...prev, optimisticMessage]);
+    setSending(true);
     
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
-      const res = await fetchWithCSRF('/api/chat/messages', {
-        method: 'POST',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        body: JSON.stringify({
-          conversationId: activeConv.id,
-          content
-        })
-      });
+    const queuedMessage: QueuedMessage = {
+      tempId,
+      content,
+      conversationId: activeConv.id,
+      senderId: user.id,
+      createdAt: new Date().toISOString(),
+      status: pusherConnectionState === 'connected' ? 'sending' : 'pending',
+      retryCount: 0,
+      nextRetryAt: Date.now()
+    };
 
-      if (res.status === 401) {
-        window.location.href = '/?auth=login';
-        return;
-      }
+    // Add to queue
+    addToQueue(queuedMessage);
 
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
-        setStatusText(json.message || 'Message could not be sent.');
-        return;
-      }
-
-      // Replace optimistic message with actual message from server
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...json.data, status: 'sent' } : m));
-      
-      setConversations((current) => {
-        const index = current.findIndex(c => c.id === json.data.conversation_id);
-        if (index === -1) return current;
-        const updated = { ...current[index], messages: [json.data] };
-        const next = [...current];
-        next.splice(index, 1);
-        return [updated, ...next];
-      });
-      setTimeout(() => inputRef.current?.focus(), 100);
-    } catch (err) {
-      console.error('Failed to send message', err);
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
-      setStatusText('Connection lost. Message failed to send.');
+    // If connected, attempt send immediately; otherwise mark as pending
+    if (pusherConnectionState === 'connected') {
+      await attemptSendMessage(tempId, content, activeConv.id);
+    } else {
+      updateMessageStatus(tempId, 'pending');
+      setSending(false);
+      setStatusText('Message queued. Will send when connection is restored.');
     }
   };
+
+  // Periodic retry check for queued messages
+  useEffect(() => {
+    if (!user?.id || pusherConnectionState !== 'connected' || messageLoading) return;
+    
+    const interval = setInterval(() => {
+      if (messageLoading) return;
+      const nextMessage = getNextMessageToRetry();
+      if (nextMessage) {
+        processMessageQueue();
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [user?.id, pusherConnectionState, getNextMessageToRetry, processMessageQueue, messageLoading]);
 
   if (state === 'loading') return <div className="chat-loading">{statusText}</div>;
 
   return (
     <div className="chat-page">
-      <header>
+      <header className="global-header">
         <a href="/" className="logo">TAKE <span>ONE</span></a>
         <nav>
           <a href="/#explore">Discover Projects</a>
@@ -810,33 +2234,462 @@ export default function ChatPage() {
           <a href="/#upload">Share Your Script</a>
           <a href="/profile">Profile</a>
           {user?.role && ['admin', 'developer', 'moderator'].includes(user.role.toLowerCase()) && (
-            <a href="/admin" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
+            <a href="https://admin.takeone-nexus.net.in" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
           )}
-          <button onClick={() => window.location.href = '/profile'} className="nav-cta" style={{ border: 'none', cursor: 'pointer', fontFamily: "'Bebas Neue', sans-serif" }}>
+          <button onClick={() => window.location.href = '/profile'} className="nav-cta">
             My Signal
           </button>
         </nav>
       </header>
 
       <div className="chat-container">
-        <aside className="chat-sidebar">
+        {/* Community Switcher Rail */}
+        <div className="community-rail">
+          {/* Community Global Icon */}
+          <div className={`rail-item-wrapper ${!inCommunity && !viewingGalaxyLanding ? 'active' : ''}`}>
+            <div className="rail-pill" />
+            <button 
+              className="rail-item" 
+              onClick={() => {
+                setInCommunity(false);
+                setViewingGalaxyLanding(false);
+                setShowCommunityDashboard(false);
+              }}
+              title="Community Global Chat"
+            >
+              N
+            </button>
+          </div>
+
+          <div className="rail-separator" />
+
+          {/* User's joined communities */}
+          {myCommunities.map((comm) => {
+            const isActive = inCommunity && communityData?.id === comm.id && !viewingGalaxyLanding;
+            const initials = comm.name.charAt(0).toUpperCase();
+            return (
+              <div key={comm.id} className={`rail-item-wrapper ${isActive ? 'active' : ''}`}>
+                <div className="rail-pill" />
+                <button 
+                  className="rail-item" 
+                  onClick={() => handleNavigateToCommunity(comm)}
+                  title={comm.name}
+                >
+                  {comm.logo_url ? (
+                    <img src={cacheBustUrl(comm.logo_url, comm.updated_at)} alt={comm.name} />
+                  ) : (
+                    initials
+                  )}
+                </button>
+              </div>
+            );
+          })}
+
+          <div className="rail-separator" />
+
+          {/* Galaxy Landing / Find Communities Button */}
+          <div className={`rail-item-wrapper ${viewingGalaxyLanding ? 'active' : ''}`}>
+            <div className="rail-pill" />
+            <button 
+              className="rail-item" 
+              onClick={() => {
+                setViewingGalaxyLanding(true);
+                fetchAllCommunities(communitySearchQuery);
+              }}
+              style={{ fontSize: '20px' }}
+              title="Explore Galaxy Communities"
+            >
+              🌌
+            </button>
+          </div>
+
+          {/* My Requests Dashboard Button */}
+          <div className="rail-item-wrapper">
+            <button 
+              className="rail-item" 
+              onClick={() => {
+                fetchMyRequests();
+                setIsJoinRequestModalOpen(true);
+              }}
+              style={{ fontSize: '20px' }}
+              title="My Community Requests"
+            >
+              📋
+            </button>
+          </div>
+        </div>
+
+        <aside
+  className={`chat-sidebar ${
+    !showMobileSidebar ? 'mobile-hidden' : ''
+  }`}
+>
           <div className="sidebar-header">
             <div className="sidebar-title-row">
-              <h2>Transmissions</h2>
-              <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta" style={{ border: 'none', cursor: 'pointer', padding: '6px 12px', height: 'auto' }} aria-label="Create Group">+</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2>NEXUS</h2>
+                <div 
+                  className={`connection-indicator ${pusherConnectionState}`}
+                  title={`Community Connection: ${pusherConnectionState}`}
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: pusherConnectionState === 'connected' ? '#00ff88' : pusherConnectionState === 'connecting' ? '#ffa620' : '#ff3232',
+                    boxShadow: pusherConnectionState === 'connected' 
+                      ? '0 0 8px #00ff88' 
+                      : pusherConnectionState === 'connecting' 
+                        ? '0 0 8px #ffa620' 
+                        : '0 0 8px #ff3232',
+                    transition: 'all 0.3s ease',
+                    animation: pusherConnectionState === 'connecting' ? 'pulse-opacity 1.5s infinite' : 'none'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={() => setIsGroupModalOpen(true)} className="nav-cta group-add-btn" aria-label="Create Group" title="Create Group">+</button>
+              </div>
             </div>
-            <div className="sidebar-search-wrap">
-              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input 
-                type="text" 
-                className="sidebar-search-input" 
-                placeholder="Search Nexus..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+
+            <div className="sidebar-tabs" style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', marginTop: '12px', marginBottom: '8px' }}>
+              <button 
+                onClick={() => { 
+                  setViewingGalaxyLanding(false); 
+                  setShowCommunityDashboard(false); 
+                }} 
+                className={`tab-btn ${!viewingGalaxyLanding && !showCommunityDashboard ? 'active' : ''}`}
+                style={{ flex: 1, padding: '8px', background: (!viewingGalaxyLanding && !showCommunityDashboard) ? 'rgba(255,77,26,0.1)' : 'transparent', border: 'none', color: '#fff', borderBottom: (!viewingGalaxyLanding && !showCommunityDashboard) ? '2px solid var(--neon)' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+              >
+                Chats
+              </button>
+              <button 
+                onClick={() => {
+                  const targetState = !viewingGalaxyLanding;
+                  setViewingGalaxyLanding(targetState);
+                  setShowCommunityDashboard(false);
+                  if (targetState) {
+                    fetchAllCommunities(communitySearchQuery);
+                  }
+                }} 
+                className={`tab-btn ${viewingGalaxyLanding ? 'active' : ''}`}
+                style={{ flex: 1, padding: '8px', background: viewingGalaxyLanding ? 'rgba(255,77,26,0.1)' : 'transparent', border: 'none', color: '#fff', borderBottom: viewingGalaxyLanding ? '2px solid var(--neon)' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+              >
+                Community
+              </button>
             </div>
+
+            {!showCommunityDashboard && (
+              <div className="sidebar-search-wrap">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input 
+                  type="text" 
+                  className="sidebar-search-input" 
+                  placeholder="Search Community..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
           </div>
-          <div className="conversation-list">
+          
+          {showCommunityDashboard ? (
+            <div className="conversation-list community-sidebar-view" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', height: 'calc(100% - 130px)' }}>
+              {inCommunity && communityData ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '12px' }}>
+                    {communityData.logo_url ? (
+                      <img src={cacheBustUrl(communityData.logo_url, communityData.updated_at)} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                    ) : (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '18px', color: 'var(--neon)' }}>
+                        {communityData.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', color: 'var(--neon)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{communityData.name}</h3>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && (
+                        <label style={{ fontSize: '10px', color: '#aaa', cursor: 'pointer', textDecoration: 'underline' }}>
+                          Update Logo
+                          <input 
+                            type="file" 
+                            accept="image/jpeg,image/png,image/webp" 
+                            style={{ display: 'none' }} 
+                            onChange={async (e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                if (file.size > 5 * 1024 * 1024) {
+                                  alert('File is too large. Max size is 5MB.');
+                                  return;
+                                }
+                                const formData = new FormData();
+                                formData.append('logo', file);
+                                formData.append('communityId', String(communityData.id));
+                                const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                                try {
+                                  const res = await fetch('/api/community/logo', {
+                                    method: 'POST',
+                                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                                    body: formData
+                                  });
+                                  const json = await res.json();
+                                  if (json.success) {
+                                    alert('Logo updated successfully.');
+                                    await fetchMyCommunity();
+                                  } else {
+                                    alert(json.message || 'Failed to upload logo.');
+                                  }
+                                } catch (err) {
+                                  console.error('Error uploading logo:', err);
+                                  alert('Failed to upload logo.');
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {myCommunities.length > 1 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ fontSize: '10px', color: '#888', display: 'block', marginBottom: '4px' }}>Active Community</label>
+                      <select 
+                        value={communityData.id} 
+                        onChange={async (e) => {
+                          const selectedId = Number(e.target.value);
+                          const found = myCommunities.find(c => c.id === selectedId);
+                          if (found) {
+                            setCommunityData(found);
+                            setCommunityRole(found.role);
+                            const token = typeof window !== 'undefined' ? localStorage.getItem('take_one_token') : null;
+                            const statsRes = await fetch(`/api/community/dashboard?communityId=${selectedId}`, {
+                              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                            });
+                            const statsJson = await statsRes.json();
+                            if (statsJson.success) {
+                              setDashboardStats(statsJson.data);
+                            }
+                          }
+                        }}
+                        style={{ width: '100%', padding: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff', fontSize: '12px' }}
+                      >
+                        {myCommunities.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Groups ({communityData.groups?.length || 0})</h4>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && (
+                        <button 
+                          onClick={() => setIsCreateGroupModalOpen(true)} 
+                          style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                          title="Create Group"
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {communityData.groups?.map((group: any) => (
+                        <div 
+                          key={group.id}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '6px', background: activeConv?.id === group.conversation_id ? 'rgba(255,77,26,0.12)' : 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'background 0.2s' }}
+                          onClick={() => {
+                            const targetConv = conversations.find(c => c.id === group.conversation_id);
+                            if (targetConv) {
+                              setActiveConversation(targetConv);
+                              fetchMessages(targetConv.id);
+                            } else {
+                              fetchConversations().then(loaded => {
+                                const found = loaded.find(c => c.id === group.conversation_id);
+                                if (found) {
+                                  setActiveConversation(found);
+                                  fetchMessages(found.id);
+                                } else {
+                                  alert("You do not have access to this group.");
+                                }
+                              });
+                            }
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', fontWeight: activeConv?.id === group.conversation_id ? 'bold' : 'normal', color: activeConv?.id === group.conversation_id ? 'var(--neon)' : '#ccc' }}>
+                            # {group.name}
+                          </span>
+                          {['Owner', 'Moderator'].includes(communityRole || '') && group.name !== 'General' && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCommunityGroup(group.id);
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: '#ff3333', fontSize: '11px', cursor: 'pointer', opacity: 0.7 }}
+                              title="Delete Group"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Members ({communityData.members?.length || 0})</h4>
+                      {['Owner', 'Moderator'].includes(communityRole || '') && (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => {
+                              fetchCommunityInvitations();
+                              setIsInvitationsManagementModalOpen(true);
+                            }} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--cream)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Manage
+                          </button>
+                          <button 
+                            onClick={() => setIsInviteModalOpen(true)} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--neon)', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Invite
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {communityData.members?.map((member: any) => (
+                        <div 
+                          key={member.id}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.01)' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                            <img 
+                              src={getAvatarUrl(member.user?.name || 'User', member.user?.gender || 'Other', member.user?.avatar_url)} 
+                              alt="" 
+                              style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0 }}
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.user?.name}</span>
+                              <span style={{ fontSize: '9px', color: member.role === 'Owner' ? 'var(--neon)' : '#999' }}>{member.role}</span>
+                            </div>
+                          </div>
+                          {['Owner', 'Moderator'].includes(communityRole || '') && member.user_id !== user?.id && (
+                            !(communityRole === 'Moderator' && ['Owner', 'Moderator'].includes(member.role)) && (
+                              <button 
+                                onClick={() => handleRemoveMember(member.user_id)}
+                                style={{ background: 'transparent', border: 'none', color: '#ff4d4d', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
+                                title="Remove from Community"
+                              >
+                                Kick
+                              </button>
+                            )
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {['Owner', 'Moderator'].includes(communityRole || '') && (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', marginTop: 'auto' }}>
+                      <div style={{ background: 'rgba(255,77,26,0.03)', border: '1px solid rgba(255,77,26,0.15)', padding: '10px', borderRadius: '6px', fontSize: '11px', color: '#ccc' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--neon)', marginBottom: '4px', fontSize: '12px' }}>Dashboard: {dashboardStats?.planType || 'Owner'}</div>
+                        <div style={{ marginBottom: '2px' }}>Members: <strong>{dashboardStats?.memberCount || 0} / {dashboardStats?.max_members || 0}</strong></div>
+                        <div>Groups: <strong>{dashboardStats?.groupCount || 0} / 50</strong></div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px', marginTop: dashboardStats ? '12px' : 'auto' }}>
+                    <button 
+                      onClick={() => {
+                        if (!isFounder) {
+                          fetchPricingConfigs();
+                        }
+                        setIsCommunityModalOpen(true);
+                      }}
+                      style={{ width: '100%', background: 'transparent', border: '1px dashed rgba(255,77,26,0.4)', color: 'var(--neon)', padding: '8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      + Create Another Community
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,77,26,0.05)', border: '1px solid rgba(255,77,26,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <svg viewBox="0 0 24 24" width="28" height="28" stroke="var(--neon)" strokeWidth="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                  </div>
+                  <div>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--neon)' }}>No Community Yet</h3>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#888', lineHeight: '1.5' }}>Launch a community to host custom groups, invite crew, and collaborate on scripts.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (!isFounder) {
+                        fetchPricingConfigs();
+                      }
+                      setIsCommunityModalOpen(true);
+                    }}
+                    style={{ background: 'var(--neon)', border: 'none', padding: '10px 20px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    Launch Community
+                  </button>
+                </div>
+              )}
+
+              {myInvitations.length > 0 && (
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px', marginTop: '12px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', fontWeight: 'bold' }}>Pending Invitations ({myInvitations.length})</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {myInvitations.map((inv: any) => (
+                      <div 
+                        key={inv.id} 
+                        style={{ 
+                          padding: '10px', 
+                          background: 'rgba(255,77,26,0.03)', 
+                          border: '1px solid rgba(255,77,26,0.15)', 
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {inv.community.logo_url ? (
+                            <img src={cacheBustUrl(inv.community.logo_url, inv.community.updated_at)} alt="" style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '11px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                              {inv.community.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.community.name}</div>
+                            <div style={{ fontSize: '10px', color: '#888' }}>Invited by {inv.inviter?.name || 'Owner'}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button 
+                            onClick={() => handleAcceptInvitation(inv.id)}
+                            style={{ flex: 1, background: 'var(--neon)', border: 'none', padding: '4px', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                          >
+                            Accept
+                          </button>
+                          <button 
+                            onClick={() => handleRejectInvitation(inv.id)}
+                            style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px', borderRadius: '4px', color: '#ccc', fontSize: '11px', cursor: 'pointer' }}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="conversation-list">
             {conversations
               .filter(c => {
                 const recipient = getRecipient(c);
@@ -852,15 +2705,17 @@ export default function ChatPage() {
                   <button
                     key={conv.id}
                     type="button"
-                    className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''}`}
+                    className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''} ${!conv.is_group ? `role-theme-${getRoleSlug(recipient?.role)}` : ''}`}
                     onClick={() => {
+                      setViewingGalaxyLanding(false);
+                      setShowCommunityDashboard(false);
                       setActiveConversation(conv);
                       fetchMessages(conv.id);
                     }}
                     aria-pressed={activeConv?.id === conv.id}
                   >
                     <img
-                      src={conv.is_group ? (conv.avatar_url || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
+                      src={conv.is_group ? (cacheBustUrl(conv.avatar_url, conv.updated_at) || '/assets/default-group.png') : getAvatarUrl(recipient?.name || 'User', recipient?.gender || 'Other', recipient?.avatar_url)}
                       alt=""
                       className="conv-avatar"
                       loading="lazy" decoding="async"
@@ -872,7 +2727,18 @@ export default function ChatPage() {
                     </div>
                     <div className="conv-meta">
                       {lastTime && <div className="conv-time">{lastTime}</div>}
-                      {conv.unread ? <div className="unread-badge">{conv.unread > 9 ? '9+' : conv.unread}</div> : null}
+                      <div className="conv-meta-icons">
+                        {mutedConvIds.has(conv.id) && (
+                          <svg className="conv-mute-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            <path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path>
+                            <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path>
+                            <path d="M18 8a6 6 0 0 0-9.33-5"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        )}
+                        {conv.unread ? <div className="unread-badge">{conv.unread > 9 ? '9+' : conv.unread}</div> : null}
+                      </div>
                     </div>
                   </button>
                 );
@@ -881,10 +2747,198 @@ export default function ChatPage() {
               <div className="sidebar-empty">No active transmissions yet. Open a crew profile and send the first message.</div>
             )}
           </div>
+          )}
         </aside>
 
-        <main className="chat-window">
-          {state === 'error' || state === 'not-found' ? (
+        <main className={`chat-window ${activeConv && !activeConv.is_group ? `role-theme-${getRoleSlug(activeRecipient?.role)}` : ''}`}>
+          {viewingGalaxyLanding ? (
+            <div className="galaxy-container">
+              <div className="galaxy-stars"></div>
+
+              <div className="galaxy-main-view">
+                {/* Left side: Discover Communities list */}
+                <div className="galaxy-card">
+                  <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '28px', color: 'var(--cream)', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                    🌌 Discover Communities
+                  </h2>
+                  <p style={{ fontSize: '13px', color: '#888', marginBottom: '20px' }}>
+                    Browse available communities or request to join.
+                  </p>
+
+                  <div className="sidebar-search-wrap" style={{ marginBottom: '20px' }}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input 
+                      type="text" 
+                      className="sidebar-search-input" 
+                      placeholder="Search available communities..." 
+                      value={communitySearchQuery}
+                      onChange={(e) => {
+                        setCommunitySearchQuery(e.target.value);
+                        fetchAllCommunities(e.target.value);
+                      }}
+                    />
+                  </div>
+
+                  {allCommunitiesLoading ? (
+                    <div style={{ color: 'var(--neon)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>Loading systems...</div>
+                  ) : (
+                    <div className="community-grid-list">
+                      {allCommunities.map((comm) => {
+                        const status = comm.joinStatus; // PENDING, ACCEPTED, REJECTED or null
+                        const isMember = myCommunities.some(c => c.id === comm.id);
+
+                        return (
+                          <div key={comm.id} className="community-card-item">
+                            <div className="community-card-info">
+                              {comm.avatar_url ? (
+                                <img src={comm.avatar_url} alt="" className="community-card-logo" />
+                              ) : (
+                                <div className="community-card-initials">
+                                  {comm.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div>
+                                <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', color: 'var(--cream)', fontWeight: 'bold' }}>
+                                  {comm.name}
+                                </h3>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#aaa', lineHeight: '1.4' }}>
+                                  {comm.description || 'No description provided.'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div>
+                              {isMember ? (
+                                <span className="request-badge accepted">Joined</span>
+                              ) : status === 'PENDING' ? (
+                                <span className="request-badge pending">Pending Request</span>
+                              ) : status === 'REJECTED' ? (
+                                <span className="request-badge rejected">Rejected</span>
+                              ) : (
+                                <button 
+                                  onClick={() => handleRequestJoin(comm.id)}
+                                  className="nav-cta"
+                                  style={{ padding: '6px 16px', fontSize: '11px', borderRadius: '4px' }}
+                                >
+                                  Join
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {allCommunities.length === 0 && (
+                        <div style={{ color: '#666', fontSize: '12px', textAlign: 'center', padding: '20px' }}>No communities found.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right side: Subscription pricing tiers selector */}
+                <div className="galaxy-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '28px', color: 'var(--cream)', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                      💳 Select a Subscription Plan
+                    </h2>
+                    <p style={{ fontSize: '13px', color: '#888', marginBottom: '24px' }}>
+                      Choose the plan that suits your creative goals. Every community is billed on a standard 3-month cycle.
+                    </p>
+
+                    <div className="pricing-cards">
+                      <div 
+                        className={`pricing-card ${selectedPlan === 'Starter' ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedPlan('Starter');
+                          if (!isFounder) {
+                            fetchPricingConfigs();
+                          }
+                          setIsCommunityModalOpen(true);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div>
+                          <h3>Starter</h3>
+                          <div className="price">₹{pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59'}</div>
+                          <div className="duration">Per 3 Months</div>
+                        </div>
+                        <ul className="features" style={{ marginTop: '16px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <li>✓ 20 Members limit</li>
+                          <li>✓ Standard group posting</li>
+                          <li>✓ Basic script sharing</li>
+                          <li>✓ Group chat channels</li>
+                        </ul>
+                      </div>
+
+                      <div 
+                        className={`pricing-card ${selectedPlan === 'Growth' ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedPlan('Growth');
+                          if (!isFounder) {
+                            fetchPricingConfigs();
+                          }
+                          setIsCommunityModalOpen(true);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div>
+                          <h3>Growth</h3>
+                          <div className="price">₹{pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99'}</div>
+                          <div className="duration">Per 3 Months</div>
+                        </div>
+                        <ul className="features" style={{ marginTop: '16px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <li>✓ 35 Members limit</li>
+                          <li>✓ Custom member roles</li>
+                          <li>✓ Priority feedback channel</li>
+                          <li>✓ Advanced group moderation</li>
+                        </ul>
+                      </div>
+
+                      <div 
+                        className={`pricing-card ${selectedPlan === 'Custom' ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedPlan('Custom');
+                          if (!isFounder) {
+                            fetchPricingConfigs();
+                          }
+                          setIsCommunityModalOpen(true);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div>
+                          <h3>Custom</h3>
+                          <div className="price">
+                            ₹{(() => {
+                              const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                              const base = customCfg ? Number(customCfg.base_price) : 99;
+                              const per = customCfg ? Number(customCfg.per_member_price) : 2;
+                              return base + (50 * per); // Default calculated for 50 members (₹199)
+                            })()}*
+                          </div>
+                          <div className="duration">Per 3 Months</div>
+                        </div>
+                        <ul className="features" style={{ marginTop: '16px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <li>✓ Dynamic member scaling</li>
+                          <li>✓ ₹99 Base + ₹2 / member</li>
+                          <li>✓ Scale up to 1000 members</li>
+                          <li>✓ Dedicated support agent</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '30px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#888', marginBottom: '12px' }}>
+                      <span>Standard Billing Interval:</span>
+                      <span style={{ color: 'var(--neon)', fontWeight: 'bold' }}>3 Months</span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>
+                      * Billed automatically every 3 months. Cancel anytime. Rates include all taxes.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : state === 'error' || state === 'not-found' ? (
             <div className="chat-empty">
               <div className="empty-kicker">{state === 'not-found' ? 'Conversation Not Found' : 'Signal Error'}</div>
               <h3>Channel Unavailable</h3>
@@ -894,10 +2948,16 @@ export default function ChatPage() {
           ) : activeConv ? (
             <>
               <header className="chat-header">
+                <button
+  className="mobile-back-btn"
+  onClick={() => setShowMobileSidebar(true)}
+>
+  ←
+</button>
                 <div className="header-left">
                   <div className="header-avatar-container" onClick={() => setShowDetails(!showDetails)} style={{ cursor: 'pointer' }}>
                     <img
-                      src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
+                      src={activeConv.is_group ? (cacheBustUrl(activeConv.avatar_url, activeConv.updated_at) || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)}
                       alt=""
                       className="header-avatar"
                       loading="lazy" decoding="async"
@@ -966,9 +3026,10 @@ export default function ChatPage() {
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                       </button>
                       <button 
-                        className="header-action-btn" 
+                        ref={menuBtnRef}
+                        className={`header-action-btn ${showMenu ? 'active' : ''}`} 
                         title="More Options"
-                        onClick={() => setShowMenu(!showMenu)}
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                       >
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                       </button>
@@ -976,9 +3037,10 @@ export default function ChatPage() {
                   ) : (
                     <>
                       <button 
+                        ref={menuBtnRef}
                         className={`header-action-btn ${showMenu ? 'active' : ''}`} 
                         title="More Options"
-                        onClick={() => setShowMenu(!showMenu)}
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                       >
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                       </button>
@@ -1008,11 +3070,11 @@ export default function ChatPage() {
                 )}
 
                 {showMenu && (
-                  <div className="chat-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                  <div ref={menuRef} className="chat-dropdown-menu" onClick={(e) => e.stopPropagation()}>
                     {activeConv.is_group ? (
                       <>
                         <button onClick={() => { setShowDetails(true); setShowMenu(false); }}>Group Info</button>
-                        <button onClick={() => toggleMute()}>{isMuted ? 'Unmute Group' : 'Mute Group'}</button>
+                        <button onClick={() => toggleMute()}>{mutedConvIds.has(activeConv.id) ? 'Unmute Group' : 'Mute Group'}</button>
                         <button onClick={() => handleClearChat(activeConv.id)}>Clear Chat</button>
                         <button className="danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
                       </>
@@ -1023,7 +3085,7 @@ export default function ChatPage() {
                           else setShowDetails(true); 
                           setShowMenu(false); 
                         }}>View Profile</button>
-                        <button onClick={() => toggleMute()}>{isMuted ? 'Unmute Signal' : 'Mute Signal'}</button>
+                        <button onClick={() => toggleMute()}>{mutedConvIds.has(activeConv.id) ? 'Unmute Signal' : 'Mute Signal'}</button>
                         <button onClick={() => handleClearChat(activeConv.id)}>Clear History</button>
                         <button className="danger" onClick={() => handleDeleteConversation(activeConv.id)}>Delete Transmission</button>
                       </>
@@ -1103,7 +3165,7 @@ export default function ChatPage() {
                                 <div className="msg-content">
                                   {msg.content}
                                   {msg.status === 'sending' && <span className="msg-status-icon sending">...</span>}
-                                  {msg.status === 'error' && (
+                                  {msg.status === 'failed' && (
                                     <span className="msg-status-icon error" title="Failed to send. Click to retry." onClick={() => {
                                       setNewMessage(msg.content);
                                       setMessages(prev => prev.filter(m => m.id !== msg.id));
@@ -1243,12 +3305,15 @@ export default function ChatPage() {
                   </header>
                   <div className="details-content">
                     <div className="details-main-info">
-                      <img 
-                        src={activeConv.is_group ? (activeConv.avatar_url || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
-                        alt="" 
-                        className="details-avatar" 
-                        loading="lazy" decoding="async"
-                      />
+                      <div className="details-avatar-wrapper">
+                        <img 
+                          src={activeConv.is_group ? (cacheBustUrl(activeConv.avatar_url, activeConv.updated_at) || '/assets/default-group.png') : getAvatarUrl(activeRecipient?.name || 'User', activeRecipient?.gender || 'Other', activeRecipient?.avatar_url)} 
+                          alt="" 
+                          className="details-avatar" 
+                          loading="lazy" decoding="async"
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                        />
+                      </div>
                       <h4>{activeConv.is_group ? activeConv.name : (activeRecipient?.name || 'Crew Member')}</h4>
                       {!activeConv.is_group && <span className="details-role">{activeRecipient?.role || 'Crew Member'}</span>}
                       
@@ -1314,28 +3379,231 @@ export default function ChatPage() {
                               Save
                             </button>
                           </div>
+                          {/* We removed the old Messaging Permissions block here because it is now inside the Settings Tab */}
                         </div>
                       )}
                     </div>
 
-                    {activeConv.is_group ? (
-                      <div className="details-section">
-                        <div className="section-title">Members ({activeConv.users.length})</div>
-                        <div className="details-members-list">
-                          {activeConv.users.map(u => (
-                            <div key={u.id} className="member-item">
-                              <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" loading="lazy" decoding="async" />
-                              <div className="member-info">
-                                <span className="member-name">{u.name}</span>
-                                <span className="member-role">{u.role_in_group || 'Member'}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="details-actions">
-                          <button className="details-btn danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
-                        </div>
+                    {/* Tab Navigation for Group Details */}
+                    {activeConv.is_group && (activeConv.my_role === 'Admin' || activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || '')) && (
+                      <div style={{ display: 'flex', borderBottom: '1px solid rgba(232,232,224,0.1)', width: '100%', marginBottom: '16px' }}>
+                        <button 
+                          onClick={() => setDetailsTab('members')}
+                          style={{
+                            flex: 1,
+                            padding: '10px 0',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: detailsTab === 'members' ? '2px solid var(--neon)' : '2px solid transparent',
+                            color: detailsTab === 'members' ? 'var(--neon)' : '#a0a0a0',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Members
+                        </button>
+                        <button 
+                          onClick={() => setDetailsTab('settings')}
+                          style={{
+                            flex: 1,
+                            padding: '10px 0',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: detailsTab === 'settings' ? '2px solid var(--neon)' : '2px solid transparent',
+                            color: detailsTab === 'settings' ? 'var(--neon)' : '#a0a0a0',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Settings
+                        </button>
                       </div>
+                    )}
+
+                    {activeConv.is_group ? (
+                      detailsTab === 'members' ? (
+                        <div className="details-section">
+                          {/* Pending join requests section */}
+                          {(activeConv.my_role === 'Admin' || activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || '')) && (joinRequestsLoading || pendingJoinRequests.length > 0) && (
+                            <div style={{ marginBottom: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <div className="section-title" style={{ color: 'var(--neon)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Join Requests {pendingJoinRequests.length > 0 && `(${pendingJoinRequests.length})`}</span>
+                              </div>
+                              {joinRequestsLoading ? (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>Loading requests...</div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                                  {pendingJoinRequests.map(req => (
+                                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <img src={getAvatarUrl(req.user.name, req.user.gender || 'Other', req.user.avatar_url)} alt="" className="mini-avatar" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                                        <span style={{ fontSize: '13px', color: '#e8e8e0' }}>{req.user.name}</span>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button 
+                                          onClick={() => handleApproveJoinRequest(activeConv.id, req.id)}
+                                          style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                                        >
+                                          Approve
+                                        </button>
+                                        <button 
+                                          onClick={() => handleRejectJoinRequest(activeConv.id, req.id)}
+                                          style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                                        >
+                                          Reject
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="section-title">Members ({activeConv.users.length})</div>
+                          <div className="details-members-list">
+                            {activeConv.users.map(u => {
+                              const isMe = u.id === user?.id;
+                              const canManageUser = !isMe && (activeConv.my_role === 'Director' || ['Owner', 'Moderator'].includes(communityRole || ''));
+                              return (
+                                <div key={u.id} className="member-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <img src={getAvatarUrl(u.name, u.gender || 'Other', u.avatar_url)} alt="" className="mini-avatar" loading="lazy" decoding="async" />
+                                    <div className="member-info">
+                                      <span className="member-name" style={{ color: isMe ? 'var(--neon)' : '#e8e8e0' }}>{u.name} {isMe && '(You)'}</span>
+                                      <span className="member-role" style={{ 
+                                        fontSize: '11px', 
+                                        color: u.role_in_group === 'Director' ? '#ef4444' : u.role_in_group === 'Admin' ? 'var(--neon)' : '#888',
+                                        background: u.role_in_group === 'Director' ? 'rgba(239,68,68,0.1)' : u.role_in_group === 'Admin' ? 'rgba(0,255,200,0.1)' : 'transparent',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        marginLeft: '4px'
+                                      }}>
+                                        {u.role_in_group || 'Member'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  {canManageUser && (
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      {u.role_in_group !== 'Admin' && u.role_in_group !== 'Director' && (
+                                        <button 
+                                          onClick={() => handlePromoteMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(0,255,200,0.15)', color: 'var(--neon)', border: '1px solid var(--neon)', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Promote to Admin"
+                                        >
+                                          Promote
+                                        </button>
+                                      )}
+                                      {u.role_in_group === 'Admin' && (
+                                        <button 
+                                          onClick={() => handleDemoteMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(255,255,255,0.1)', color: '#ccc', border: '1px solid #555', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Demote to Member"
+                                        >
+                                          Demote
+                                        </button>
+                                      )}
+                                      {u.role_in_group !== 'Director' && (
+                                        <button 
+                                          onClick={() => handleRemoveGroupMember(activeConv.id, u.id)}
+                                          style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                                          title="Remove from Group"
+                                        >
+                                          Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="details-actions" style={{ marginTop: '16px' }}>
+                            <button className="details-btn danger" onClick={() => handleLeaveGroup(activeConv.id)}>Leave Group</button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Settings Tab */
+                        <div className="details-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {(() => {
+                            const settings = activeConv.groupSettings ? (typeof activeConv.groupSettings === 'string' ? JSON.parse(activeConv.groupSettings) : activeConv.groupSettings) : {};
+                            return (
+                              <>
+                                {/* 1. Visibility */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Group Visibility</label>
+                                  <select 
+                                    value={settings.visibility || 'Public'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'visibility', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Public">Public (Anyone can view in list)</option>
+                                    <option value="Private">Private (Hidden from lists)</option>
+                                  </select>
+                                </div>
+
+                                {/* 2. Who Can Join */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Join</label>
+                                  <select 
+                                    value={settings.joinPolicy || 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'joinPolicy', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Approval Required">Approval Required</option>
+                                    <option value="Invite Only">Invite Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 3. Who Can Send Messages */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Send Messages</label>
+                                  <select 
+                                    value={settings.canMembersMessage === false || settings.canMembersMessage === 'Admins Only' ? 'Admins Only' : 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersMessage', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Admins Only">Admins Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 4. Who Can Add Members */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Invite Members</label>
+                                  <select 
+                                    value={settings.canMembersInvite === false || settings.canMembersInvite === 'Admins Only' ? 'Admins Only' : 'Everyone'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersInvite', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Everyone">Everyone</option>
+                                    <option value="Admins Only">Admins Only</option>
+                                  </select>
+                                </div>
+
+                                {/* 5. Who Can Edit Group Details */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <label style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold' }}>Who Can Edit Group Details</label>
+                                  <select 
+                                    value={settings.canMembersEdit || 'Admins and Owner'}
+                                    onChange={(e) => handleUpdateSetting(activeConv.id, 'canMembersEdit', e.target.value)}
+                                    style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '4px', padding: '8px', fontSize: '13px' }}
+                                  >
+                                    <option value="Owner Only">Owner Only</option>
+                                    <option value="Admins and Owner">Admins and Owner</option>
+                                  </select>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )
                     ) : (
                       <div className="details-section">
                         <div className="section-title">Field Intel</div>
@@ -1382,12 +3650,23 @@ export default function ChatPage() {
                       ref={inputRef}
                       type="text"
                       className="chat-input"
-                      placeholder={(!activeConv?.is_group && activeRecipient?.id === -1) ? 'This user is no longer available.' : `Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`}
+                      placeholder={
+                        (!activeConv?.is_group && activeRecipient?.id === -1) 
+                          ? 'This user is no longer available.' 
+                          : isMessagingRestricted 
+                            ? 'Only admins can send messages in this group.' 
+                            : `Message ${activeConv?.is_group ? activeConv.name : (activeRecipient?.name || 'crew member')}...`
+                      }
                       value={newMessage}
                       onChange={onInputChange}
-                      disabled={sending || (!activeConv?.is_group && activeRecipient?.id === -1)}
+                      disabled={sending || (!activeConv?.is_group && activeRecipient?.id === -1) || isMessagingRestricted}
                     />
-                    <button type="submit" className="send-btn" disabled={!newMessage.trim() || sending || (!activeConv?.is_group && activeRecipient?.id === -1)} aria-label="Send message">
+                    <button 
+                      type="submit" 
+                      className="send-btn" 
+                      disabled={!newMessage.trim() || sending || (!activeConv?.is_group && activeRecipient?.id === -1) || isMessagingRestricted} 
+                      aria-label="Send message"
+                    >
                       <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                   </div>
@@ -1417,17 +3696,662 @@ export default function ChatPage() {
           )}
         </main>
       </div>
-      <CreateGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} onCreate={createGroupConversation} />
+      <NewDirectMessageModal 
+        isOpen={isGroupModalOpen} 
+        onClose={() => setIsGroupModalOpen(false)} 
+        onSelectUser={async (userId) => {
+          setIsGroupModalOpen(false);
+          const conversation = await openDirectConversation(userId);
+          if (conversation) {
+            await fetchMessages(conversation.id);
+          }
+        }} 
+      />
       <TaskModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)} 
         conversationId={activeConv?.id || 0} 
         members={activeConv?.users || []} 
         onCreate={createTask} 
-        myRole={activeConv?.my_role || 'Member'}
-        isGroup={activeConv?.is_group || false}
-        globalRole={user?.role || 'Member'}
       />
+
+      {isCommunityModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '500px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)' }}>
+                {isFounder 
+                  ? 'Establish Crew Community' 
+                  : communityCreationStep === 1 
+                    ? 'Establish Crew Community' 
+                    : 'Configure Community Details'}
+              </h2>
+              <button 
+                onClick={() => {
+                  setIsCommunityModalOpen(false);
+                  setCommunityCreationStep(1);
+                  setActiveOrderId(null);
+                  setNewCommunityName('');
+                  setNewCommunityDesc('');
+                }} 
+                style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            {!isFounder && communityCreationStep === 1 && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Select Community Tier</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <div 
+                      onClick={() => setSelectedPlan('Starter')}
+                      style={{ border: `1px solid ${selectedPlan === 'Starter' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Starter' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                    >
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Starter</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>20 Members</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59'} / 3 Months</div>
+                    </div>
+                    <div 
+                      onClick={() => setSelectedPlan('Growth')}
+                      style={{ border: `1px solid ${selectedPlan === 'Growth' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Growth' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                    >
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Growth</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>35 Members</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>₹{pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99'} / 3 Months</div>
+                    </div>
+                    <div 
+                      onClick={() => setSelectedPlan('Custom')}
+                      style={{ border: `1px solid ${selectedPlan === 'Custom' ? 'var(--neon)' : 'rgba(255,255,255,0.1)'}`, background: selectedPlan === 'Custom' ? 'rgba(255,77,26,0.08)' : 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'border-color 0.2s' }}
+                    >
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Custom</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', margin: '4px 0' }}>Dynamic Scaling</div>
+                      <div style={{ fontSize: '14px', color: 'var(--neon)', fontWeight: 'bold' }}>
+                        ₹{(() => {
+                          const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                          const base = customCfg ? Number(customCfg.base_price) : 99;
+                          const per = customCfg ? Number(customCfg.per_member_price) : 2;
+                          return base + (customMembersCount * per);
+                        })()} / 3 Months
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedPlan === 'Custom' && (() => {
+                  const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                  const basePrice = customCfg ? Number(customCfg.base_price) : 99;
+                  const perMemberPrice = customCfg ? Number(customCfg.per_member_price) : 2;
+                  const maxLimit = customCfg ? Number(customCfg.max_members) : 1000;
+                  const calculatedPrice = basePrice + (customMembersCount * perMemberPrice);
+                  const isInvalid = isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > maxLimit;
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '16px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Desired Members</label>
+                        <input 
+                          type="number" 
+                          min={1}
+                          max={maxLimit}
+                          value={customMembersCount}
+                          onChange={(e) => setCustomMembersCount(parseInt(e.target.value) || 0)}
+                          style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${isInvalid ? '#ff4d1a' : 'rgba(255,255,255,0.1)'}`, borderRadius: '6px', color: '#fff', fontSize: '14px', width: '100%' }}
+                        />
+                        {isInvalid && (
+                          <div style={{ fontSize: '11px', color: '#ff4d1a', marginTop: '2px' }}>
+                            {customMembersCount < 1 ? 'Minimum 1 member required' : `Maximum limit is ${maxLimit} members`}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aaa' }}>
+                          <span>Base Price:</span>
+                          <span>₹{basePrice}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aaa' }}>
+                          <span>Per Member Charge:</span>
+                          <span>₹{perMemberPrice}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aaa' }}>
+                          <span>Member Multiplier:</span>
+                          <span>{customMembersCount} × ₹{perMemberPrice} = ₹{customMembersCount * perMemberPrice}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', color: 'var(--neon)', borderTop: '1px dotted rgba(255,255,255,0.1)', paddingTop: '6px', marginTop: '4px' }}>
+                          <span>Total Price:</span>
+                          <span>₹{calculatedPrice} / 3 Months</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '12px', color: '#aaa' }}>Total Due (3 Months Subscription):</span>
+                      <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                        ₹{selectedPlan === 'Starter' 
+                          ? (pricingConfigs.find(c => c.plan_type === 'Starter')?.base_price || '59') 
+                          : selectedPlan === 'Growth' 
+                            ? (pricingConfigs.find(c => c.plan_type === 'Growth')?.base_price || '99') 
+                            : (() => {
+                                const customCfg = pricingConfigs.find(c => c.plan_type === 'Custom');
+                                const base = customCfg ? Number(customCfg.base_price) : 99;
+                                const per = customCfg ? Number(customCfg.per_member_price) : 2;
+                                return base + (customMembersCount * per);
+                              })()}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handlePricingProceed}
+                      disabled={selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))}
+                      style={{ 
+                        background: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? '#555' : 'var(--neon)', 
+                        border: 'none', 
+                        padding: '12px 24px', 
+                        borderRadius: '6px', 
+                        color: '#fff', 
+                        fontWeight: 'bold', 
+                        cursor: (selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000))) ? 'not-allowed' : 'pointer', 
+                        transition: 'filter 0.2s' 
+                      }}
+                      onMouseOver={(e) => {
+                        if (!(selectedPlan === 'Custom' && (isNaN(customMembersCount) || customMembersCount < 1 || customMembersCount > (pricingConfigs.find(c => c.plan_type === 'Custom')?.max_members || 1000)))) {
+                          e.currentTarget.style.filter = 'brightness(1.1)';
+                        }
+                      }}
+                      onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+                    >
+                      Proceed to Payment
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', background: 'rgba(255, 77, 26, 0.05)', border: '1px solid rgba(255, 77, 26, 0.2)', padding: '10px', borderRadius: '6px', lineHeight: '1.4' }}>
+                    <strong>Subscription Interval:</strong> Community subscriptions are charged once every 3 months. The payment covers full access to the selected member tier for a 3-month cycle.
+                  </div>
+                </div>
+              </>
+            )}
+
+            {(isFounder || communityCreationStep === 2) && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Community Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Dream Team Productions" 
+                    value={newCommunityName}
+                    onChange={(e) => setNewCommunityName(e.target.value)}
+                    style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', color: '#aaa', textTransform: 'uppercase' }}>Description</label>
+                  <textarea 
+                    placeholder="Describe your community..." 
+                    value={newCommunityDesc}
+                    onChange={(e) => setNewCommunityDesc(e.target.value)}
+                    rows={4}
+                    style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px', resize: 'none' }}
+                  />
+                </div>
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
+                  <button 
+                    onClick={isFounder ? handleFounderCreateCommunity : handleInstantiateCommunity}
+                    disabled={groupLoading}
+                    style={{ background: groupLoading ? '#555' : 'var(--neon)', border: 'none', padding: '12px 24px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: groupLoading ? 'not-allowed' : 'pointer', transition: 'filter 0.2s' }}
+                    onMouseOver={(e) => {
+                      if (!groupLoading) e.currentTarget.style.filter = 'brightness(1.1)';
+                    }}
+                    onMouseOut={(e) => e.currentTarget.style.filter = 'brightness(1.0)'}
+                  >
+                    {groupLoading ? 'Establishing...' : 'Finalize & Launch Community'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isInviteModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Invite Members</h3>
+              <button onClick={() => { setIsInviteModalOpen(false); setUserSearchQuery(''); setUserSearchResults([]); setInviteError(''); setInviteSuccess(''); }} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>Search Platform Users</label>
+              <input 
+                type="text" 
+                placeholder="Search by name, username, or role..." 
+                value={userSearchQuery}
+                onChange={(e) => handleUserSearch(e.target.value)}
+                style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff', fontSize: '14px' }}
+              />
+            </div>
+
+            {userSearchLoading && <div style={{ fontSize: '12px', color: 'var(--neon)', textAlign: 'center' }}>Searching users...</div>}
+
+            <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {userSearchResults.map((user: any) => (
+                <div 
+                  key={user.id} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    padding: '8px 12px', 
+                    background: 'rgba(255,255,255,0.02)', 
+                    border: '1px solid rgba(255,255,255,0.05)', 
+                    borderRadius: '8px' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', color: 'var(--neon)', fontSize: '14px' }}>
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {user.name}
+                        {user.email_verified && (
+                          <span title="Verified User" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--neon)', color: '#000', borderRadius: '50%', width: '14px', height: '14px', fontSize: '8px', fontWeight: 'bold' }}>✓</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#888' }}>
+                        @{user.screen_name || 'username'} • {user.role || 'Member'}
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleInviteMember(user.id)}
+                    disabled={inviteLoading}
+                    style={{ 
+                      background: 'rgba(255, 77, 26, 0.15)', 
+                      border: '1px solid var(--neon)', 
+                      padding: '6px 12px', 
+                      borderRadius: '4px', 
+                      color: '#fff', 
+                      fontSize: '12px', 
+                      fontWeight: 'bold', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Invite
+                  </button>
+                </div>
+              ))}
+              {!userSearchLoading && userSearchQuery && userSearchResults.length === 0 && (
+                <div style={{ fontSize: '12px', color: '#aaa', textAlign: 'center', padding: '16px' }}>No users found matching "{userSearchQuery}"</div>
+              )}
+            </div>
+
+            {inviteError && <div style={{ color: '#ff4d4d', fontSize: '12px', textAlign: 'center' }}>{inviteError}</div>}
+            {inviteSuccess && <div style={{ color: '#4dff4d', fontSize: '12px', textAlign: 'center' }}>{inviteSuccess}</div>}
+          </div>
+        </div>
+      )}
+
+      {isCreateGroupModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '16px', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--neon)' }}>Create Community Group</h3>
+              <button onClick={() => setIsCreateGroupModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <form onSubmit={handleCreateCommunityGroup} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', color: '#aaa' }}>Group Name</label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="e.g. marketing-discussion" 
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={groupLoading}
+                style={{ background: 'var(--neon)', border: 'none', padding: '10px', borderRadius: '6px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                {groupLoading ? 'Creating...' : 'Create Group'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isJoinRequestModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1010, backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '600px', maxWidth: '90%', display: 'flex', flexDirection: 'column', gap: '20px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)', maxHeight: '80vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)', fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>
+                📋 My Community Requests
+              </h2>
+              <button 
+                onClick={() => setIsJoinRequestModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              {/* PENDING REQUESTS */}
+              <div>
+                <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--neon)', borderBottom: '1px solid rgba(255,77,26,0.2)', paddingBottom: '6px', marginBottom: '12px' }}>
+                  Pending Requests
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {myRequests.filter(r => r.status === 'PENDING').map(req => (
+                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {req.community?.avatar_url ? (
+                          <img src={req.community.avatar_url} alt="" style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'rgba(255,77,26,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                            {req.community?.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{req.community?.name}</div>
+                          <div style={{ fontSize: '11px', color: '#888' }}>Requested: {new Date(req.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <span className="request-badge pending" style={{ fontSize: '11px', padding: '4px 8px' }}>Pending</span>
+                    </div>
+                  ))}
+                  {myRequests.filter(r => r.status === 'PENDING').length === 0 && (
+                    <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>No pending requests.</div>
+                  )}
+                </div>
+              </div>
+
+              {/* ACCEPTED REQUESTS */}
+              <div>
+                <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#4dff4d', borderBottom: '1px solid rgba(77,255,77,0.2)', paddingBottom: '6px', marginBottom: '12px' }}>
+                  Accepted Requests
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {myRequests.filter(r => r.status === 'ACCEPTED').map(req => (
+                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {req.community?.avatar_url ? (
+                          <img src={req.community.avatar_url} alt="" style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'rgba(77,255,77,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px', fontWeight: 'bold', color: '#4dff4d' }}>
+                            {req.community?.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{req.community?.name}</div>
+                          <div style={{ fontSize: '11px', color: '#888' }}>Accepted: {new Date(req.updatedAt || req.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setIsJoinRequestModalOpen(false);
+                          const communities = await fetchMyCommunity();
+                          if (communities && communities.length > 0) {
+                            const joined = communities.find((c: any) => c.id === req.community.id);
+                            if (joined) {
+                              handleNavigateToCommunity(joined);
+                            } else {
+                              handleNavigateToCommunity(communities[0]);
+                            }
+                          }
+                        }}
+                        className="nav-cta"
+                        style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '4px', background: '#4dff4d', color: '#000', border: 'none' }}
+                      >
+                        Join Community
+                      </button>
+                    </div>
+                  ))}
+                  {myRequests.filter(r => r.status === 'ACCEPTED').length === 0 && (
+                    <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>No accepted requests yet.</div>
+                  )}
+                </div>
+              </div>
+
+              {/* REJECTED REQUESTS */}
+              <div>
+                <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#ff4d4d', borderBottom: '1px solid rgba(255,77,24,0.2)', paddingBottom: '6px', marginBottom: '12px' }}>
+                  Rejected Requests
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {myRequests.filter(r => r.status === 'REJECTED').map(req => (
+                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '10px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {req.community?.avatar_url ? (
+                          <img src={req.community.avatar_url} alt="" style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: 'rgba(255,77,77,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '14px', fontWeight: 'bold', color: '#ff4d4d' }}>
+                            {req.community?.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{req.community?.name}</div>
+                          <div style={{ fontSize: '11px', color: '#888' }}>Rejected: {new Date(req.updatedAt || req.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <span className="request-badge rejected" style={{ fontSize: '11px', padding: '4px 8px' }}>Rejected</span>
+                    </div>
+                  ))}
+                  {myRequests.filter(r => r.status === 'REJECTED').length === 0 && (
+                    <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>No rejected requests.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isInvitationsManagementModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1010, backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#121212', border: '1px solid rgba(255, 77, 26, 0.3)', borderRadius: '12px', padding: '24px', width: '650px', maxWidth: '95%', display: 'flex', flexDirection: 'column', gap: '20px', color: '#fff', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.15)', maxHeight: '80vh' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--neon)', fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>
+                ✉️ Community Invitations Dashboard
+              </h2>
+              <button 
+                onClick={() => setIsInvitationsManagementModalOpen(false)} 
+                style={{ background: 'transparent', border: 'none', color: '#aaa', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              {invitationsLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '150px', color: 'var(--neon)', fontSize: '14px' }}>
+                  Loading invitations...
+                </div>
+              ) : invitationsList.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '150px', color: '#666', fontStyle: 'italic', gap: '8px' }}>
+                  <span>No invitations found for this community.</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {invitationsList.map((inv: any) => {
+                    const isExpired = inv.expiresAt ? new Date(inv.expiresAt) < new Date() : false;
+                    const canCancel = inv.status === 'PENDING' && !isExpired;
+                    const canResend = inv.status === 'PENDING' || inv.status === 'CANCELLED' || isExpired;
+
+                    return (
+                      <div 
+                        key={inv.id} 
+                        style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '10px', 
+                          background: 'rgba(255,255,255,0.02)', 
+                          padding: '12px 16px', 
+                          borderRadius: '8px', 
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          transition: 'border-color 0.2s ease-in-out' 
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--cream)' }}>
+                              Invited: {inv.invitee ? `${inv.invitee.name} (@${inv.invitee.screen_name})` : inv.email}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>
+                              Sent by: <strong>{inv.inviter?.name || 'Owner'}</strong> • Created: {new Date(inv.createdAt).toLocaleDateString()}
+                            </div>
+                            {inv.expiresAt && (
+                              <div style={{ fontSize: '11px', color: isExpired ? '#ff4d4d' : '#888', marginTop: '2px' }}>
+                                {isExpired ? 'Expired' : `Expires: ${new Date(inv.expiresAt).toLocaleString()}`}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span 
+                              style={{ 
+                                fontSize: '10px', 
+                                padding: '3px 8px', 
+                                borderRadius: '12px', 
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                background: isExpired 
+                                  ? 'rgba(255,77,77,0.1)' 
+                                  : inv.status === 'ACCEPTED' 
+                                    ? 'rgba(77,255,77,0.1)' 
+                                    : inv.status === 'REJECTED' 
+                                      ? 'rgba(255,77,77,0.1)' 
+                                      : 'rgba(255,255,255,0.05)',
+                                color: isExpired 
+                                  ? '#ff4d4d' 
+                                  : inv.status === 'ACCEPTED' 
+                                    ? '#4dff4d' 
+                                    : inv.status === 'REJECTED' 
+                                      ? '#ff4d4d' 
+                                      : '#e8e8e0',
+                                border: `1px solid ${
+                                  isExpired 
+                                    ? 'rgba(255,77,77,0.2)' 
+                                    : inv.status === 'ACCEPTED' 
+                                      ? 'rgba(77,255,77,0.2)' 
+                                      : inv.status === 'REJECTED' 
+                                        ? 'rgba(255,77,77,0.2)' 
+                                        : 'rgba(255,255,255,0.1)'
+                                }`
+                              }}
+                            >
+                              {isExpired ? 'EXPIRED' : inv.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        {(canCancel || canResend) && (
+                          <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px', marginTop: '4px' }}>
+                            {canCancel && (
+                              <button
+                                onClick={() => cancelInvitation(inv.id)}
+                                style={{ 
+                                  padding: '5px 12px', 
+                                  fontSize: '11px', 
+                                  borderRadius: '4px', 
+                                  background: 'transparent', 
+                                  color: '#ff4d4d', 
+                                  border: '1px solid rgba(255,77,77,0.3)', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s' 
+                                }}
+                              >
+                                Cancel Invitation
+                              </button>
+                            )}
+                            {canResend && (
+                              <button
+                                onClick={() => resendInvitation(inv.id)}
+                                style={{ 
+                                  padding: '5px 12px', 
+                                  fontSize: '11px', 
+                                  borderRadius: '4px', 
+                                  background: 'rgba(255,77,26,0.15)', 
+                                  color: '#fff', 
+                                  border: '1px solid var(--neon)', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s' 
+                                }}
+                              >
+                                Resend Invitation
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAutoInviteModal && autoInviteToHandle && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1020, backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#121212', border: '1px solid var(--neon)', borderRadius: '12px', padding: '30px', width: '450px', maxWidth: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', color: '#fff', textAlign: 'center', boxShadow: '0 8px 32px rgba(255, 77, 26, 0.25)' }}>
+            <div>
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>✉️</div>
+              <h2 style={{ margin: '0 0 8px 0', fontSize: '22px', color: 'var(--cream)', fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>
+                You're Invited!
+              </h2>
+              <p style={{ margin: 0, fontSize: '14px', color: '#aaa', lineHeight: '1.5' }}>
+                You have been invited to join the <strong>{autoInviteToHandle.community?.name}</strong> community.
+              </p>
+            </div>
+
+            {autoInviteToHandle.community?.logo_url ? (
+              <img src={cacheBustUrl(autoInviteToHandle.community.logo_url, autoInviteToHandle.community.updated_at)} alt="" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+            ) : (
+              <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: 'rgba(255,77,26,0.1)', border: '1px solid var(--neon)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '32px', fontWeight: 'bold', color: 'var(--neon)' }}>
+                {autoInviteToHandle.community?.name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+
+            {autoInviteToHandle.inviter && (
+              <div style={{ fontSize: '13px', color: '#888', background: 'rgba(255,255,255,0.02)', padding: '8px 16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                Invited by: <strong>{autoInviteToHandle.inviter.name}</strong> (@{autoInviteToHandle.inviter.screen_name})
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+              <button
+                onClick={() => handleRejectInvite(autoInviteToHandle.id)}
+                style={{ flex: 1, padding: '12px', borderRadius: '6px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+              >
+                Decline
+              </button>
+              <button
+                onClick={() => handleAcceptInvite(autoInviteToHandle.id)}
+                style={{ flex: 1, padding: '12px', borderRadius: '6px', background: 'var(--neon)', border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+              >
+                Accept Invite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

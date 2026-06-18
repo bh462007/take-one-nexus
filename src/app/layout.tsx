@@ -1,5 +1,6 @@
 import React from 'react';
 import './globals.css';
+import '../../public/styles/components/global-chat-fab.css';
 import { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Space_Mono, Bebas_Neue, Cormorant_Garamond } from 'next/font/google';
@@ -61,9 +62,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${spaceMono.variable} ${bebasNeue.variable} ${cormorantGaramond.variable}`}>
-      <head>
-        <link rel="stylesheet" href="/styles/components/global-chat-fab.css" />
-      </head>
       <body className={`${spaceMono.className}`}>
         <PostHogProvider>
           <div className="cur-dot" id="dot"></div>
@@ -76,6 +74,7 @@ export default function RootLayout({
           <CookieConsentBanner />
         </PostHogProvider>
         <Script src="/scripts/constants/roles.js" strategy="beforeInteractive" />
+        <Script src="/scripts/constants/themes.js" strategy="beforeInteractive" />
         <Script src="/scripts/api/api.js" strategy="afterInteractive" />
         <Script src="/scripts/utils/helpers.js" strategy="afterInteractive" />
         <Script src="/scripts/animations/common.js" strategy="afterInteractive" />

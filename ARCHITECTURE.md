@@ -29,7 +29,23 @@ Due to the transition from a purely static/Express application to a modern Next.
 ### B. Legacy Express Server (`server.js`)
 - **Purpose**: Core REST API for data mutations. Serves legacy static `.htm` pages (`/public`).
 - **Execution**: Serverless Function on Vercel.
-- **Routing**: `/api/*` handles all data operations.
+- **Routing**: Core application APIs are handled by the Express server, while authentication-related routes may be served by Next.js Route Handlers depending on the route configuration.
+
+#### API Route Ownership
+
+To support the dual-server architecture, API responsibilities are divided between Next.js and Express:
+
+| Route Pattern | Handler |
+|---|---|
+| `/api/auth/verify-email` | Next.js Route Handler |
+| `/api/auth/forgot-password` | Next.js Route Handler |
+| `/api/auth/reset-password` | Next.js Route Handler |
+| `/api/users/*` | Express Server |
+| `/api/chat/*` | Express Server |
+| `/api/system/*` | Express Server |
+
+This separation helps contributors understand which framework is responsible for handling specific API endpoints within the application.
+
 - **Key Express Routes**:
   | Route | Auth | Purpose |
   |---|---|---|
@@ -211,9 +227,9 @@ Pusher WebSockets drive the live creative interaction layers:
 
 ---
 
-## 🌐 Open Source Programs
+## 🌐 Community & Collaboration Programs
 
-TAKE ONE Nexus is actively developed as an open-source filmmaking collaboration platform and participates in community-driven open-source initiatives including NSoC'26.
+TAKE ONE Nexus is developed as a source-available filmmaking collaboration platform and participates in community-driven development initiatives including NSoC'26.
 
-Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams.
+Contributors are encouraged to explore issues, submit pull requests, improve documentation, and help build tools for filmmakers and creative teams under the project's source-available license.
 

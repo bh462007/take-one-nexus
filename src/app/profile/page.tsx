@@ -1,5 +1,5 @@
 import React from 'react';
-import { Metadata, ResolvingMetadata } from 'next';
+import { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { getCanonicalDisplayName } from '@/utils/formatting';
@@ -17,8 +17,7 @@ type Props = {
 }
 
 export async function generateMetadata(
-  { params, searchParams }: Props,
-  parent: ResolvingMetadata
+  { params, searchParams }: Props
 ): Promise<Metadata> {
   try {
     await params;
@@ -33,16 +32,14 @@ export async function generateMetadata(
       title: `${user.name || 'Creator'} — TAKE ONE`,
       description: user.bio || `Creator profile on TAKE ONE.`,
     };
-  } catch (error) {
+  } catch {
     return { title: 'Profile — TAKE ONE' };
   }
 }
 
 export default async function ProfilePage({ 
-  params, 
   searchParams 
 }: { 
-  params: Promise<{ id?: string }>, 
   searchParams: Promise<{ [key: string]: string | string[] | undefined }> 
 }) {
   try {
@@ -118,7 +115,6 @@ export default async function ProfilePage({
     
     // Display Name Logic
     const displayName = getCanonicalDisplayName(user);
-    const credits = user?.credits || 0;
     const availability = user?.availability || 'Available';
 
     return (
@@ -182,6 +178,24 @@ export default async function ProfilePage({
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--neon)', filter: 'drop-shadow(0 0 4px var(--neon))' }}>
                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="var(--neon)" />
                     </svg>
+                  </span>
+                )}
+                {user.secondary_role === 'founder' && (
+                  <span className="founder-badge-inline" title="Founder" style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'rgba(255, 215, 0, 0.1)',
+                    border: '1px solid #ffd700',
+                    color: '#ffd700',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    boxShadow: '0 0 8px rgba(255, 215, 0, 0.2)'
+                  }}>
+                    Founder ⭐
                   </span>
                 )}
               </div>
@@ -964,9 +978,7 @@ export default async function ProfilePage({
   } catch (criticalError: any) {
     console.error('[CRITICAL_PROFILE_RENDER_FAILURE]:', criticalError?.message);
     
-    // Attempt to extract helpful details for debugging
     const errorMsg = criticalError?.message || 'Unknown render failure';
-    const errorStack = criticalError?.stack || '';
 
     return (
       <div className="profile-error-fallback" style={{ background: '#06080A', color: '#E8DFC8', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center', position: 'relative' }}>
