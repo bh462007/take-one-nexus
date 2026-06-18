@@ -199,6 +199,17 @@ function renderPortfolio(profile) {
                 <p><a href="${profile.portfolio || '#'}" target="_blank">View Reel →</a></p>
             </div>
         `;
+    } else if (role.includes('Photographer')) {
+         detailsHtml = `
+            <div class="portfolio-card-mini">
+                <strong>Camera & Lenses</strong>
+                <p>${profile.skills || 'Add gear/skills'}</p>
+            </div>
+            <div class="portfolio-card-mini">
+                <strong>Portfolio</strong>
+                <p><a href="${profile.portfolio || '#'}" target="_blank">View Gallery →</a></p>
+            </div>
+        `;
     } else {
         detailsHtml = `
             <div class="portfolio-card-mini">
@@ -300,6 +311,10 @@ function upsertLocalPortfolioItem(script, remove = false) {
 function populateProfile(profile) {
     if (!profile) return;
     currentProfileData = profile;
+    
+    if (typeof applyRoleTheme === 'function') {
+        applyRoleTheme(profile.role);
+    }
     
     const nameEl = document.getElementById('profileName');
     if (nameEl) {
@@ -794,6 +809,10 @@ const ROLE_FIELDS = {
     'DP': [
         { id: 'cameraUsed', label: 'Camera Gear', type: 'text', placeholder: 'e.g. RED Komodo, Sony A7SIII' },
         { id: 'visualStyle', label: 'Visual Style', type: 'text', placeholder: 'e.g. High Contrast, Anamorphic' }
+    ],
+    'PHOTOGRAPHER': [
+        { id: 'cameraUsed', label: 'Camera Body & Lenses', type: 'text', placeholder: 'e.g. Sony A7R V, 85mm f/1.4' },
+        { id: 'photographyStyle', label: 'Photography Style', type: 'text', placeholder: 'e.g. Cinematic Stills, BTS, Editorial' }
     ]
 };
 

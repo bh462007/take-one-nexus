@@ -610,3 +610,17 @@ header.nav-open .nav-toggle span:nth-child(3) { transform: translateY(-6.5px) ro
   color: var(--silver);
   text-transform: uppercase;
 }
+
+/* Photographer role theme variables override */
+.role-theme-photographer {
+  --neon: #8B5CF6;
+  --neon2: #A78BFA;
+  --border: rgba(139, 92, 246, 0.18);
+  --glow: rgba(139, 92, 246, 0.25);
+  --theme-primary: #8B5CF6;
+  --theme-primary-rgb: 139, 92, 246;
+  --theme-secondary: #7C3AED;
+  --theme-secondary-rgb: 124, 58, 237;
+  --theme-glow: rgba(139, 92, 246, 0.15);
+}
+

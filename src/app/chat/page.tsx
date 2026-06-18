@@ -19,6 +19,23 @@ const cacheBustUrl = (url: string | null | undefined, updatedAt?: string | Date 
   return `${url}${separator}t=${t}`;
 };
 
+const getRoleSlug = (role?: string): string => {
+  if (!role) return 'other';
+  const r = role.toLowerCase();
+  if (r.includes('director')) return 'director';
+  if (r.includes('photographer')) return 'photographer';
+  if (r.includes('cinematographer') || r.includes('dp') || r.includes('camera')) return 'cinematographer';
+  if (r.includes('writer')) return 'writer';
+  if (r.includes('editor')) return 'editor';
+  if (r.includes('sound')) return 'sound';
+  if (r.includes('designer')) return 'designer';
+  if (r.includes('developer')) return 'developer';
+  if (r.includes('actor')) return 'actor';
+  if (r.includes('producer')) return 'producer';
+  if (r.includes('lighting') || r.includes('gaffer')) return 'lighting';
+  if (r.includes('support') || r.includes('spot')) return 'support';
+  return 'other';
+};
 
 interface User {
   id: number;
@@ -229,6 +246,13 @@ export default function ChatPage() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (user && typeof (window as any).applyRoleTheme === 'function') {
+      (window as any).applyRoleTheme(user.role);
+    }
+  }, [user]);
+
   const isFounder = user?.secondary_role?.toLowerCase() === 'founder';
   const [state, setState] = useState<ChatState>('loading');
   const [statusText, setStatusText] = useState('Synchronizing with Community...');
@@ -2681,7 +2705,7 @@ export default function ChatPage() {
                   <button
                     key={conv.id}
                     type="button"
-                    className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''}`}
+                    className={`conversation-item ${activeConv?.id === conv.id ? 'active' : ''} ${!conv.is_group ? `role-theme-${getRoleSlug(recipient?.role)}` : ''}`}
                     onClick={() => {
                       setViewingGalaxyLanding(false);
                       setShowCommunityDashboard(false);
@@ -2726,7 +2750,7 @@ export default function ChatPage() {
           )}
         </aside>
 
-        <main className="chat-window">
+        <main className={`chat-window ${activeConv && !activeConv.is_group ? `role-theme-${getRoleSlug(activeRecipient?.role)}` : ''}`}>
           {viewingGalaxyLanding ? (
             <div className="galaxy-container">
               <div className="galaxy-stars"></div>

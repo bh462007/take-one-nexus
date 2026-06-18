@@ -79,8 +79,10 @@ function personCard(person) {
     ">${availability}</span>
   </div>`;
 
+  const roleSlug = (typeof getRoleSlug === 'function') ? getRoleSlug(person.role) : 'other';
+
   return `
-    <article class="crew-card">
+    <article class="crew-card role-theme-${roleSlug}">
       <div class="crew-avatar">${initials(person.name)}</div>
       <div class="crew-name" style="display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap;">${name}${verifiedBadge}</div>
       <div class="crew-role">${person.role || 'Crew Member'}</div>
@@ -228,3 +230,22 @@ document.getElementById('clearCrewFilters')?.addEventListener('click', () => {
 
 renderRoleFilters();
 loadPeople(1);
+
+async function checkCrewAuthState() {
+  if (typeof API === 'undefined' || !API.auth) return;
+  try {
+    const validation = await API.auth.validateSession();
+    if (validation.valid && validation.user && typeof applyRoleTheme === 'function') {
+      applyRoleTheme(validation.user.role);
+    }
+  } catch (error) {
+    console.error('Crew auth state validation failed:', error);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkCrewAuthState);
+} else {
+  checkCrewAuthState();
+}
+

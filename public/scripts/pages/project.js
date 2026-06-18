@@ -1812,6 +1812,10 @@ function updateUIAfterLogin(user) {
 }
 
 function applyRoleBasedUI(user) {
+  if (typeof applyRoleTheme === 'function') {
+    applyRoleTheme(user ? user.role : 'Other');
+  }
+
   const creatorUploadZone = document.getElementById('creatorUploadZone');
   const crewModePanel = document.getElementById('crewModePanel');
   const uploadSectionLabel = document.getElementById('uploadSectionLabel');
