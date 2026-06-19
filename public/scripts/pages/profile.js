@@ -171,7 +171,7 @@ function renderPortfolio(profile) {
     if (!detailsWrap || !gridWrap) return;
 
     const role = profile.role || 'Other';
-    const scripts = profile.scripts || [];
+    const portfolioWorks = profile.portfolioWorks || [];
     
     // 1. Render Role-Specific Details Cards
     let detailsHtml = '';
@@ -214,7 +214,7 @@ function renderPortfolio(profile) {
         detailsHtml = `
             <div class="portfolio-card-mini">
                 <strong>Creator Stats</strong>
-                <p>${scripts.length} Projects · ${profile.credits} Credits</p>
+                <p>${portfolioWorks.length} Projects · ${profile.credits} Credits</p>
             </div>
             <div class="portfolio-card-mini">
                 <strong>Bio</strong>
@@ -229,7 +229,7 @@ function renderPortfolio(profile) {
     isOwner = !!(authUser && profile.id === authUser.id);
 
     // 2. Render Featured Work Cards
-    if (scripts.length === 0) {
+    if (portfolioWorks.length === 0) {
         gridWrap.innerHTML = `
             <div class="collab-empty">
                 <p>No projects uploaded to showcase yet.</p>
@@ -237,7 +237,7 @@ function renderPortfolio(profile) {
             </div>
         `;
     } else {
-        gridWrap.innerHTML = scripts.map((script, i) => {
+        gridWrap.innerHTML = portfolioWorks.map((script, i) => {
             let roleInfo = '';
             if (script.role_data) {
                 try {
@@ -287,24 +287,23 @@ function notifyProfile(message) {
     }
 }
 
-function upsertLocalPortfolioItem(script, remove = false) {
-    if (!currentProfileData || !script || !script.id) return;
+function upsertLocalPortfolioItem(item, remove = false) {
+    if (!currentProfileData || !item || !item.id) return;
 
-    const scripts = Array.isArray(currentProfileData.scripts)
-        ? currentProfileData.scripts.slice()
+    const works = Array.isArray(currentProfileData.portfolioWorks)
+        ? currentProfileData.portfolioWorks.slice()
         : [];
-    const index = scripts.findIndex(item => Number(item.id) === Number(script.id));
+    const index = works.findIndex(x => Number(x.id) === Number(item.id));
 
     if (remove) {
-        if (index >= 0) scripts.splice(index, 1);
+        if (index >= 0) works.splice(index, 1);
     } else if (index >= 0) {
-        scripts[index] = { ...scripts[index], ...script };
+        works[index] = { ...works[index], ...item };
     } else {
-        scripts.unshift(script);
+        works.unshift(item);
     }
 
-    currentProfileData.scripts = scripts;
-    renderProjects(scripts);
+    currentProfileData.portfolioWorks = works;
     renderPortfolio(currentProfileData);
 }
 
@@ -364,6 +363,107 @@ function populateProfile(profile) {
     renderPortfolio(profile);
 
     if (typeof updateStat === 'function') updateStat('profileCity', profile.city || '--');
+    
+    // Initialize rating engine component
+    initCreatorRatings(profile.id);
+}
+
+async function initCreatorRatings(profileId) {
+    const container = document.getElementById('creatorRatingSection');
+    if (!container) return;
+
+    try {
+        const authUser = API.auth.getUser();
+        const isViewerOwner = !!(authUser && Number(authUser.id) === Number(profileId));
+
+        const res = await API.ratings.getStatus(profileId);
+        if (!res.success || !res.data) {
+            container.style.display = 'none';
+            return;
+        }
+
+        const { averageRating, ratingCount, userRating } = res.data;
+
+        // Render stars structure
+        let starsHtml = '';
+        const currentAvg = Math.round(averageRating || 0);
+        for (let i = 1; i <= 5; i++) {
+            const isActive = i <= (userRating || currentAvg);
+            const isInteractiveClass = !isViewerOwner && authUser ? 'interactive' : '';
+            starsHtml += `<span class="rating-star-icon ${isActive ? 'active' : ''} ${isInteractiveClass}" data-value="${i}">★</span>`;
+        }
+
+        container.innerHTML = `
+            <div class="rating-title">Creator Rating</div>
+            <div class="rating-stars-display">
+                ${starsHtml}
+            </div>
+            <div class="rating-stats-text">
+                <span class="rating-score-bold">${averageRating ? parseFloat(averageRating).toFixed(1) : '0.0'}</span>
+                <span>/ 5.0</span>
+                <span>(${ratingCount} ${ratingCount === 1 ? 'rating' : 'ratings'})</span>
+            </div>
+            ${userRating > 0 ? `
+                <div class="rating-subtext">Your rating: ${userRating} ★</div>
+            ` : !isViewerOwner && authUser ? `
+                <div class="rating-subtext">Tap stars to rate this creator</div>
+            ` : !authUser ? `
+                <div class="rating-subtext"><a href="/?auth=login" style="color: var(--neon); text-decoration: none;">Login</a> to rate</div>
+            ` : `
+                <div class="rating-subtext">Self-rating is disabled</div>
+            `}
+        `;
+
+        // Bind interactive event listeners if viewer is not owner
+        if (!isViewerOwner && authUser) {
+            container.querySelectorAll('.rating-star-icon.interactive').forEach(star => {
+                star.addEventListener('mouseover', function() {
+                    const hoverVal = parseInt(this.getAttribute('data-value'));
+                    container.querySelectorAll('.rating-star-icon.interactive').forEach(s => {
+                        const sVal = parseInt(s.getAttribute('data-value'));
+                        if (sVal <= hoverVal) {
+                            s.classList.add('active');
+                        } else {
+                            s.classList.remove('active');
+                        }
+                    });
+                });
+
+                star.addEventListener('mouseout', function() {
+                    container.querySelectorAll('.rating-star-icon.interactive').forEach(s => {
+                        const sVal = parseInt(s.getAttribute('data-value'));
+                        const checkVal = userRating || currentAvg;
+                        if (sVal <= checkVal) {
+                            s.classList.add('active');
+                        } else {
+                            s.classList.remove('active');
+                        }
+                    });
+                });
+
+                star.addEventListener('click', async function() {
+                    const clickVal = parseInt(this.getAttribute('data-value'));
+                    try {
+                        const submitRes = await API.ratings.submit(profileId, clickVal);
+                        if (submitRes.success) {
+                            notifyProfile('Rating submitted ✦');
+                            // Re-init ratings after brief delay to show new scores
+                            initCreatorRatings(profileId);
+                        } else {
+                            notifyProfile(submitRes.message || 'Could not submit rating');
+                        }
+                    } catch (err) {
+                        console.error('Submit rating error:', err);
+                        notifyProfile(err.message || 'Connection error');
+                    }
+                });
+            });
+        }
+
+    } catch (error) {
+        console.error('Error initializing creator ratings:', error);
+        container.style.display = 'none';
+    }
 }
 
 async function loadProfile() {
@@ -875,7 +975,7 @@ window.openEditWorkModal = function(scriptId = null) {
 
     if (scriptId) {
         title.textContent = 'Edit Portfolio Work';
-        const script = currentProfileData?.scripts?.find(s => Number(s.id) === Number(scriptId));
+        const script = currentProfileData?.portfolioWorks?.find(s => Number(s.id) === Number(scriptId));
         if (script) {
             document.getElementById('workTitle').value = script.title || '';
             document.getElementById('workGenre').value = script.genre || '';
@@ -909,7 +1009,7 @@ window.deleteWork = async function(scriptId) {
     if (!confirm('Are you sure you want to remove this project from your portfolio?')) return;
     
     try {
-        const json = await API.scripts.delete(scriptId);
+        const json = await API.portfolio.delete(scriptId);
         
         if (json.success) {
             notifyProfile('Project removed');
@@ -951,8 +1051,8 @@ async function handleWorkSubmit(e) {
         return;
     }
 
-    if (typeof API === 'undefined' || !API.scripts) {
-        notifyProfile('Project API is not available. Start the API server and try again.');
+    if (typeof API === 'undefined' || !API.portfolio) {
+        notifyProfile('Portfolio API is not available.');
         return;
     }
 
@@ -963,8 +1063,8 @@ async function handleWorkSubmit(e) {
 
     try {
         const json = scriptId
-            ? await API.scripts.update(scriptId, data)
-            : await API.scripts.createPortfolio(data);
+            ? await API.portfolio.update(scriptId, data)
+            : await API.portfolio.create(data);
         
         if (json.success) {
             const savedScript = json.data || {

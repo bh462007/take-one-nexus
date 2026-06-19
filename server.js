@@ -81,6 +81,8 @@ try {
   const creditsRoutes = require('./routes/credits');
   const paymentRoutes = require('./routes/payments');
   const communityRoutes = require('./routes/community');
+  const portfolioRoutes = require('./routes/portfolio');
+  const ratingRoutes = require('./routes/ratings');
 
 const PORT = process.env.PORT || 3000;
 
@@ -230,6 +232,8 @@ app.use('/api/payments', paymentRateLimiter, paymentRoutes);
 app.use('/api/community/create-order', paymentRateLimiter);
 app.use('/api/community/verify-payment', paymentRateLimiter);
 app.use('/api/community', communityRoutes);
+app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/ratings', ratingRoutes);
 
 app.post('/api/groups/create', (req, res) => {
   res.status(403).json({

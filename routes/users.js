@@ -175,11 +175,28 @@ async function getProfileData(userId) {
         created_at
     FROM scripts
     WHERE user_id = ?
-    AND (
-      payment_verified = TRUE
-      OR payment_status = 'portfolio'
-    )
+    AND payment_verified = TRUE
+    AND (payment_status IS NULL OR payment_status != 'portfolio')
     ORDER BY created_at DESC, id DESC`,
+    [userId]
+  );
+
+  const [portfolioRows] = await pool.query(
+    `SELECT
+        id,
+        user_id,
+        title,
+        genre,
+        synopsis,
+        media_links,
+        role_data,
+        work_type,
+        status,
+        created_at,
+        updated_at
+     FROM portfolio_work
+     WHERE user_id = ?
+     ORDER BY created_at DESC, id DESC`,
     [userId]
   );
 
@@ -187,7 +204,8 @@ async function getProfileData(userId) {
     ...userRows[0],
     name: formatDisplayName(userRows[0].name),
     email_verified: userRows[0].email_verified === 1 || userRows[0].email_verified === true,
-    scripts: scriptRows
+    scripts: scriptRows,
+    portfolioWorks: portfolioRows
   };
 }
 

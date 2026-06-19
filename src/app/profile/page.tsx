@@ -56,6 +56,13 @@ export default async function ProfilePage({
         where: { id: targetUserId },
         include: {
           scripts: {
+            where: {
+              payment_verified: true,
+              payment_status: { not: 'portfolio' }
+            },
+            orderBy: { created_at: 'desc' }
+          },
+          portfolio_works: {
             orderBy: { created_at: 'desc' }
           }
         }
@@ -77,11 +84,10 @@ export default async function ProfilePage({
       isOwner = false;
     } else {
       // Viewing own profile
-      rawUser = authUser;
       isOwner = true;
 
       // Auth Gate if not logged in and no targetId
-      if (!rawUser) {
+      if (!authUser) {
         return (
           <div className="profile-auth-gate" id="profileAuthGate">
             <div className="auth-kicker">Profile Locked</div>
@@ -94,10 +100,29 @@ export default async function ProfilePage({
           </div>
         );
       }
+
+      rawUser = await prisma.user.findUnique({
+        where: { id: authUser.id },
+        include: {
+          scripts: {
+            where: {
+              payment_verified: true,
+              payment_status: { not: 'portfolio' }
+            },
+            orderBy: { created_at: 'desc' }
+          },
+          portfolio_works: {
+            orderBy: { created_at: 'desc' }
+          }
+        }
+      });
     }
 
     // ENSURE POJO SERIALIZATION
     const user = JSON.parse(JSON.stringify(rawUser));
+    if (user) {
+      user.portfolioWorks = user.portfolio_works || [];
+    }
 
     // STABILITY: Absolute defaults for all fields
     const name = user?.name || 'Creator';
@@ -227,6 +252,10 @@ export default async function ProfilePage({
                   {availability}
                 </span>
               </div>
+
+              {/* Rating Section */}
+              <div id="creatorRatingSection" className="creator-rating-section"></div>
+
               <div className="profile-meta" id="profileMeta">
                 {[college, city].filter(Boolean).join(' · ') || 'Location Pending'}
               </div>
