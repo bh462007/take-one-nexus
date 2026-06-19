@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs/promises');
 const path = require('path');
 const { pool } = require('../config/db');
-const { authenticateUser, requireVerified, requireRole } = require('../middleware/auth');
+const { authenticateUser, requireVerified, requireRole, requireAdmin } = require('../middleware/auth');
 const { createRateLimiter } = require('../middleware/rateLimiter');
 const Pusher = require('pusher');
 
@@ -588,7 +588,7 @@ router.delete('/:id', authenticateUser, deleteLimiter, async (req, res) => {
  * Approve or reject a script (Admin only)
  * Body: { action: 'approved' | 'rejected' | 'pending', moderation_notes?: string }
  */
-router.patch('/:id/moderate', authenticateUser, requireRole(['Admin', 'Developer']), moderationLimiter, async (req, res) => {
+router.patch('/:id/moderate', authenticateUser, requireAdmin, moderationLimiter, async (req, res) => {
   try {
     const scriptId = Number(req.params.id);
     const { action, moderation_notes } = req.body;

@@ -97,7 +97,7 @@ TAKE ONE Nexus utilizes a **dual-server architecture** running side-by-side on V
 The Administrative Moderation Console is decoupled and hosted on the `admin` subdomain:
 - **Main App**: `takeone-nexus.net.in` (Apex)
 - **Admin Portal**: `admin.takeone-nexus.net.in` (Subdomain)
-- **Shared Session**: Auth cookies share a common apex domain configuration: `domain: '.takeone-nexus.net.in'`. Users with the appropriate `secondary_role` permissions (e.g. `Admin`, `Developer`) can navigate to the admin console without re-authenticating.
+- **Shared Session**: Auth cookies share a common apex domain configuration: `domain: '.takeone-nexus.net.in'`. Users with the appropriate `secondary_role` permissions (e.g. `Admin`) can navigate to the admin console without re-authenticating.
 
 For details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 

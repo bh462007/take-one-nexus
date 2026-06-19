@@ -62,7 +62,7 @@ This separation helps contributors understand which framework is responsible for
 - **Apex Domain**: `takeone-nexus.net.in`
 - **Admin Subdomain**: `admin.takeone-nexus.net.in`
 - **Decoupled Architecture**: The admin panel is decoupled into its own codebase, referencing the central API server.
-- **Subdomain Cookie Sharing**: Auth sessions share a common apex domain configuration: `domain: '.takeone-nexus.net.in'` on cookies. Users possessing the correct `secondary_role` permissions (e.g. `Admin`, `Developer`) can navigate to the admin console without re-authenticating.
+- **Subdomain Cookie Sharing**: Auth sessions share a common apex domain configuration: `domain: '.takeone-nexus.net.in'` on cookies. Users possessing the correct `secondary_role` permissions (e.g. `Admin`) can navigate to the admin console without re-authenticating.
 
 ---
 

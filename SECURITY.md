@@ -60,7 +60,7 @@ Endpoint-specific rate limiters are applied on both the Next.js API router and E
 
 ### 5. Multi-Platform Ingestion Security
 - Telemetry, logging, and bug reporting modals run validation schemas to prevent abuse.
-- Administrative triage and moderation updates are restricted to verified accounts possessing the `Admin`, `Developer`, or elevated `secondary_role` privileges via `requireRole` check.
+- Administrative triage and moderation updates are restricted to verified accounts possessing the `Admin` or elevated `secondary_role` privileges.
 
 ---
 

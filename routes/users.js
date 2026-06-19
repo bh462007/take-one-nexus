@@ -106,7 +106,7 @@ function createToken(user) {
     throw new Error('JWT_SECRET is not configured');
   }
   
-  // Ensure primary admin/dev email always has the Developer role in the session token
+  // Ensure primary roles are populated in the session token
   const role = user.role || '';
 
   return jwt.sign(
@@ -654,10 +654,8 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
     const role = String(req.user.role || '').toLowerCase();
     const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
     const isAuthorized =
-      role === 'developer' ||
-      role === 'admin' ||
-      role === 'moderator' ||
-      secondaryRole === 'admin';
+      secondaryRole === 'admin' ||
+      secondaryRole === 'founder';
 
     if (!isAuthorized) {
       return res.status(403).json({

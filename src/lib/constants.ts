@@ -6,7 +6,6 @@ export const USER_ROLES = [
   "Editor",
   "Sound Designer",
   "Designer",
-  "Developer",
   "Actor",
   "Producer",
   "Lighting Crew",

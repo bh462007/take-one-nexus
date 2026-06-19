@@ -58,10 +58,10 @@ const Navbar = {
             html += `<a href="${href}" ${item.id ? `id="${item.id}"` : ''} ${additionalAttrs}>${label}</a>`;
         });
 
-        // Add Admin Panel for admins, developers, and moderators
-        if (user && user.role) {
-            const role = user.role.toLowerCase();
-            if (role === 'admin' || role === 'developer' || role === 'moderator') {
+        // Add Admin Panel for admins and founders in the secondary_role
+        if (user) {
+            const secondaryRole = String(user.secondary_role || '').toLowerCase();
+            if (secondaryRole === 'admin' || secondaryRole === 'founder') {
                 html += `<a href="https://admin.takeone-nexus.net.in" style="color: var(--neon); font-weight: bold;">Admin Panel</a>`;
             }
         }
