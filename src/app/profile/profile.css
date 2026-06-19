@@ -111,7 +111,7 @@ header {
 nav {
     display: flex;
     align-items: center;
-    gap: 48px;
+    gap: clamp(12px, 1.8vw, 24px);
 }
 
 nav a {
@@ -123,6 +123,7 @@ nav a {
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     padding: 4px 0;
+    white-space: nowrap;
 }
 
 nav a::after {
@@ -1398,7 +1399,7 @@ nav a:hover::after {
 }
 
 /* ── RESPONSIVE POLISH ── */
-@media (max-width: 680px) {
+@media (max-width: 1024px) {
     header {
         height: auto;
         min-height: 60px;

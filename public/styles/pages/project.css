@@ -336,12 +336,13 @@ header:hover {
   animation: pulse 2s ease-in-out infinite;
 }
 
-header nav { display: flex; align-items: center; gap: 32px; }
+header nav { display: flex; align-items: center; gap: clamp(12px, 1.8vw, 24px); }
 header nav a {
   font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;
   color: var(--silver); text-decoration: none;
   transition: color 0.3s;
   position: relative;
+  white-space: nowrap;
 }
 header nav a:hover { color: var(--cream); }
 header nav a::after {
@@ -362,6 +363,7 @@ header nav a:hover::after { width: 100%; }
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   box-shadow: 0 0 15px rgba(255, 77, 26, 0.4);
+  white-space: nowrap;
 }
 .nav-cta:hover { 
   background: var(--amber); 
@@ -891,7 +893,7 @@ header.nav-open .nav-toggle span:nth-child(3) { transform: translateY(-6.5px) ro
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .nav-toggle { display: flex; }
 
   header {
