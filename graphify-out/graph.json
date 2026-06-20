@@ -9,7 +9,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/sentry.client.config.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_sentry_client_config_js",
-      "community": 61,
+      "community": 62,
       "norm_label": "sentry.client.config.js"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/tailwind.config.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_tailwind_config_js",
-      "community": 62,
+      "community": 63,
       "norm_label": "tailwind.config.js"
     },
     {
@@ -27,7 +27,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/sentry.edge.config.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_sentry_edge_config_js",
-      "community": 63,
+      "community": 64,
       "norm_label": "sentry.edge.config.js"
     },
     {
@@ -36,7 +36,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/test-db.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_test_db_js",
-      "community": 16,
+      "community": 15,
       "norm_label": "test-db.js"
     },
     {
@@ -45,7 +45,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/test-db.js",
       "source_location": "L5",
       "id": "test_db_testmysql",
-      "community": 16,
+      "community": 15,
       "norm_label": "testmysql()"
     },
     {
@@ -54,7 +54,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/test-db.js",
       "source_location": "L40",
       "id": "test_db_testprisma",
-      "community": 16,
+      "community": 15,
       "norm_label": "testprisma()"
     },
     {
@@ -63,7 +63,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/test-db.js",
       "source_location": "L54",
       "id": "test_db_run",
-      "community": 16,
+      "community": 15,
       "norm_label": "run()"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/server.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_server_js",
-      "community": 64,
+      "community": 65,
       "norm_label": "server.js"
     },
     {
@@ -81,7 +81,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/next.config.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_next_config_js",
-      "community": 65,
+      "community": 66,
       "norm_label": "next.config.js"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/next-env.d.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_next_env_d_ts",
-      "community": 66,
+      "community": 67,
       "norm_label": "next-env.d.ts"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/sentry.server.config.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_sentry_server_config_js",
-      "community": 67,
+      "community": 68,
       "norm_label": "sentry.server.config.js"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/postcss.config.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_postcss_config_js",
-      "community": 68,
+      "community": 69,
       "norm_label": "postcss.config.js"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/eslint.config.mjs",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_eslint_config_mjs",
-      "community": 69,
+      "community": 70,
       "norm_label": "eslint.config.mjs"
     },
     {
@@ -126,7 +126,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/moderation.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_middleware_moderation_js",
-      "community": 23,
+      "community": 22,
       "norm_label": "moderation.js"
     },
     {
@@ -135,7 +135,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/moderation.js",
       "source_location": "L3",
       "id": "moderation_ismoderatoraccount",
-      "community": 23,
+      "community": 22,
       "norm_label": "ismoderatoraccount()"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/moderation.js",
       "source_location": "L18",
       "id": "moderation_requiremoderator",
-      "community": 23,
+      "community": 22,
       "norm_label": "requiremoderator()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_middleware_auth_js",
-      "community": 10,
+      "community": 9,
       "norm_label": "auth.js"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L6",
       "id": "auth_authenticateuser",
-      "community": 10,
+      "community": 9,
       "norm_label": "authenticateuser()"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L92",
       "id": "auth_requirerole",
-      "community": 10,
+      "community": 9,
       "norm_label": "requirerole()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L118",
       "id": "auth_requiresecondaryrole",
-      "community": 10,
+      "community": 9,
       "norm_label": "requiresecondaryrole()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L146",
       "id": "auth_requireadmin",
-      "community": 10,
+      "community": 9,
       "norm_label": "requireadmin()"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L153",
       "id": "auth_requiremoderator",
-      "community": 10,
+      "community": 9,
       "norm_label": "requiremoderator()"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L160",
       "id": "auth_requireverified",
-      "community": 10,
+      "community": 9,
       "norm_label": "requireverified()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/auth.js",
       "source_location": "L183",
       "id": "auth_requiresameuser",
-      "community": 10,
+      "community": 9,
       "norm_label": "requiresameuser()"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/validator.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_middleware_validator_js",
-      "community": 31,
+      "community": 29,
       "norm_label": "validator.js"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/validator.js",
       "source_location": "L7",
       "id": "validator_validaterequest",
-      "community": 31,
+      "community": 29,
       "norm_label": "validaterequest()"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/csrf.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_middleware_csrf_js",
-      "community": 32,
+      "community": 30,
       "norm_label": "csrf.js"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/csrf.js",
       "source_location": "L32",
       "id": "csrf_csrfprotection",
-      "community": 32,
+      "community": 30,
       "norm_label": "csrfprotection()"
     },
     {
@@ -261,7 +261,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/upload.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_middleware_upload_js",
-      "community": 33,
+      "community": 31,
       "norm_label": "upload.js"
     },
     {
@@ -270,7 +270,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/upload.js",
       "source_location": "L31",
       "id": "upload_filefilter",
-      "community": 33,
+      "community": 31,
       "norm_label": "filefilter()"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/rateLimiter.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_middleware_ratelimiter_js",
-      "community": 34,
+      "community": 32,
       "norm_label": "ratelimiter.js"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/middleware/rateLimiter.js",
       "source_location": "L22",
       "id": "ratelimiter_createratelimiter",
-      "community": 34,
+      "community": 32,
       "norm_label": "createratelimiter()"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/seed_communities.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_database_seed_communities_js",
-      "community": 35,
+      "community": 33,
       "norm_label": "seed_communities.js"
     },
     {
@@ -306,8 +306,26 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/seed_communities.js",
       "source_location": "L4",
       "id": "seed_communities_seedcommunities",
-      "community": 35,
+      "community": 33,
       "norm_label": "seedcommunities()"
+    },
+    {
+      "label": "migration.js",
+      "file_type": "code",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/migration.js",
+      "source_location": "L1",
+      "id": "users_aarushgupta_documents_projects_take_one_nexus_database_migration_js",
+      "community": 34,
+      "norm_label": "migration.js"
+    },
+    {
+      "label": "migratePortfolioItems()",
+      "file_type": "code",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/migration.js",
+      "source_location": "L4",
+      "id": "migration_migrateportfolioitems",
+      "community": 34,
+      "norm_label": "migrateportfolioitems()"
     },
     {
       "label": "init.js",
@@ -315,7 +333,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/init.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_database_init_js",
-      "community": 36,
+      "community": 35,
       "norm_label": "init.js"
     },
     {
@@ -324,7 +342,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/init.js",
       "source_location": "L6",
       "id": "init_initializedatabase",
-      "community": 36,
+      "community": 35,
       "norm_label": "initializedatabase()"
     },
     {
@@ -333,7 +351,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/seed.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_database_seed_js",
-      "community": 37,
+      "community": 36,
       "norm_label": "seed.js"
     },
     {
@@ -342,7 +360,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/seed.js",
       "source_location": "L5",
       "id": "seed_seeddatabase",
-      "community": 37,
+      "community": 36,
       "norm_label": "seeddatabase()"
     },
     {
@@ -351,7 +369,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/db.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_config_db_js",
-      "community": 24,
+      "community": 23,
       "norm_label": "db.js"
     },
     {
@@ -360,7 +378,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/db.js",
       "source_location": "L4",
       "id": "db_parseconnectionstring",
-      "community": 24,
+      "community": 23,
       "norm_label": "parseconnectionstring()"
     },
     {
@@ -369,7 +387,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/db.js",
       "source_location": "L49",
       "id": "db_connectdb",
-      "community": 24,
+      "community": 23,
       "norm_label": "connectdb()"
     },
     {
@@ -378,7 +396,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/mailer.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_config_mailer_js",
-      "community": 11,
+      "community": 10,
       "norm_label": "mailer.js"
     },
     {
@@ -387,7 +405,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/mailer.js",
       "source_location": "L9",
       "id": "mailer_emailenabled",
-      "community": 11,
+      "community": 10,
       "norm_label": "emailenabled()"
     },
     {
@@ -396,7 +414,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/mailer.js",
       "source_location": "L26",
       "id": "mailer_getemailstatus",
-      "community": 11,
+      "community": 10,
       "norm_label": "getemailstatus()"
     },
     {
@@ -405,7 +423,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/mailer.js",
       "source_location": "L41",
       "id": "mailer_gettransporter",
-      "community": 11,
+      "community": 10,
       "norm_label": "gettransporter()"
     },
     {
@@ -414,7 +432,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/mailer.js",
       "source_location": "L55",
       "id": "mailer_sendcollaborationrequestemail",
-      "community": 11,
+      "community": 10,
       "norm_label": "sendcollaborationrequestemail()"
     },
     {
@@ -423,7 +441,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/mailer.js",
       "source_location": "L105",
       "id": "mailer_verifyemailconnection",
-      "community": 11,
+      "community": 10,
       "norm_label": "verifyemailconnection()"
     },
     {
@@ -432,7 +450,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/config/mailer.js",
       "source_location": "L122",
       "id": "mailer_sendsmtptestemail",
-      "community": 11,
+      "community": 10,
       "norm_label": "sendsmtptestemail()"
     },
     {
@@ -441,7 +459,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/seedCreditTasks.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_seedcredittasks_js",
-      "community": 25,
+      "community": 24,
       "norm_label": "seedcredittasks.js"
     },
     {
@@ -450,7 +468,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/seedCreditTasks.js",
       "source_location": "L13",
       "id": "seedcredittasks_seedcredittasks",
-      "community": 25,
+      "community": 24,
       "norm_label": "seedcredittasks()"
     },
     {
@@ -459,7 +477,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/seedCreditTasks.js",
       "source_location": "L68",
       "id": "seedcredittasks_awardcredittask",
-      "community": 25,
+      "community": 24,
       "norm_label": "awardcredittask()"
     },
     {
@@ -468,7 +486,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/cleanupCommunityPayments.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_cleanupcommunitypayments_js",
-      "community": 38,
+      "community": 37,
       "norm_label": "cleanupcommunitypayments.js"
     },
     {
@@ -477,7 +495,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/cleanupCommunityPayments.js",
       "source_location": "L8",
       "id": "cleanupcommunitypayments_cleanuppendingcommunitypayments",
-      "community": 38,
+      "community": 37,
       "norm_label": "cleanuppendingcommunitypayments()"
     },
     {
@@ -513,7 +531,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/email-templates-legacy.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_email_templates_legacy_js",
-      "community": 17,
+      "community": 16,
       "norm_label": "email-templates-legacy.js"
     },
     {
@@ -522,7 +540,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/email-templates-legacy.js",
       "source_location": "L6",
       "id": "email_templates_legacy_escapehtml",
-      "community": 17,
+      "community": 16,
       "norm_label": "escapehtml()"
     },
     {
@@ -531,7 +549,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/email-templates-legacy.js",
       "source_location": "L16",
       "id": "email_templates_legacy_buildverifyemailtemplate",
-      "community": 17,
+      "community": 16,
       "norm_label": "buildverifyemailtemplate()"
     },
     {
@@ -540,7 +558,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/email-templates-legacy.js",
       "source_location": "L103",
       "id": "email_templates_legacy_buildresetpasswordtemplate",
-      "community": 17,
+      "community": 16,
       "norm_label": "buildresetpasswordtemplate()"
     },
     {
@@ -567,7 +585,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/cleanupDrafts.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_cleanupdrafts_js",
-      "community": 39,
+      "community": 38,
       "norm_label": "cleanupdrafts.js"
     },
     {
@@ -576,7 +594,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/cleanupDrafts.js",
       "source_location": "L16",
       "id": "cleanupdrafts_cleanupexpireddrafts",
-      "community": 39,
+      "community": 38,
       "norm_label": "cleanupexpireddrafts()"
     },
     {
@@ -585,7 +603,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/prisma.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_prisma_js",
-      "community": 70,
+      "community": 71,
       "norm_label": "prisma.js"
     },
     {
@@ -594,7 +612,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/validation.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_validation_js",
-      "community": 18,
+      "community": 17,
       "norm_label": "validation.js"
     },
     {
@@ -603,7 +621,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/validation.js",
       "source_location": "L8",
       "id": "validation_sanitize",
-      "community": 18,
+      "community": 17,
       "norm_label": "sanitize()"
     },
     {
@@ -612,7 +630,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/validation.js",
       "source_location": "L18",
       "id": "validation_sanitizeobject",
-      "community": 18,
+      "community": 17,
       "norm_label": "sanitizeobject()"
     },
     {
@@ -621,7 +639,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/validation.js",
       "source_location": "L42",
       "id": "validation_sanitizemiddleware",
-      "community": 18,
+      "community": 17,
       "norm_label": "sanitizemiddleware()"
     },
     {
@@ -630,7 +648,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/notifications.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_notifications_js",
-      "community": 13,
+      "community": 11,
       "norm_label": "notifications.js"
     },
     {
@@ -639,7 +657,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/notifications.js",
       "source_location": "L3",
       "id": "notifications_ensurenotificationstable",
-      "community": 13,
+      "community": 11,
       "norm_label": "ensurenotificationstable()"
     },
     {
@@ -648,7 +666,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/notifications.js",
       "source_location": "L28",
       "id": "notifications_createnotification",
-      "community": 13,
+      "community": 11,
       "norm_label": "createnotification()"
     },
     {
@@ -657,7 +675,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/notifications.js",
       "source_location": "L46",
       "id": "notifications_listnotifications",
-      "community": 13,
+      "community": 11,
       "norm_label": "listnotifications()"
     },
     {
@@ -666,7 +684,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/notifications.js",
       "source_location": "L61",
       "id": "notifications_unreadnotificationcount",
-      "community": 13,
+      "community": 11,
       "norm_label": "unreadnotificationcount()"
     },
     {
@@ -675,7 +693,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/dbInit.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_utils_dbinit_js",
-      "community": 40,
+      "community": 39,
       "norm_label": "dbinit.js"
     },
     {
@@ -684,7 +702,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/utils/dbInit.js",
       "source_location": "L3",
       "id": "dbinit_initializemoderationtable",
-      "community": 40,
+      "community": 39,
       "norm_label": "initializemoderationtable()"
     },
     {
@@ -736,7 +754,7 @@
       "label": "getRoleSlug()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/constants/themes.js",
-      "source_location": "L95",
+      "source_location": "L88",
       "id": "themes_getroleslug",
       "community": 4,
       "norm_label": "getroleslug()"
@@ -745,7 +763,7 @@
       "label": "applyRoleTheme()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/constants/themes.js",
-      "source_location": "L113",
+      "source_location": "L105",
       "id": "themes_applyroletheme",
       "community": 4,
       "norm_label": "applyroletheme()"
@@ -756,7 +774,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/constants/roles.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_constants_roles_js",
-      "community": 71,
+      "community": 72,
       "norm_label": "roles.js"
     },
     {
@@ -765,7 +783,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/user.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_utils_user_js",
-      "community": 72,
+      "community": 73,
       "norm_label": "user.js"
     },
     {
@@ -774,7 +792,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/colleges.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_utils_colleges_js",
-      "community": 73,
+      "community": 74,
       "norm_label": "colleges.js"
     },
     {
@@ -783,7 +801,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/locations.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_utils_locations_js",
-      "community": 74,
+      "community": 75,
       "norm_label": "locations.js"
     },
     {
@@ -871,7 +889,7 @@
       "label": "getAvatarUrl()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/helpers.js",
-      "source_location": "L80",
+      "source_location": "L78",
       "id": "helpers_getavatarurl",
       "community": 0,
       "norm_label": "getavatarurl()"
@@ -880,7 +898,7 @@
       "label": "handleImageError()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/helpers.js",
-      "source_location": "L106",
+      "source_location": "L104",
       "id": "helpers_handleimageerror",
       "community": 0,
       "norm_label": "handleimageerror()"
@@ -1071,7 +1089,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/submission-helper.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_components_submission_helper_js",
-      "community": 75,
+      "community": 76,
       "norm_label": "submission-helper.js"
     },
     {
@@ -1080,7 +1098,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/navbar.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_components_navbar_js",
-      "community": 76,
+      "community": 77,
       "norm_label": "navbar.js"
     },
     {
@@ -1152,7 +1170,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_components_register_wizard_js",
-      "community": 9,
+      "community": 2,
       "norm_label": "register-wizard.js"
     },
     {
@@ -1161,7 +1179,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L62",
       "id": "register_wizard_updatepasswordstrength",
-      "community": 9,
+      "community": 2,
       "norm_label": "updatepasswordstrength()"
     },
     {
@@ -1170,7 +1188,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L114",
       "id": "register_wizard_navigatetostep",
-      "community": 9,
+      "community": 2,
       "norm_label": "navigatetostep()"
     },
     {
@@ -1179,7 +1197,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L176",
       "id": "register_wizard_filterroles",
-      "community": 9,
+      "community": 2,
       "norm_label": "filterroles()"
     },
     {
@@ -1188,7 +1206,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L197",
       "id": "register_wizard_restoreallroles",
-      "community": 9,
+      "community": 2,
       "norm_label": "restoreallroles()"
     },
     {
@@ -1197,7 +1215,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L212",
       "id": "register_wizard_validatestep1",
-      "community": 9,
+      "community": 2,
       "norm_label": "validatestep1()"
     },
     {
@@ -1206,7 +1224,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L241",
       "id": "register_wizard_validatestep2",
-      "community": 9,
+      "community": 2,
       "norm_label": "validatestep2()"
     },
     {
@@ -1215,7 +1233,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L267",
       "id": "register_wizard_validateemailformat",
-      "community": 9,
+      "community": 2,
       "norm_label": "validateemailformat()"
     },
     {
@@ -1224,7 +1242,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/components/register-wizard.js",
       "source_location": "L272",
       "id": "register_wizard_showvalidationmessage",
-      "community": 9,
+      "community": 2,
       "norm_label": "showvalidationmessage()"
     },
     {
@@ -1395,16 +1413,16 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/api/api.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_api_api_js",
-      "community": 41,
+      "community": 40,
       "norm_label": "api.js"
     },
     {
       "label": "checkSessionExpiry()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/api/api.js",
-      "source_location": "L408",
+      "source_location": "L449",
       "id": "api_checksessionexpiry",
-      "community": 41,
+      "community": 40,
       "norm_label": "checksessionexpiry()"
     },
     {
@@ -1528,7 +1546,7 @@
       "label": "notifyProfile()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L276",
+      "source_location": "L292",
       "id": "profile_notifyprofile",
       "community": 2,
       "norm_label": "notifyprofile()"
@@ -1537,7 +1555,7 @@
       "label": "upsertLocalPortfolioItem()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L290",
+      "source_location": "L306",
       "id": "profile_upsertlocalportfolioitem",
       "community": 2,
       "norm_label": "upsertlocalportfolioitem()"
@@ -1546,16 +1564,25 @@
       "label": "populateProfile()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L311",
+      "source_location": "L326",
       "id": "profile_populateprofile",
       "community": 2,
       "norm_label": "populateprofile()"
     },
     {
+      "label": "initCreatorRatings()",
+      "file_type": "code",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
+      "source_location": "L387",
+      "id": "profile_initcreatorratings",
+      "community": 2,
+      "norm_label": "initcreatorratings()"
+    },
+    {
       "label": "loadProfile()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L369",
+      "source_location": "L501",
       "id": "profile_loadprofile",
       "community": 2,
       "norm_label": "loadprofile()"
@@ -1564,7 +1591,7 @@
       "label": "requestCard()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L416",
+      "source_location": "L598",
       "id": "profile_requestcard",
       "community": 2,
       "norm_label": "requestcard()"
@@ -1573,7 +1600,7 @@
       "label": "renderRequestList()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L475",
+      "source_location": "L657",
       "id": "profile_renderrequestlist",
       "community": 2,
       "norm_label": "renderrequestlist()"
@@ -1582,7 +1609,7 @@
       "label": "updateRequestStatus()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L493",
+      "source_location": "L675",
       "id": "profile_updaterequeststatus",
       "community": 2,
       "norm_label": "updaterequeststatus()"
@@ -1591,7 +1618,7 @@
       "label": "loadCollaborationRequests()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L515",
+      "source_location": "L697",
       "id": "profile_loadcollaborationrequests",
       "community": 2,
       "norm_label": "loadcollaborationrequests()"
@@ -1600,7 +1627,7 @@
       "label": "formatNotificationTime()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L528",
+      "source_location": "L710",
       "id": "profile_formatnotificationtime",
       "community": 2,
       "norm_label": "formatnotificationtime()"
@@ -1609,7 +1636,7 @@
       "label": "notificationCard()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L541",
+      "source_location": "L723",
       "id": "profile_notificationcard",
       "community": 2,
       "norm_label": "notificationcard()"
@@ -1618,7 +1645,7 @@
       "label": "renderNotifications()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L568",
+      "source_location": "L750",
       "id": "profile_rendernotifications",
       "community": 2,
       "norm_label": "rendernotifications()"
@@ -1627,7 +1654,7 @@
       "label": "loadNotifications()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L590",
+      "source_location": "L772",
       "id": "profile_loadnotifications",
       "community": 2,
       "norm_label": "loadnotifications()"
@@ -1636,7 +1663,7 @@
       "label": "markNotificationRead()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L601",
+      "source_location": "L783",
       "id": "profile_marknotificationread",
       "community": 2,
       "norm_label": "marknotificationread()"
@@ -1645,7 +1672,7 @@
       "label": "markAllNotificationsRead()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L616",
+      "source_location": "L798",
       "id": "profile_markallnotificationsread",
       "community": 2,
       "norm_label": "markallnotificationsread()"
@@ -1654,7 +1681,7 @@
       "label": "saveProfile()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L631",
+      "source_location": "L813",
       "id": "profile_saveprofile",
       "community": 2,
       "norm_label": "saveprofile()"
@@ -1663,7 +1690,7 @@
       "label": "initProfile()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L698",
+      "source_location": "L880",
       "id": "profile_initprofile",
       "community": 2,
       "norm_label": "initprofile()"
@@ -1672,7 +1699,7 @@
       "label": "injectRoleFields()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L819",
+      "source_location": "L1001",
       "id": "profile_injectrolefields",
       "community": 2,
       "norm_label": "injectrolefields()"
@@ -1681,7 +1708,7 @@
       "label": "handleWorkSubmit()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L927",
+      "source_location": "L1109",
       "id": "profile_handleworksubmit",
       "community": 2,
       "norm_label": "handleworksubmit()"
@@ -2151,7 +2178,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L2161",
       "id": "project_requesttojoinscript",
-      "community": 2,
+      "community": 0,
       "norm_label": "requesttojoinscript()"
     },
     {
@@ -2259,7 +2286,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/animations/common.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_animations_common_js",
-      "community": 19,
+      "community": 18,
       "norm_label": "common.js"
     },
     {
@@ -2268,7 +2295,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/animations/common.js",
       "source_location": "L31",
       "id": "common_initcursorinteractions",
-      "community": 19,
+      "community": 18,
       "norm_label": "initcursorinteractions()"
     },
     {
@@ -2277,7 +2304,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/animations/common.js",
       "source_location": "L56",
       "id": "common_initscrollreveal",
-      "community": 19,
+      "community": 18,
       "norm_label": "initscrollreveal()"
     },
     {
@@ -2286,7 +2313,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/animations/common.js",
       "source_location": "L67",
       "id": "common_updatescrollprogress",
-      "community": 19,
+      "community": 18,
       "norm_label": "updatescrollprogress()"
     },
     {
@@ -2295,7 +2322,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/scripts/check-task-sync.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_scripts_check_task_sync_js",
-      "community": 42,
+      "community": 41,
       "norm_label": "check-task-sync.js"
     },
     {
@@ -2304,7 +2331,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/scripts/check-task-sync.js",
       "source_location": "L9",
       "id": "check_task_sync_checktasksync",
-      "community": 42,
+      "community": 41,
       "norm_label": "checktasksync()"
     },
     {
@@ -2313,7 +2340,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/scripts/delete_legacy_groups.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_scripts_delete_legacy_groups_js",
-      "community": 13,
+      "community": 11,
       "norm_label": "delete_legacy_groups.js"
     },
     {
@@ -2322,7 +2349,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/scripts/delete_legacy_groups.js",
       "source_location": "L12",
       "id": "delete_legacy_groups_deletelegacygroups",
-      "community": 13,
+      "community": 11,
       "norm_label": "deletelegacygroups()"
     },
     {
@@ -2331,7 +2358,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/moderation.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_moderation_js",
-      "community": 77,
+      "community": 78,
       "norm_label": "moderation.js"
     },
     {
@@ -2340,7 +2367,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/otp.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_otp_js",
-      "community": 26,
+      "community": 25,
       "norm_label": "otp.js"
     },
     {
@@ -2349,7 +2376,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/otp.js",
       "source_location": "L29",
       "id": "otp_buildotpemailhtml",
-      "community": 26,
+      "community": 25,
       "norm_label": "buildotpemailhtml()"
     },
     {
@@ -2358,7 +2385,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/otp.js",
       "source_location": "L250",
       "id": "otp_triggercredittask",
-      "community": 26,
+      "community": 25,
       "norm_label": "triggercredittask()"
     },
     {
@@ -2367,7 +2394,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/system.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_system_js",
-      "community": 43,
+      "community": 42,
       "norm_label": "system.js"
     },
     {
@@ -2376,7 +2403,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/system.js",
       "source_location": "L126",
       "id": "system_formatrows",
-      "community": 43,
+      "community": 42,
       "norm_label": "formatrows()"
     },
     {
@@ -2430,7 +2457,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/issues.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_issues_js",
-      "community": 44,
+      "community": 43,
       "norm_label": "issues.js"
     },
     {
@@ -2439,7 +2466,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/issues.js",
       "source_location": "L16",
       "id": "issues_validatepayload",
-      "community": 44,
+      "community": 43,
       "norm_label": "validatepayload()"
     },
     {
@@ -2448,7 +2475,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/webhook.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_webhook_js",
-      "community": 78,
+      "community": 79,
       "norm_label": "webhook.js"
     },
     {
@@ -2500,7 +2527,7 @@
       "label": "safeQuery()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/users.js",
-      "source_location": "L505",
+      "source_location": "L526",
       "id": "users_safequery",
       "community": 4,
       "norm_label": "safequery()"
@@ -2511,7 +2538,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/csrf.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_csrf_js",
-      "community": 79,
+      "community": 80,
       "norm_label": "csrf.js"
     },
     {
@@ -2583,7 +2610,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/tasks.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_tasks_js",
-      "community": 45,
+      "community": 44,
       "norm_label": "tasks.js"
     },
     {
@@ -2592,7 +2619,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/tasks.js",
       "source_location": "L32",
       "id": "tasks_safepushertrigger",
-      "community": 45,
+      "community": 44,
       "norm_label": "safepushertrigger()"
     },
     {
@@ -2601,7 +2628,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/requests.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_requests_js",
-      "community": 46,
+      "community": 45,
       "norm_label": "requests.js"
     },
     {
@@ -2610,7 +2637,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/requests.js",
       "source_location": "L11",
       "id": "requests_ensurerequeststable",
-      "community": 46,
+      "community": 45,
       "norm_label": "ensurerequeststable()"
     },
     {
@@ -2718,7 +2745,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/credits.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_credits_js",
-      "community": 47,
+      "community": 46,
       "norm_label": "credits.js"
     },
     {
@@ -2727,8 +2754,17 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/credits.js",
       "source_location": "L10",
       "id": "credits_getoptionaluserid",
-      "community": 47,
+      "community": 46,
       "norm_label": "getoptionaluserid()"
+    },
+    {
+      "label": "portfolio.js",
+      "file_type": "code",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/portfolio.js",
+      "source_location": "L1",
+      "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_portfolio_js",
+      "community": 81,
+      "norm_label": "portfolio.js"
     },
     {
       "label": "community.js",
@@ -2736,7 +2772,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/community.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_community_js",
-      "community": 27,
+      "community": 26,
       "norm_label": "community.js"
     },
     {
@@ -2745,7 +2781,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/community.js",
       "source_location": "L22",
       "id": "community_logtransaction",
-      "community": 27,
+      "community": 26,
       "norm_label": "logtransaction()"
     },
     {
@@ -2754,7 +2790,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/community.js",
       "source_location": "L37",
       "id": "community_logcommunityevent",
-      "community": 27,
+      "community": 26,
       "norm_label": "logcommunityevent()"
     },
     {
@@ -2763,7 +2799,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/chat.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_chat_js",
-      "community": 28,
+      "community": 27,
       "norm_label": "chat.js"
     },
     {
@@ -2772,7 +2808,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/chat.js",
       "source_location": "L31",
       "id": "chat_getconversationinclude",
-      "community": 28,
+      "community": 27,
       "norm_label": "getconversationinclude()"
     },
     {
@@ -2781,7 +2817,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/chat.js",
       "source_location": "L77",
       "id": "chat_transformconversation",
-      "community": 28,
+      "community": 27,
       "norm_label": "transformconversation()"
     },
     {
@@ -2790,8 +2826,26 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/notifications.js",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_notifications_js",
-      "community": 80,
+      "community": 82,
       "norm_label": "notifications.js"
+    },
+    {
+      "label": "ratings.js",
+      "file_type": "code",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/ratings.js",
+      "source_location": "L1",
+      "id": "users_aarushgupta_documents_projects_take_one_nexus_routes_ratings_js",
+      "community": 47,
+      "norm_label": "ratings.js"
+    },
+    {
+      "label": "getFormattedName()",
+      "file_type": "code",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/ratings.js",
+      "source_location": "L15",
+      "id": "ratings_getformattedname",
+      "community": 47,
+      "norm_label": "getformattedname()"
     },
     {
       "label": "proxy.ts",
@@ -2853,7 +2907,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/layout.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_layout_tsx",
-      "community": 81,
+      "community": 83,
       "norm_label": "layout.tsx"
     },
     {
@@ -2862,7 +2916,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/PostHogPageview.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_posthogpageview_tsx",
-      "community": 29,
+      "community": 28,
       "norm_label": "posthogpageview.tsx"
     },
     {
@@ -2871,7 +2925,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/PostHogPageview.tsx",
       "source_location": "L8",
       "id": "posthogpageview_posthogpageviewinner",
-      "community": 29,
+      "community": 28,
       "norm_label": "posthogpageviewinner()"
     },
     {
@@ -2880,7 +2934,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/PostHogPageview.tsx",
       "source_location": "L43",
       "id": "posthogpageview_posthogpageview",
-      "community": 29,
+      "community": 28,
       "norm_label": "posthogpageview()"
     },
     {
@@ -2943,7 +2997,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/developer/issues/page.tsx",
       "source_location": "L51",
       "id": "page_updatestatus",
-      "community": 2,
+      "community": 1,
       "norm_label": "updatestatus()"
     },
     {
@@ -2986,7 +3040,7 @@
       "label": "useMessageQueue()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L125",
+      "source_location": "L124",
       "id": "page_usemessagequeue",
       "community": 1,
       "norm_label": "usemessagequeue()"
@@ -2995,7 +3049,7 @@
       "label": "loadRazorpayScript()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L224",
+      "source_location": "L223",
       "id": "page_loadrazorpayscript",
       "community": 1,
       "norm_label": "loadrazorpayscript()"
@@ -3004,7 +3058,7 @@
       "label": "cancelInvitation()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L373",
+      "source_location": "L372",
       "id": "page_cancelinvitation",
       "community": 1,
       "norm_label": "cancelinvitation()"
@@ -3013,7 +3067,7 @@
       "label": "resendInvitation()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L393",
+      "source_location": "L392",
       "id": "page_resendinvitation",
       "community": 1,
       "norm_label": "resendinvitation()"
@@ -3022,7 +3076,7 @@
       "label": "handleApproveJoinRequest()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L434",
+      "source_location": "L433",
       "id": "page_handleapprovejoinrequest",
       "community": 1,
       "norm_label": "handleapprovejoinrequest()"
@@ -3031,7 +3085,7 @@
       "label": "handleRejectJoinRequest()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L454",
+      "source_location": "L453",
       "id": "page_handlerejectjoinrequest",
       "community": 1,
       "norm_label": "handlerejectjoinrequest()"
@@ -3040,7 +3094,7 @@
       "label": "handlePromoteMember()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L474",
+      "source_location": "L473",
       "id": "page_handlepromotemember",
       "community": 1,
       "norm_label": "handlepromotemember()"
@@ -3049,7 +3103,7 @@
       "label": "handleDemoteMember()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L494",
+      "source_location": "L493",
       "id": "page_handledemotemember",
       "community": 1,
       "norm_label": "handledemotemember()"
@@ -3058,7 +3112,7 @@
       "label": "handleRemoveGroupMember()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L514",
+      "source_location": "L513",
       "id": "page_handleremovegroupmember",
       "community": 1,
       "norm_label": "handleremovegroupmember()"
@@ -3067,7 +3121,7 @@
       "label": "handleUpdateSetting()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L535",
+      "source_location": "L534",
       "id": "page_handleupdatesetting",
       "community": 1,
       "norm_label": "handleupdatesetting()"
@@ -3076,7 +3130,7 @@
       "label": "handleRequestJoin()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L604",
+      "source_location": "L603",
       "id": "page_handlerequestjoin",
       "community": 1,
       "norm_label": "handlerequestjoin()"
@@ -3085,7 +3139,7 @@
       "label": "handleAcceptInvite()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L630",
+      "source_location": "L629",
       "id": "page_handleacceptinvite",
       "community": 1,
       "norm_label": "handleacceptinvite()"
@@ -3094,7 +3148,7 @@
       "label": "handleRejectInvite()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L655",
+      "source_location": "L654",
       "id": "page_handlerejectinvite",
       "community": 1,
       "norm_label": "handlerejectinvite()"
@@ -3103,7 +3157,7 @@
       "label": "handleInviteMember()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L770",
+      "source_location": "L769",
       "id": "page_handleinvitemember",
       "community": 1,
       "norm_label": "handleinvitemember()"
@@ -3112,7 +3166,7 @@
       "label": "handleAcceptInvitation()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L803",
+      "source_location": "L802",
       "id": "page_handleacceptinvitation",
       "community": 1,
       "norm_label": "handleacceptinvitation()"
@@ -3121,7 +3175,7 @@
       "label": "handleRejectInvitation()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L826",
+      "source_location": "L825",
       "id": "page_handlerejectinvitation",
       "community": 1,
       "norm_label": "handlerejectinvitation()"
@@ -3130,7 +3184,7 @@
       "label": "handleUserSearch()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L847",
+      "source_location": "L846",
       "id": "page_handleusersearch",
       "community": 1,
       "norm_label": "handleusersearch()"
@@ -3139,7 +3193,7 @@
       "label": "handleRemoveMember()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L870",
+      "source_location": "L869",
       "id": "page_handleremovemember",
       "community": 1,
       "norm_label": "handleremovemember()"
@@ -3148,7 +3202,7 @@
       "label": "handleCreateCommunityGroup()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L892",
+      "source_location": "L891",
       "id": "page_handlecreatecommunitygroup",
       "community": 1,
       "norm_label": "handlecreatecommunitygroup()"
@@ -3157,7 +3211,7 @@
       "label": "handleDeleteCommunityGroup()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L924",
+      "source_location": "L923",
       "id": "page_handledeletecommunitygroup",
       "community": 1,
       "norm_label": "handledeletecommunitygroup()"
@@ -3166,7 +3220,7 @@
       "label": "handlePricingProceed()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L946",
+      "source_location": "L945",
       "id": "page_handlepricingproceed",
       "community": 1,
       "norm_label": "handlepricingproceed()"
@@ -3175,7 +3229,7 @@
       "label": "handleInstantiateCommunity()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1053",
+      "source_location": "L1052",
       "id": "page_handleinstantiatecommunity",
       "community": 1,
       "norm_label": "handleinstantiatecommunity()"
@@ -3184,7 +3238,7 @@
       "label": "handleFounderCreateCommunity()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1093",
+      "source_location": "L1092",
       "id": "page_handlefoundercreatecommunity",
       "community": 1,
       "norm_label": "handlefoundercreatecommunity()"
@@ -3193,7 +3247,7 @@
       "label": "groupMessagesByDate()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1175",
+      "source_location": "L1174",
       "id": "page_groupmessagesbydate",
       "community": 1,
       "norm_label": "groupmessagesbydate()"
@@ -3202,7 +3256,7 @@
       "label": "getFriendlyDate()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1185",
+      "source_location": "L1184",
       "id": "page_getfriendlydate",
       "community": 1,
       "norm_label": "getfriendlydate()"
@@ -3211,7 +3265,7 @@
       "label": "scrollToBottom()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1199",
+      "source_location": "L1198",
       "id": "page_scrolltobottom",
       "community": 1,
       "norm_label": "scrolltobottom()"
@@ -3220,7 +3274,7 @@
       "label": "handleDeleteConversation()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1455",
+      "source_location": "L1454",
       "id": "page_handledeleteconversation",
       "community": 1,
       "norm_label": "handledeleteconversation()"
@@ -3229,7 +3283,7 @@
       "label": "handleLeaveGroup()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1473",
+      "source_location": "L1472",
       "id": "page_handleleavegroup",
       "community": 1,
       "norm_label": "handleleavegroup()"
@@ -3238,7 +3292,7 @@
       "label": "handleClearChat()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1493",
+      "source_location": "L1492",
       "id": "page_handleclearchat",
       "community": 1,
       "norm_label": "handleclearchat()"
@@ -3247,7 +3301,7 @@
       "label": "toggleMute()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1514",
+      "source_location": "L1513",
       "id": "page_togglemute",
       "community": 1,
       "norm_label": "togglemute()"
@@ -3256,7 +3310,7 @@
       "label": "handleTyping()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1526",
+      "source_location": "L1525",
       "id": "page_handletyping",
       "community": 1,
       "norm_label": "handletyping()"
@@ -3265,7 +3319,7 @@
       "label": "onInputChange()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1538",
+      "source_location": "L1537",
       "id": "page_oninputchange",
       "community": 1,
       "norm_label": "oninputchange()"
@@ -3274,7 +3328,7 @@
       "label": "handleNavigateToCommunity()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1560",
+      "source_location": "L1559",
       "id": "page_handlenavigatetocommunity",
       "community": 1,
       "norm_label": "handlenavigatetocommunity()"
@@ -3283,7 +3337,7 @@
       "label": "initialize()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1598",
+      "source_location": "L1597",
       "id": "page_initialize",
       "community": 3,
       "norm_label": "initialize()"
@@ -3292,7 +3346,7 @@
       "label": "handleCreditUpdate()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1747",
+      "source_location": "L1746",
       "id": "page_handlecreditupdate",
       "community": 1,
       "norm_label": "handlecreditupdate()"
@@ -3301,7 +3355,7 @@
       "label": "handleMessageNotification()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1751",
+      "source_location": "L1750",
       "id": "page_handlemessagenotification",
       "community": 1,
       "norm_label": "handlemessagenotification()"
@@ -3310,7 +3364,7 @@
       "label": "handleConversationUpdate()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1776",
+      "source_location": "L1775",
       "id": "page_handleconversationupdate",
       "community": 1,
       "norm_label": "handleconversationupdate()"
@@ -3319,7 +3373,7 @@
       "label": "handleConnectionStateChange()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1967",
+      "source_location": "L1966",
       "id": "page_handleconnectionstatechange",
       "community": 1,
       "norm_label": "handleconnectionstatechange()"
@@ -3328,7 +3382,7 @@
       "label": "handleNewMessage()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2034",
+      "source_location": "L2033",
       "id": "page_handlenewmessage",
       "community": 1,
       "norm_label": "handlenewmessage()"
@@ -3337,7 +3391,7 @@
       "label": "handleUserTyping()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2073",
+      "source_location": "L2072",
       "id": "page_handleusertyping",
       "community": 1,
       "norm_label": "handleusertyping()"
@@ -3346,7 +3400,7 @@
       "label": "handleTaskUpdate()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2083",
+      "source_location": "L2082",
       "id": "page_handletaskupdate",
       "community": 1,
       "norm_label": "handletaskupdate()"
@@ -3355,7 +3409,7 @@
       "label": "handleSettingsUpdated()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2093",
+      "source_location": "L2092",
       "id": "page_handlesettingsupdated",
       "community": 1,
       "norm_label": "handlesettingsupdated()"
@@ -3364,7 +3418,7 @@
       "label": "handleKeyDown()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2128",
+      "source_location": "L2127",
       "id": "page_handlekeydown",
       "community": 1,
       "norm_label": "handlekeydown()"
@@ -3373,7 +3427,7 @@
       "label": "handleClickOutside()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2145",
+      "source_location": "L2144",
       "id": "page_handleclickoutside",
       "community": 1,
       "norm_label": "handleclickoutside()"
@@ -3382,7 +3436,7 @@
       "label": "sendMessage()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2163",
+      "source_location": "L2162",
       "id": "page_sendmessage",
       "community": 1,
       "norm_label": "sendmessage()"
@@ -3391,7 +3445,7 @@
       "label": "async()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2416",
+      "source_location": "L2420",
       "id": "page_async",
       "community": 1,
       "norm_label": "async()"
@@ -3445,7 +3499,7 @@
       "label": "getDisplayName()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/LeaderboardClient.tsx",
-      "source_location": "L85",
+      "source_location": "L87",
       "id": "leaderboardclient_getdisplayname",
       "community": 4,
       "norm_label": "getdisplayname()"
@@ -3454,7 +3508,7 @@
       "label": "getInitials()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/LeaderboardClient.tsx",
-      "source_location": "L89",
+      "source_location": "L91",
       "id": "leaderboardclient_getinitials",
       "community": 4,
       "norm_label": "getinitials()"
@@ -3465,26 +3519,17 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/page.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_leaderboard_page_tsx",
-      "community": 30,
+      "community": 54,
       "norm_label": "page.tsx"
     },
     {
       "label": "getLeaderboardData()",
       "file_type": "code",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/page.tsx",
-      "source_location": "L14",
+      "source_location": "L15",
       "id": "page_getleaderboarddata",
-      "community": 30,
+      "community": 54,
       "norm_label": "getleaderboarddata()"
-    },
-    {
-      "label": "LeaderboardPage()",
-      "file_type": "code",
-      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/page.tsx",
-      "source_location": "L39",
-      "id": "page_leaderboardpage",
-      "community": 30,
-      "norm_label": "leaderboardpage()"
     },
     {
       "label": "page.tsx",
@@ -3492,7 +3537,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/verify-email/page.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_verify_email_page_tsx",
-      "community": 82,
+      "community": 84,
       "norm_label": "page.tsx"
     },
     {
@@ -3501,7 +3546,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/profile/error.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_profile_error_tsx",
-      "community": 83,
+      "community": 85,
       "norm_label": "error.tsx"
     },
     {
@@ -3510,7 +3555,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/profile/loading.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_profile_loading_tsx",
-      "community": 84,
+      "community": 86,
       "norm_label": "loading.tsx"
     },
     {
@@ -3618,7 +3663,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/legal/page.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_legal_page_tsx",
-      "community": 54,
+      "community": 55,
       "norm_label": "page.tsx"
     },
     {
@@ -3627,7 +3672,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/legal/page.tsx",
       "source_location": "L10",
       "id": "page_legalpage",
-      "community": 54,
+      "community": 55,
       "norm_label": "legalpage()"
     },
     {
@@ -3636,7 +3681,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/moderation/page.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_app_moderation_page_tsx",
-      "community": 55,
+      "community": 56,
       "norm_label": "page.tsx"
     },
     {
@@ -3645,7 +3690,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/moderation/page.tsx",
       "source_location": "L11",
       "id": "page_moderationpage",
-      "community": 55,
+      "community": 56,
       "norm_label": "moderationpage()"
     },
     {
@@ -3699,7 +3744,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/NewDirectMessageModal.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_components_newdirectmessagemodal_tsx",
-      "community": 56,
+      "community": 57,
       "norm_label": "newdirectmessagemodal.tsx"
     },
     {
@@ -3708,7 +3753,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/NewDirectMessageModal.tsx",
       "source_location": "L26",
       "id": "newdirectmessagemodal_fetchusers",
-      "community": 56,
+      "community": 57,
       "norm_label": "fetchusers()"
     },
     {
@@ -3717,7 +3762,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/GlobalIssueReporter.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_components_globalissuereporter_tsx",
-      "community": 57,
+      "community": 58,
       "norm_label": "globalissuereporter.tsx"
     },
     {
@@ -3726,7 +3771,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/GlobalIssueReporter.tsx",
       "source_location": "L6",
       "id": "globalissuereporter_globalissuereporter",
-      "community": 57,
+      "community": 58,
       "norm_label": "globalissuereporter()"
     },
     {
@@ -3753,7 +3798,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/EmailVerificationReminderPopup.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_components_emailverificationreminderpopup_tsx",
-      "community": 20,
+      "community": 21,
       "norm_label": "emailverificationreminderpopup.tsx"
     },
     {
@@ -3762,7 +3807,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/EmailVerificationReminderPopup.tsx",
       "source_location": "L13",
       "id": "emailverificationreminderpopup_emailverificationreminderpopup",
-      "community": 20,
+      "community": 21,
       "norm_label": "emailverificationreminderpopup()"
     },
     {
@@ -3771,7 +3816,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/TaskModal.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_components_taskmodal_tsx",
-      "community": 58,
+      "community": 59,
       "norm_label": "taskmodal.tsx"
     },
     {
@@ -3780,7 +3825,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/TaskModal.tsx",
       "source_location": "L35",
       "id": "taskmodal_handlesubmit",
-      "community": 58,
+      "community": 59,
       "norm_label": "handlesubmit()"
     },
     {
@@ -3789,7 +3834,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CookieConsentBanner.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_components_cookieconsentbanner_tsx",
-      "community": 21,
+      "community": 19,
       "norm_label": "cookieconsentbanner.tsx"
     },
     {
@@ -3798,7 +3843,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CookieConsentBanner.tsx",
       "source_location": "L31",
       "id": "cookieconsentbanner_acceptall",
-      "community": 21,
+      "community": 19,
       "norm_label": "acceptall()"
     },
     {
@@ -3807,7 +3852,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CookieConsentBanner.tsx",
       "source_location": "L32",
       "id": "cookieconsentbanner_rejectall",
-      "community": 21,
+      "community": 19,
       "norm_label": "rejectall()"
     },
     {
@@ -3816,7 +3861,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CookieConsentBanner.tsx",
       "source_location": "L33",
       "id": "cookieconsentbanner_savecustom",
-      "community": 21,
+      "community": 19,
       "norm_label": "savecustom()"
     },
     {
@@ -3825,7 +3870,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/PostHogProvider.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_components_posthogprovider_tsx",
-      "community": 59,
+      "community": 60,
       "norm_label": "posthogprovider.tsx"
     },
     {
@@ -3834,7 +3879,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/PostHogProvider.tsx",
       "source_location": "L12",
       "id": "posthogprovider_posthogprovider",
-      "community": 59,
+      "community": 60,
       "norm_label": "posthogprovider()"
     },
     {
@@ -3861,7 +3906,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CreateGroupModal.tsx",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_components_creategroupmodal_tsx",
-      "community": 22,
+      "community": 20,
       "norm_label": "creategroupmodal.tsx"
     },
     {
@@ -3870,7 +3915,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CreateGroupModal.tsx",
       "source_location": "L18",
       "id": "creategroupmodal_fetchusers",
-      "community": 22,
+      "community": 20,
       "norm_label": "fetchusers()"
     },
     {
@@ -3879,7 +3924,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CreateGroupModal.tsx",
       "source_location": "L66",
       "id": "creategroupmodal_handlesubmit",
-      "community": 22,
+      "community": 20,
       "norm_label": "handlesubmit()"
     },
     {
@@ -3888,7 +3933,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/CreateGroupModal.tsx",
       "source_location": "L73",
       "id": "creategroupmodal_toggleuser",
-      "community": 22,
+      "community": 20,
       "norm_label": "toggleuser()"
     },
     {
@@ -3897,7 +3942,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/prisma.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_prisma_ts",
-      "community": 60,
+      "community": 61,
       "norm_label": "prisma.ts"
     },
     {
@@ -3906,7 +3951,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/prisma.ts",
       "source_location": "L3",
       "id": "prisma_prismaclientsingleton",
-      "community": 60,
+      "community": 61,
       "norm_label": "prismaclientsingleton()"
     },
     {
@@ -3915,7 +3960,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/cookie-consent.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_cookie_consent_ts",
-      "community": 14,
+      "community": 13,
       "norm_label": "cookie-consent.ts"
     },
     {
@@ -3924,7 +3969,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/cookie-consent.ts",
       "source_location": "L24",
       "id": "cookie_consent_hasconsented",
-      "community": 14,
+      "community": 13,
       "norm_label": "hasconsented()"
     },
     {
@@ -3933,7 +3978,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/cookie-consent.ts",
       "source_location": "L37",
       "id": "cookie_consent_getconsent",
-      "community": 14,
+      "community": 13,
       "norm_label": "getconsent()"
     },
     {
@@ -3942,7 +3987,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/cookie-consent.ts",
       "source_location": "L51",
       "id": "cookie_consent_setconsent",
-      "community": 14,
+      "community": 13,
       "norm_label": "setconsent()"
     },
     {
@@ -3951,7 +3996,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/cookie-consent.ts",
       "source_location": "L68",
       "id": "cookie_consent_acceptall",
-      "community": 14,
+      "community": 13,
       "norm_label": "acceptall()"
     },
     {
@@ -3960,7 +4005,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/cookie-consent.ts",
       "source_location": "L73",
       "id": "cookie_consent_rejectall",
-      "community": 14,
+      "community": 13,
       "norm_label": "rejectall()"
     },
     {
@@ -3969,7 +4014,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/cookie-consent.ts",
       "source_location": "L78",
       "id": "cookie_consent_clearconsent",
-      "community": 14,
+      "community": 13,
       "norm_label": "clearconsent()"
     },
     {
@@ -4023,7 +4068,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/posthog.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_posthog_ts",
-      "community": 15,
+      "community": 14,
       "norm_label": "posthog.ts"
     },
     {
@@ -4032,7 +4077,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/posthog.ts",
       "source_location": "L21",
       "id": "posthog_initposthog",
-      "community": 15,
+      "community": 14,
       "norm_label": "initposthog()"
     },
     {
@@ -4041,7 +4086,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/posthog.ts",
       "source_location": "L74",
       "id": "posthog_optoutposthog",
-      "community": 15,
+      "community": 14,
       "norm_label": "optoutposthog()"
     },
     {
@@ -4050,7 +4095,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/posthog.ts",
       "source_location": "L88",
       "id": "posthog_trackevent",
-      "community": 15,
+      "community": 14,
       "norm_label": "trackevent()"
     },
     {
@@ -4059,7 +4104,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/posthog.ts",
       "source_location": "L107",
       "id": "posthog_identifyuser",
-      "community": 15,
+      "community": 14,
       "norm_label": "identifyuser()"
     },
     {
@@ -4068,7 +4113,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/posthog.ts",
       "source_location": "L126",
       "id": "posthog_resetposthog",
-      "community": 15,
+      "community": 14,
       "norm_label": "resetposthog()"
     },
     {
@@ -4077,7 +4122,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/posthog.ts",
       "source_location": "L139",
       "id": "posthog_isfeatureenabled",
-      "community": 15,
+      "community": 14,
       "norm_label": "isfeatureenabled()"
     },
     {
@@ -4086,7 +4131,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/useEmailVerificationReminder.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_useemailverificationreminder_ts",
-      "community": 20,
+      "community": 21,
       "norm_label": "useemailverificationreminder.ts"
     },
     {
@@ -4095,7 +4140,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/useEmailVerificationReminder.ts",
       "source_location": "L9",
       "id": "useemailverificationreminder_useemailverificationreminder",
-      "community": 20,
+      "community": 21,
       "norm_label": "useemailverificationreminder()"
     },
     {
@@ -4185,7 +4230,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/constants.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_constants_ts",
-      "community": 85,
+      "community": 87,
       "norm_label": "constants.ts"
     },
     {
@@ -4194,7 +4239,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/pusher-server.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_pusher_server_ts",
-      "community": 86,
+      "community": 88,
       "norm_label": "pusher-server.ts"
     },
     {
@@ -4203,7 +4248,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/auth.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_auth_ts",
-      "community": 87,
+      "community": 89,
       "norm_label": "auth.ts"
     },
     {
@@ -4212,7 +4257,7 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/rate-limit-config.ts",
       "source_location": "L1",
       "id": "users_aarushgupta_documents_projects_take_one_nexus_src_lib_rate_limit_config_ts",
-      "community": 88,
+      "community": 90,
       "norm_label": "rate-limit-config.ts"
     },
     {
@@ -4511,6 +4556,18 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/migration.js",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "users_aarushgupta_documents_projects_take_one_nexus_database_migration_js",
+      "_tgt": "migration_migrateportfolioitems",
+      "source": "users_aarushgupta_documents_projects_take_one_nexus_database_migration_js",
+      "target": "migration_migrateportfolioitems",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/database/init.js",
       "source_location": "L6",
       "weight": 1.0,
@@ -4779,8 +4836,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/users.js",
       "source_location": "L188",
       "weight": 1.0,
-      "_src": "users_getprofiledata",
-      "_tgt": "formatting_formatdisplayname",
+      "_src": "formatting_formatdisplayname",
+      "_tgt": "users_getprofiledata",
       "source": "formatting_formatdisplayname",
       "target": "users_getprofiledata"
     },
@@ -4803,8 +4860,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/LeaderboardClient.tsx",
       "source_location": "L86",
       "weight": 1.0,
-      "_src": "leaderboardclient_getdisplayname",
-      "_tgt": "formatting_getcanonicaldisplayname",
+      "_src": "formatting_getcanonicaldisplayname",
+      "_tgt": "leaderboardclient_getdisplayname",
       "source": "formatting_getcanonicaldisplayname",
       "target": "leaderboardclient_getdisplayname"
     },
@@ -4899,8 +4956,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/developer/issues/page.tsx",
       "source_location": "L53",
       "weight": 1.0,
-      "_src": "page_updatestatus",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_updatestatus",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_updatestatus"
     },
@@ -4911,8 +4968,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/developer/issues/page.tsx",
       "source_location": "L69",
       "weight": 1.0,
-      "_src": "page_deleteissue",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_deleteissue",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_deleteissue"
     },
@@ -4923,8 +4980,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L376",
       "weight": 1.0,
-      "_src": "page_cancelinvitation",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_cancelinvitation",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_cancelinvitation"
     },
@@ -4935,8 +4992,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L396",
       "weight": 1.0,
-      "_src": "page_resendinvitation",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_resendinvitation",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_resendinvitation"
     },
@@ -4947,8 +5004,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L437",
       "weight": 1.0,
-      "_src": "page_handleapprovejoinrequest",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handleapprovejoinrequest",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handleapprovejoinrequest"
     },
@@ -4959,8 +5016,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L457",
       "weight": 1.0,
-      "_src": "page_handlerejectjoinrequest",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handlerejectjoinrequest",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handlerejectjoinrequest"
     },
@@ -4971,8 +5028,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L477",
       "weight": 1.0,
-      "_src": "page_handlepromotemember",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handlepromotemember",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handlepromotemember"
     },
@@ -4983,8 +5040,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L497",
       "weight": 1.0,
-      "_src": "page_handledemotemember",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handledemotemember",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handledemotemember"
     },
@@ -4995,8 +5052,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L518",
       "weight": 1.0,
-      "_src": "page_handleremovegroupmember",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handleremovegroupmember",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handleremovegroupmember"
     },
@@ -5007,8 +5064,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L538",
       "weight": 1.0,
-      "_src": "page_handleupdatesetting",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handleupdatesetting",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handleupdatesetting"
     },
@@ -5019,8 +5076,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L953",
       "weight": 1.0,
-      "_src": "page_handlepricingproceed",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handlepricingproceed",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handlepricingproceed"
     },
@@ -5031,8 +5088,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L1061",
       "weight": 1.0,
-      "_src": "page_handleinstantiatecommunity",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handleinstantiatecommunity",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handleinstantiatecommunity"
     },
@@ -5043,8 +5100,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L1103",
       "weight": 1.0,
-      "_src": "page_handlefoundercreatecommunity",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handlefoundercreatecommunity",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handlefoundercreatecommunity"
     },
@@ -5055,8 +5112,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L1459",
       "weight": 1.0,
-      "_src": "page_handledeleteconversation",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handledeleteconversation",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handledeleteconversation"
     },
@@ -5067,8 +5124,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L1477",
       "weight": 1.0,
-      "_src": "page_handleleavegroup",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handleleavegroup",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handleleavegroup"
     },
@@ -5079,8 +5136,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L1497",
       "weight": 1.0,
-      "_src": "page_handleclearchat",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handleclearchat",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handleclearchat"
     },
@@ -5091,8 +5148,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
       "source_location": "L1529",
       "weight": 1.0,
-      "_src": "page_handletyping",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "page_handletyping",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "page_handletyping"
     },
@@ -5103,8 +5160,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/IssueReportModal.tsx",
       "source_location": "L22",
       "weight": 1.0,
-      "_src": "issuereportmodal_handlesubmit",
-      "_tgt": "fetchwithcsrf_fetchwithcsrf",
+      "_src": "fetchwithcsrf_fetchwithcsrf",
+      "_tgt": "issuereportmodal_handlesubmit",
       "source": "fetchwithcsrf_fetchwithcsrf",
       "target": "issuereportmodal_handlesubmit"
     },
@@ -5271,8 +5328,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/scripts/delete_legacy_groups.js",
       "source_location": "L50",
       "weight": 1.0,
-      "_src": "delete_legacy_groups_deletelegacygroups",
-      "_tgt": "notifications_createnotification",
+      "_src": "notifications_createnotification",
+      "_tgt": "delete_legacy_groups_deletelegacygroups",
       "source": "notifications_createnotification",
       "target": "delete_legacy_groups_deletelegacygroups"
     },
@@ -5352,7 +5409,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/constants/themes.js",
-      "source_location": "L95",
+      "source_location": "L88",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_constants_themes_js",
       "_tgt": "themes_getroleslug",
@@ -5364,7 +5421,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/constants/themes.js",
-      "source_location": "L113",
+      "source_location": "L105",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_constants_themes_js",
       "_tgt": "themes_applyroletheme",
@@ -5376,7 +5433,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/constants/themes.js",
-      "source_location": "L115",
+      "source_location": "L107",
       "weight": 1.0,
       "_src": "themes_applyroletheme",
       "_tgt": "themes_getroleslug",
@@ -5391,8 +5448,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L316",
       "weight": 1.0,
-      "_src": "profile_populateprofile",
-      "_tgt": "themes_applyroletheme",
+      "_src": "themes_applyroletheme",
+      "_tgt": "profile_populateprofile",
       "source": "themes_applyroletheme",
       "target": "profile_populateprofile"
     },
@@ -5403,8 +5460,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1816",
       "weight": 1.0,
-      "_src": "project_applyrolebasedui",
-      "_tgt": "themes_applyroletheme",
+      "_src": "themes_applyroletheme",
+      "_tgt": "project_applyrolebasedui",
       "source": "themes_applyroletheme",
       "target": "project_applyrolebasedui"
     },
@@ -5415,8 +5472,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/crew.js",
       "source_location": "L239",
       "weight": 1.0,
-      "_src": "crew_checkcrewauthstate",
-      "_tgt": "themes_applyroletheme",
+      "_src": "themes_applyroletheme",
+      "_tgt": "crew_checkcrewauthstate",
       "source": "themes_applyroletheme",
       "target": "crew_checkcrewauthstate"
     },
@@ -5520,7 +5577,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/helpers.js",
-      "source_location": "L80",
+      "source_location": "L78",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_utils_helpers_js",
       "_tgt": "helpers_getavatarurl",
@@ -5532,7 +5589,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/helpers.js",
-      "source_location": "L106",
+      "source_location": "L104",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_utils_helpers_js",
       "_tgt": "helpers_handleimageerror",
@@ -5547,8 +5604,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1079",
       "weight": 1.0,
-      "_src": "project_updatedirectormonitor",
-      "_tgt": "helpers_formatcompactnumber",
+      "_src": "helpers_formatcompactnumber",
+      "_tgt": "project_updatedirectormonitor",
       "source": "helpers_formatcompactnumber",
       "target": "project_updatedirectormonitor"
     },
@@ -5559,8 +5616,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1100",
       "weight": 1.0,
-      "_src": "project_updatefeaturedashboard",
-      "_tgt": "helpers_formatcompactnumber",
+      "_src": "helpers_formatcompactnumber",
+      "_tgt": "project_updatefeaturedashboard",
       "source": "helpers_formatcompactnumber",
       "target": "project_updatefeaturedashboard"
     },
@@ -5571,8 +5628,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1231",
       "weight": 1.0,
-      "_src": "project_loadhomepagedata",
-      "_tgt": "helpers_formatcompactnumber",
+      "_src": "helpers_formatcompactnumber",
+      "_tgt": "project_loadhomepagedata",
       "source": "helpers_formatcompactnumber",
       "target": "project_loadhomepagedata"
     },
@@ -5583,8 +5640,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L108",
       "weight": 1.0,
-      "_src": "profile_renderskillbadges",
-      "_tgt": "helpers_splitskills",
+      "_src": "helpers_splitskills",
+      "_tgt": "profile_renderskillbadges",
       "source": "helpers_splitskills",
       "target": "profile_renderskillbadges"
     },
@@ -5602,25 +5659,13 @@
     },
     {
       "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/utils/helpers.js",
-      "source_location": "L75",
-      "weight": 1.0,
-      "_src": "helpers_isadmin",
-      "_tgt": "helpers_normalizerole",
-      "source": "helpers_normalizerole",
-      "target": "helpers_isadmin",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L669",
       "weight": 1.0,
-      "_src": "project_getworkspaceforrole",
-      "_tgt": "helpers_normalizerole",
+      "_src": "helpers_normalizerole",
+      "_tgt": "project_getworkspaceforrole",
       "source": "helpers_normalizerole",
       "target": "project_getworkspaceforrole"
     },
@@ -5631,8 +5676,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L687",
       "weight": 1.0,
-      "_src": "project_getroleskinkey",
-      "_tgt": "helpers_normalizerole",
+      "_src": "helpers_normalizerole",
+      "_tgt": "project_getroleskinkey",
       "source": "helpers_normalizerole",
       "target": "project_getroleskinkey"
     },
@@ -5643,8 +5688,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L980",
       "weight": 1.0,
-      "_src": "project_rolekeywords",
-      "_tgt": "helpers_normalizerole",
+      "_src": "helpers_normalizerole",
+      "_tgt": "project_rolekeywords",
       "source": "helpers_normalizerole",
       "target": "project_rolekeywords"
     },
@@ -5655,8 +5700,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1014",
       "weight": 1.0,
-      "_src": "project_scriptmatchesuserrole",
-      "_tgt": "helpers_normalizerole",
+      "_src": "helpers_normalizerole",
+      "_tgt": "project_scriptmatchesuserrole",
       "source": "helpers_normalizerole",
       "target": "project_scriptmatchesuserrole"
     },
@@ -5667,8 +5712,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L2093",
       "weight": 1.0,
-      "_src": "project_openscriptmodal",
-      "_tgt": "helpers_getcardtone",
+      "_src": "helpers_getcardtone",
+      "_tgt": "project_openscriptmodal",
       "source": "helpers_getcardtone",
       "target": "project_openscriptmodal"
     },
@@ -5679,8 +5724,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1884",
       "weight": 1.0,
-      "_src": "project_applyrolebasedui",
-      "_tgt": "helpers_isadmin",
+      "_src": "helpers_isadmin",
+      "_tgt": "project_applyrolebasedui",
       "source": "helpers_isadmin",
       "target": "project_applyrolebasedui"
     },
@@ -6075,8 +6120,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1079",
       "weight": 1.0,
-      "_src": "project_updatedirectormonitor",
-      "_tgt": "ui_updatetext",
+      "_src": "ui_updatetext",
+      "_tgt": "project_updatedirectormonitor",
       "source": "ui_updatetext",
       "target": "project_updatedirectormonitor"
     },
@@ -6087,8 +6132,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1100",
       "weight": 1.0,
-      "_src": "project_updatefeaturedashboard",
-      "_tgt": "ui_updatetext",
+      "_src": "ui_updatetext",
+      "_tgt": "project_updatefeaturedashboard",
       "source": "ui_updatetext",
       "target": "project_updatefeaturedashboard"
     },
@@ -6099,8 +6144,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1231",
       "weight": 1.0,
-      "_src": "project_loadhomepagedata",
-      "_tgt": "ui_updatetext",
+      "_src": "ui_updatetext",
+      "_tgt": "project_loadhomepagedata",
       "source": "ui_updatetext",
       "target": "project_loadhomepagedata"
     },
@@ -6111,8 +6156,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1389",
       "weight": 1.0,
-      "_src": "project_loadlivescripts",
-      "_tgt": "ui_updatetext",
+      "_src": "ui_updatetext",
+      "_tgt": "project_loadlivescripts",
       "source": "ui_updatetext",
       "target": "project_loadlivescripts"
     },
@@ -6123,8 +6168,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L2079",
       "weight": 1.0,
-      "_src": "project_openscriptmodal",
-      "_tgt": "ui_updatetext",
+      "_src": "ui_updatetext",
+      "_tgt": "project_openscriptmodal",
       "source": "ui_updatetext",
       "target": "project_openscriptmodal"
     },
@@ -6135,8 +6180,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L111",
       "weight": 1.0,
-      "_src": "profile_renderskillbadges",
-      "_tgt": "ui_updatestat",
+      "_src": "ui_updatestat",
+      "_tgt": "profile_renderskillbadges",
       "source": "ui_updatestat",
       "target": "profile_renderskillbadges"
     },
@@ -6147,8 +6192,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L165",
       "weight": 1.0,
-      "_src": "profile_renderprojects",
-      "_tgt": "ui_updatestat",
+      "_src": "ui_updatestat",
+      "_tgt": "profile_renderprojects",
       "source": "ui_updatestat",
       "target": "profile_renderprojects"
     },
@@ -6159,8 +6204,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L366",
       "weight": 1.0,
-      "_src": "profile_populateprofile",
-      "_tgt": "ui_updatestat",
+      "_src": "ui_updatestat",
+      "_tgt": "profile_populateprofile",
       "source": "ui_updatestat",
       "target": "profile_populateprofile"
     },
@@ -6447,8 +6492,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L56",
       "weight": 1.0,
-      "_src": "profile_changeavatar",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "profile_changeavatar",
       "source": "register_wizard_showtoast",
       "target": "profile_changeavatar"
     },
@@ -6459,8 +6504,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L278",
       "weight": 1.0,
-      "_src": "profile_notifyprofile",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "profile_notifyprofile",
       "source": "register_wizard_showtoast",
       "target": "profile_notifyprofile"
     },
@@ -6471,8 +6516,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L412",
       "weight": 1.0,
-      "_src": "profile_loadprofile",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "profile_loadprofile",
       "source": "register_wizard_showtoast",
       "target": "profile_loadprofile"
     },
@@ -6483,8 +6528,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L505",
       "weight": 1.0,
-      "_src": "profile_updaterequeststatus",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "profile_updaterequeststatus",
       "source": "register_wizard_showtoast",
       "target": "profile_updaterequeststatus"
     },
@@ -6495,8 +6540,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L611",
       "weight": 1.0,
-      "_src": "profile_marknotificationread",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "profile_marknotificationread",
       "source": "register_wizard_showtoast",
       "target": "profile_marknotificationread"
     },
@@ -6507,8 +6552,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L623",
       "weight": 1.0,
-      "_src": "profile_markallnotificationsread",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "profile_markallnotificationsread",
       "source": "register_wizard_showtoast",
       "target": "profile_markallnotificationsread"
     },
@@ -6519,8 +6564,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
       "source_location": "L662",
       "weight": 1.0,
-      "_src": "profile_saveprofile",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "profile_saveprofile",
       "source": "register_wizard_showtoast",
       "target": "profile_saveprofile"
     },
@@ -6531,8 +6576,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L131",
       "weight": 1.0,
-      "_src": "project_uploadwork",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "project_uploadwork",
       "source": "register_wizard_showtoast",
       "target": "project_uploadwork"
     },
@@ -6543,8 +6588,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L925",
       "weight": 1.0,
-      "_src": "project_usedirectordeskinuploadform",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "project_usedirectordeskinuploadform",
       "source": "register_wizard_showtoast",
       "target": "project_usedirectordeskinuploadform"
     },
@@ -6555,8 +6600,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L2163",
       "weight": 1.0,
-      "_src": "project_requesttojoinscript",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "project_requesttojoinscript",
       "source": "register_wizard_showtoast",
       "target": "project_requesttojoinscript"
     },
@@ -6567,8 +6612,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L2248",
       "weight": 1.0,
-      "_src": "project_uploadscript",
-      "_tgt": "register_wizard_showtoast",
+      "_src": "register_wizard_showtoast",
+      "_tgt": "project_uploadscript",
       "source": "register_wizard_showtoast",
       "target": "project_uploadscript"
     },
@@ -6603,8 +6648,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1458",
       "weight": 1.0,
-      "_src": "project_opentakeonemodal",
-      "_tgt": "modal_openmodal",
+      "_src": "modal_openmodal",
+      "_tgt": "project_opentakeonemodal",
       "source": "modal_openmodal",
       "target": "project_opentakeonemodal"
     },
@@ -6615,8 +6660,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/project.js",
       "source_location": "L1473",
       "weight": 1.0,
-      "_src": "project_closetakeonemodal",
-      "_tgt": "modal_closemodal",
+      "_src": "modal_closemodal",
+      "_tgt": "project_closetakeonemodal",
       "source": "modal_closemodal",
       "target": "project_closetakeonemodal"
     },
@@ -6852,7 +6897,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/api/api.js",
-      "source_location": "L408",
+      "source_location": "L449",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_api_api_js",
       "_tgt": "api_checksessionexpiry",
@@ -7032,7 +7077,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L276",
+      "source_location": "L292",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_notifyprofile",
@@ -7044,7 +7089,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L290",
+      "source_location": "L306",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_upsertlocalportfolioitem",
@@ -7056,7 +7101,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L311",
+      "source_location": "L326",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_populateprofile",
@@ -7068,7 +7113,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L369",
+      "source_location": "L387",
+      "weight": 1.0,
+      "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
+      "_tgt": "profile_initcreatorratings",
+      "source": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
+      "target": "profile_initcreatorratings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
+      "source_location": "L501",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_loadprofile",
@@ -7080,7 +7137,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L416",
+      "source_location": "L598",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_requestcard",
@@ -7092,7 +7149,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L475",
+      "source_location": "L657",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_renderrequestlist",
@@ -7104,7 +7161,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L493",
+      "source_location": "L675",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_updaterequeststatus",
@@ -7116,7 +7173,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L515",
+      "source_location": "L697",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_loadcollaborationrequests",
@@ -7128,7 +7185,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L528",
+      "source_location": "L710",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_formatnotificationtime",
@@ -7140,7 +7197,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L541",
+      "source_location": "L723",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_notificationcard",
@@ -7152,7 +7209,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L568",
+      "source_location": "L750",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_rendernotifications",
@@ -7164,7 +7221,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L590",
+      "source_location": "L772",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_loadnotifications",
@@ -7176,7 +7233,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L601",
+      "source_location": "L783",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_marknotificationread",
@@ -7188,7 +7245,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L616",
+      "source_location": "L798",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_markallnotificationsread",
@@ -7200,7 +7257,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L631",
+      "source_location": "L813",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_saveprofile",
@@ -7212,7 +7269,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L698",
+      "source_location": "L880",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_initprofile",
@@ -7224,7 +7281,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L819",
+      "source_location": "L1001",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_injectrolefields",
@@ -7236,7 +7293,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L927",
+      "source_location": "L1109",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_public_scripts_pages_profile_js",
       "_tgt": "profile_handleworksubmit",
@@ -7260,7 +7317,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L362",
+      "source_location": "L377",
       "weight": 1.0,
       "_src": "profile_populateprofile",
       "_tgt": "profile_renderskillbadges",
@@ -7272,7 +7329,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L397",
+      "source_location": "L564",
       "weight": 1.0,
       "_src": "profile_loadprofile",
       "_tgt": "profile_setprofilegate",
@@ -7284,19 +7341,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L307",
-      "weight": 1.0,
-      "_src": "profile_upsertlocalportfolioitem",
-      "_tgt": "profile_renderprojects",
-      "source": "profile_renderprojects",
-      "target": "profile_upsertlocalportfolioitem",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L363",
+      "source_location": "L378",
       "weight": 1.0,
       "_src": "profile_populateprofile",
       "_tgt": "profile_renderprojects",
@@ -7308,7 +7353,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L308",
+      "source_location": "L323",
       "weight": 1.0,
       "_src": "profile_upsertlocalportfolioitem",
       "_tgt": "profile_renderportfolio",
@@ -7320,7 +7365,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L364",
+      "source_location": "L379",
       "weight": 1.0,
       "_src": "profile_populateprofile",
       "_tgt": "profile_renderportfolio",
@@ -7332,7 +7377,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L950",
+      "source_location": "L506",
+      "weight": 1.0,
+      "_src": "profile_loadprofile",
+      "_tgt": "profile_notifyprofile",
+      "source": "profile_notifyprofile",
+      "target": "profile_loadprofile",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
+      "source_location": "L1132",
       "weight": 1.0,
       "_src": "profile_handleworksubmit",
       "_tgt": "profile_notifyprofile",
@@ -7344,7 +7401,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L976",
+      "source_location": "L1158",
       "weight": 1.0,
       "_src": "profile_handleworksubmit",
       "_tgt": "profile_upsertlocalportfolioitem",
@@ -7356,7 +7413,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L383",
+      "source_location": "L384",
+      "weight": 1.0,
+      "_src": "profile_populateprofile",
+      "_tgt": "profile_initcreatorratings",
+      "source": "profile_populateprofile",
+      "target": "profile_initcreatorratings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
+      "source_location": "L534",
       "weight": 1.0,
       "_src": "profile_loadprofile",
       "_tgt": "profile_populateprofile",
@@ -7368,7 +7437,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L674",
+      "source_location": "L856",
       "weight": 1.0,
       "_src": "profile_saveprofile",
       "_tgt": "profile_populateprofile",
@@ -7392,7 +7461,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L407",
+      "source_location": "L574",
       "weight": 1.0,
       "_src": "profile_loadprofile",
       "_tgt": "profile_loadcollaborationrequests",
@@ -7404,7 +7473,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L408",
+      "source_location": "L575",
       "weight": 1.0,
       "_src": "profile_loadprofile",
       "_tgt": "profile_loadnotifications",
@@ -7416,7 +7485,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L777",
+      "source_location": "L959",
       "weight": 1.0,
       "_src": "profile_initprofile",
       "_tgt": "profile_loadprofile",
@@ -7428,7 +7497,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L978",
+      "source_location": "L1160",
       "weight": 1.0,
       "_src": "profile_handleworksubmit",
       "_tgt": "profile_loadprofile",
@@ -7464,7 +7533,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L521",
+      "source_location": "L703",
       "weight": 1.0,
       "_src": "profile_loadcollaborationrequests",
       "_tgt": "profile_renderrequestlist",
@@ -7476,7 +7545,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L506",
+      "source_location": "L688",
       "weight": 1.0,
       "_src": "profile_updaterequeststatus",
       "_tgt": "profile_loadcollaborationrequests",
@@ -7488,7 +7557,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L507",
+      "source_location": "L689",
       "weight": 1.0,
       "_src": "profile_updaterequeststatus",
       "_tgt": "profile_loadnotifications",
@@ -7512,7 +7581,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L558",
+      "source_location": "L740",
       "weight": 1.0,
       "_src": "profile_notificationcard",
       "_tgt": "profile_formatnotificationtime",
@@ -7524,7 +7593,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L595",
+      "source_location": "L777",
       "weight": 1.0,
       "_src": "profile_loadnotifications",
       "_tgt": "profile_rendernotifications",
@@ -7536,7 +7605,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L608",
+      "source_location": "L790",
       "weight": 1.0,
       "_src": "profile_marknotificationread",
       "_tgt": "profile_loadnotifications",
@@ -7548,7 +7617,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/public/scripts/pages/profile.js",
-      "source_location": "L622",
+      "source_location": "L804",
       "weight": 1.0,
       "_src": "profile_markallnotificationsread",
       "_tgt": "profile_loadnotifications",
@@ -9171,8 +9240,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/api/auth/verify-email/route.ts",
       "source_location": "L117",
       "weight": 1.0,
-      "_src": "route_post",
-      "_tgt": "auth_generatesecuretoken",
+      "_src": "auth_generatesecuretoken",
+      "_tgt": "route_post",
       "source": "auth_generatesecuretoken",
       "target": "route_post"
     },
@@ -9183,8 +9252,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/api/auth/verify-email/route.ts",
       "source_location": "L41",
       "weight": 1.0,
-      "_src": "route_get",
-      "_tgt": "auth_hashtoken",
+      "_src": "auth_hashtoken",
+      "_tgt": "route_get",
       "source": "auth_hashtoken",
       "target": "route_get"
     },
@@ -9195,8 +9264,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/api/auth/verify-email/route.ts",
       "source_location": "L118",
       "weight": 1.0,
-      "_src": "route_post",
-      "_tgt": "auth_hashtoken",
+      "_src": "auth_hashtoken",
+      "_tgt": "route_post",
       "source": "auth_hashtoken",
       "target": "route_post"
     },
@@ -9264,7 +9333,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/users.js",
-      "source_location": "L505",
+      "source_location": "L526",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_routes_users_js",
       "_tgt": "users_safequery",
@@ -9623,6 +9692,18 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/routes/ratings.js",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_src": "users_aarushgupta_documents_projects_take_one_nexus_routes_ratings_js",
+      "_tgt": "ratings_getformattedname",
+      "source": "users_aarushgupta_documents_projects_take_one_nexus_routes_ratings_js",
+      "target": "ratings_getformattedname",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/proxy.ts",
       "source_location": "L17",
       "weight": 1.0,
@@ -9792,7 +9873,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L125",
+      "source_location": "L124",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_usemessagequeue",
@@ -9804,7 +9885,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L224",
+      "source_location": "L223",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_loadrazorpayscript",
@@ -9816,7 +9897,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L373",
+      "source_location": "L372",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_cancelinvitation",
@@ -9828,7 +9909,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L393",
+      "source_location": "L392",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_resendinvitation",
@@ -9840,7 +9921,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L434",
+      "source_location": "L433",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleapprovejoinrequest",
@@ -9852,7 +9933,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L454",
+      "source_location": "L453",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlerejectjoinrequest",
@@ -9864,7 +9945,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L474",
+      "source_location": "L473",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlepromotemember",
@@ -9876,7 +9957,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L494",
+      "source_location": "L493",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handledemotemember",
@@ -9888,7 +9969,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L514",
+      "source_location": "L513",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleremovegroupmember",
@@ -9900,7 +9981,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L535",
+      "source_location": "L534",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleupdatesetting",
@@ -9912,7 +9993,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L604",
+      "source_location": "L603",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlerequestjoin",
@@ -9924,7 +10005,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L630",
+      "source_location": "L629",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleacceptinvite",
@@ -9936,7 +10017,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L655",
+      "source_location": "L654",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlerejectinvite",
@@ -9948,7 +10029,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L770",
+      "source_location": "L769",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleinvitemember",
@@ -9960,7 +10041,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L803",
+      "source_location": "L802",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleacceptinvitation",
@@ -9972,7 +10053,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L826",
+      "source_location": "L825",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlerejectinvitation",
@@ -9984,7 +10065,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L847",
+      "source_location": "L846",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleusersearch",
@@ -9996,7 +10077,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L870",
+      "source_location": "L869",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleremovemember",
@@ -10008,7 +10089,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L892",
+      "source_location": "L891",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlecreatecommunitygroup",
@@ -10020,7 +10101,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L924",
+      "source_location": "L923",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handledeletecommunitygroup",
@@ -10032,7 +10113,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L946",
+      "source_location": "L945",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlepricingproceed",
@@ -10044,7 +10125,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1053",
+      "source_location": "L1052",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleinstantiatecommunity",
@@ -10056,7 +10137,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1093",
+      "source_location": "L1092",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlefoundercreatecommunity",
@@ -10068,7 +10149,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1175",
+      "source_location": "L1174",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_groupmessagesbydate",
@@ -10080,7 +10161,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1185",
+      "source_location": "L1184",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_getfriendlydate",
@@ -10092,7 +10173,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1199",
+      "source_location": "L1198",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_scrolltobottom",
@@ -10104,7 +10185,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1455",
+      "source_location": "L1454",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handledeleteconversation",
@@ -10116,7 +10197,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1473",
+      "source_location": "L1472",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleleavegroup",
@@ -10128,7 +10209,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1493",
+      "source_location": "L1492",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleclearchat",
@@ -10140,7 +10221,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1514",
+      "source_location": "L1513",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_togglemute",
@@ -10152,7 +10233,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1526",
+      "source_location": "L1525",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handletyping",
@@ -10164,7 +10245,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1538",
+      "source_location": "L1537",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_oninputchange",
@@ -10176,7 +10257,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L4110",
+      "source_location": "L4115",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlenavigatetocommunity",
@@ -10188,7 +10269,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1598",
+      "source_location": "L1597",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_initialize",
@@ -10200,7 +10281,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1747",
+      "source_location": "L1746",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlecreditupdate",
@@ -10212,7 +10293,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1751",
+      "source_location": "L1750",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlemessagenotification",
@@ -10224,7 +10305,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1776",
+      "source_location": "L1775",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleconversationupdate",
@@ -10236,7 +10317,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1967",
+      "source_location": "L1966",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleconnectionstatechange",
@@ -10248,7 +10329,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2034",
+      "source_location": "L2033",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlenewmessage",
@@ -10260,7 +10341,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2073",
+      "source_location": "L2072",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleusertyping",
@@ -10272,7 +10353,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2083",
+      "source_location": "L2082",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handletaskupdate",
@@ -10284,7 +10365,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2093",
+      "source_location": "L2092",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlesettingsupdated",
@@ -10296,7 +10377,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2128",
+      "source_location": "L2127",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handlekeydown",
@@ -10308,7 +10389,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2145",
+      "source_location": "L2144",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_handleclickoutside",
@@ -10320,7 +10401,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2163",
+      "source_location": "L2162",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_sendmessage",
@@ -10332,7 +10413,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L2457",
+      "source_location": "L2461",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_chat_page_tsx",
       "_tgt": "page_async",
@@ -10344,7 +10425,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L997",
+      "source_location": "L996",
       "weight": 1.0,
       "_src": "page_handlepricingproceed",
       "_tgt": "page_loadrazorpayscript",
@@ -10356,7 +10437,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/chat/page.tsx",
-      "source_location": "L1547",
+      "source_location": "L1546",
       "weight": 1.0,
       "_src": "page_oninputchange",
       "_tgt": "page_handletyping",
@@ -10404,7 +10485,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/LeaderboardClient.tsx",
-      "source_location": "L85",
+      "source_location": "L87",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_leaderboard_leaderboardclient_tsx",
       "_tgt": "leaderboardclient_getdisplayname",
@@ -10416,7 +10497,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/LeaderboardClient.tsx",
-      "source_location": "L89",
+      "source_location": "L91",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_leaderboard_leaderboardclient_tsx",
       "_tgt": "leaderboardclient_getinitials",
@@ -10428,36 +10509,12 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/page.tsx",
-      "source_location": "L14",
+      "source_location": "L15",
       "weight": 1.0,
       "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_leaderboard_page_tsx",
       "_tgt": "page_getleaderboarddata",
       "source": "users_aarushgupta_documents_projects_take_one_nexus_src_app_leaderboard_page_tsx",
       "target": "page_getleaderboarddata",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/page.tsx",
-      "source_location": "L39",
-      "weight": 1.0,
-      "_src": "users_aarushgupta_documents_projects_take_one_nexus_src_app_leaderboard_page_tsx",
-      "_tgt": "page_leaderboardpage",
-      "source": "users_aarushgupta_documents_projects_take_one_nexus_src_app_leaderboard_page_tsx",
-      "target": "page_leaderboardpage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/app/leaderboard/page.tsx",
-      "source_location": "L40",
-      "weight": 1.0,
-      "_src": "page_leaderboardpage",
-      "_tgt": "page_getleaderboarddata",
-      "source": "page_getleaderboarddata",
-      "target": "page_leaderboardpage",
       "confidence_score": 1.0
     },
     {
@@ -10515,8 +10572,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/rate-limiter.ts",
       "source_location": "L66",
       "weight": 1.0,
-      "_src": "rate_limiter_getclientip",
-      "_tgt": "route_get",
+      "_src": "route_get",
+      "_tgt": "rate_limiter_getclientip",
       "source": "route_get",
       "target": "rate_limiter_getclientip"
     },
@@ -10527,8 +10584,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/lib/rate-limiter.ts",
       "source_location": "L99",
       "weight": 1.0,
-      "_src": "rate_limiter_checkratelimit",
-      "_tgt": "route_get",
+      "_src": "route_get",
+      "_tgt": "rate_limiter_checkratelimit",
       "source": "route_get",
       "target": "rate_limiter_checkratelimit"
     },
@@ -10815,8 +10872,8 @@
       "source_file": "/Users/aarushgupta/Documents/Projects/take-one-nexus/src/components/EmailVerificationBanner.tsx",
       "source_location": "L19",
       "weight": 1.0,
-      "_src": "emailverificationbanner_check",
-      "_tgt": "usersession_getcurrentuser",
+      "_src": "usersession_getcurrentuser",
+      "_tgt": "emailverificationbanner_check",
       "source": "usersession_getcurrentuser",
       "target": "emailverificationbanner_check"
     },
