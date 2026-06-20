@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [2.2.0] - 2026-06-21
+
+### Added
+- **Rating Deletion Flow**: Allows creators to delete a rating they previously submitted, with a confirmation modal, instantly recalculating and updating stats.
+- **Rating Notifications**: Triggers standard notifications specifically for new creator ratings, while bypassing updates or deletions.
+- **Graphifyy Analytics Event Instrumentation**: Injected persistent database logging for `profile_rated` and `rating_removed` events.
+
+---
+
 ## [2.1.0] - 2026-06-18
 
 ### Added

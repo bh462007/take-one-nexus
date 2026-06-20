@@ -384,16 +384,18 @@ function populateProfile(profile) {
     initCreatorRatings(profile.id);
 }
 
-async function initCreatorRatings(profileId) {
+async function initCreatorRatings(profileId, isEditing = false) {
     const container = document.getElementById('creatorRatingSection');
     if (!container) return;
 
-    // Show visual loading feedback
-    container.innerHTML = `
-        <div class="rating-loading" style="font-size: 11px; color: var(--cyan); letter-spacing: 0.1em; opacity: 0.7; text-align: center; padding: 4px;">
-            LOADING RATING...
-        </div>
-    `;
+    // Show visual loading feedback only if loading for the first time
+    if (!container.querySelector('.rating-stars-display')) {
+        container.innerHTML = `
+            <div class="rating-loading" style="font-size: 11px; color: var(--cyan); letter-spacing: 0.1em; opacity: 0.7; text-align: center; padding: 4px;">
+                LOADING RATING...
+            </div>
+        `;
+    }
 
     try {
         const authUser = API.auth.getUser();
@@ -414,10 +416,39 @@ async function initCreatorRatings(profileId) {
         // Render stars structure
         let starsHtml = '';
         const currentAvg = Math.round(averageRating || 0);
+
+        // Stars are interactive if viewer is not the profile owner AND is logged in AND (they have not rated yet OR they are in editing mode)
+        const shouldBeInteractive = !isViewerOwner && authUser && (userRating === 0 || isEditing);
+        const activeStarCount = userRating || currentAvg;
+
         for (let i = 1; i <= 5; i++) {
-            const isActive = i <= (userRating || currentAvg);
-            const isInteractiveClass = !isViewerOwner && authUser ? 'interactive' : '';
+            const isActive = i <= activeStarCount;
+            const isInteractiveClass = shouldBeInteractive ? 'interactive' : '';
             starsHtml += `<span class="rating-star-icon ${isActive ? 'active' : ''} ${isInteractiveClass}" data-value="${i}">★</span>`;
+        }
+
+        let subtextHtml = '';
+        if (isViewerOwner) {
+            subtextHtml = `<div class="rating-subtext">Self-rating is disabled</div>`;
+        } else if (!authUser) {
+            subtextHtml = `<div class="rating-subtext"><a href="/?auth=login" style="color: var(--neon); text-decoration: none;">Login</a> to rate</div>`;
+        } else if (userRating > 0) {
+            if (isEditing) {
+                subtextHtml = `
+                    <div class="rating-subtext">Select a new rating or <span class="rating-action-btn cancel-edit-btn" style="color: var(--cyan); cursor: pointer; text-decoration: underline;">Cancel</span></div>
+                `;
+            } else {
+                subtextHtml = `
+                    <div class="rating-subtext">Your rating: ${userRating} ★</div>
+                    <div class="rating-actions" style="margin-top: 8px; display: flex; gap: 12px; justify-content: center; font-size: 11px;">
+                        <span class="rating-action-btn edit-rating-btn" style="color: var(--cyan); cursor: pointer; text-decoration: underline; letter-spacing: 0.05em;">Edit Rating</span>
+                        <span style="color: var(--border);">|</span>
+                        <span class="rating-action-btn remove-rating-btn" style="color: var(--neon); cursor: pointer; text-decoration: underline; letter-spacing: 0.05em;">Remove Rating</span>
+                    </div>
+                `;
+            }
+        } else {
+            subtextHtml = `<div class="rating-subtext">Tap stars to rate this creator</div>`;
         }
 
         container.innerHTML = `
@@ -430,19 +461,11 @@ async function initCreatorRatings(profileId) {
                 <span>/ 5.0</span>
                 <span>(${ratingCount} ${ratingCount === 1 ? 'rating' : 'ratings'})</span>
             </div>
-            ${userRating > 0 ? `
-                <div class="rating-subtext">Your rating: ${userRating} ★</div>
-            ` : !isViewerOwner && authUser ? `
-                <div class="rating-subtext">Tap stars to rate this creator</div>
-            ` : !authUser ? `
-                <div class="rating-subtext"><a href="/?auth=login" style="color: var(--neon); text-decoration: none;">Login</a> to rate</div>
-            ` : `
-                <div class="rating-subtext">Self-rating is disabled</div>
-            `}
+            ${subtextHtml}
         `;
 
-        // Bind interactive event listeners if viewer is not owner
-        if (!isViewerOwner && authUser) {
+        // Bind interactive event listeners if needed
+        if (shouldBeInteractive) {
             container.querySelectorAll('.rating-star-icon.interactive').forEach(star => {
                 star.addEventListener('mouseover', function() {
                     const hoverVal = parseInt(this.getAttribute('data-value'));
@@ -474,8 +497,8 @@ async function initCreatorRatings(profileId) {
                         const submitRes = await API.ratings.submit(profileId, clickVal);
                         if (submitRes.success) {
                             notifyProfile('Rating submitted ✦');
-                            // Re-init ratings after brief delay to show new scores
-                            initCreatorRatings(profileId);
+                            // Re-init ratings (exiting edit mode)
+                            initCreatorRatings(profileId, false);
                         } else {
                             notifyProfile(submitRes.message || 'Could not submit rating');
                         }
@@ -487,6 +510,30 @@ async function initCreatorRatings(profileId) {
             });
         }
 
+        // Bind action button listeners
+        if (userRating > 0) {
+            const editBtn = container.querySelector('.edit-rating-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', () => {
+                    initCreatorRatings(profileId, true);
+                });
+            }
+
+            const removeBtn = container.querySelector('.remove-rating-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    openDeleteRatingConfirmation(profileId);
+                });
+            }
+
+            const cancelBtn = container.querySelector('.cancel-edit-btn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    initCreatorRatings(profileId, false);
+                });
+            }
+        }
+
     } catch (error) {
         console.error('Error initializing creator ratings:', error);
         container.innerHTML = `
@@ -496,6 +543,68 @@ async function initCreatorRatings(profileId) {
         `;
     }
 }
+
+function openDeleteRatingConfirmation(profileId) {
+    let modal = document.getElementById('deleteRatingModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'deleteRatingModal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; padding: 24px; text-align: center; border-radius: 4px;">
+                <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--neon); margin-bottom: 16px;">Remove Rating</h2>
+                <p style="font-size: 14px; color: var(--text); margin-bottom: 24px; line-height: 1.5;">Remove your rating for this creator?</p>
+                <div class="modal-actions" style="display: flex; gap: 12px; justify-content: center;">
+                    <button class="ctab modal-cancel-btn" style="background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px 16px; cursor: pointer; border-radius: 4px;">Cancel</button>
+                    <button class="ctab modal-remove-btn" style="background: var(--neon); color: var(--machine); border: none; padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 4px;">Remove Rating</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Add events
+        modal.querySelector('.modal-cancel-btn').addEventListener('click', () => {
+            closeDeleteRatingModal();
+        });
+        
+        modal.querySelector('.modal-remove-btn').addEventListener('click', async () => {
+            closeDeleteRatingModal();
+            await executeRatingDeletion(profileId);
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDeleteRatingModal();
+        });
+    }
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteRatingModal() {
+    const modal = document.getElementById('deleteRatingModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    document.body.style.overflow = '';
+}
+
+async function executeRatingDeletion(profileId) {
+    try {
+        const deleteRes = await API.ratings.delete(profileId);
+        if (deleteRes.success) {
+            notifyProfile('Rating removed ✦');
+            // Re-init ratings after deletion to show updated scores
+            initCreatorRatings(profileId, false);
+        } else {
+            notifyProfile(deleteRes.message || 'Could not remove rating');
+        }
+    } catch (err) {
+        console.error('Delete rating error:', err);
+        notifyProfile(err.message || 'Connection error');
+    }
+}
+
 
 let loadProfileAttempts = 0;
 async function loadProfile() {

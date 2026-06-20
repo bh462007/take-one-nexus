@@ -12,7 +12,7 @@
   </p>
 
   <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-2.1.0-blue.svg?cacheSeconds=2592000" />
+    <img alt="Version" src="https://img.shields.io/badge/version-2.2.0-blue.svg?cacheSeconds=2592000" />
     <img alt="License: Source-Available" src="https://img.shields.io/badge/License-Source--Available-red.svg" />
     <img alt="Production Ready" src="https://img.shields.io/badge/PRODUCTION_READY-FF4D1A?style=flat&logo=vercel" />
     <img alt="NSoC 2026" src="https://img.shields.io/badge/NSoC-2026-blue?style=flat" />
@@ -41,6 +41,7 @@ TAKE ONE Nexus is the definitive digital ecosystem for the next generation of fi
 *   **👑 Role System & Management**: Fine-grained community roles (Owner, Admin, Member) with administrative workflows (member promotion, demotion, removal).
 *   **📩 Invite & Request System**: Send join invitations or manage incoming join requests with dedicated approval dashboards.
 *   **🏆 Live Leaderboard**: Real-time community ranking system based on creative engagement and verified creator achievements.
+*   **⭐ Creator Rating System**: Interactive rating system for creators with submission, editing, and deletion capabilities, notifying creators on new ratings and feeding analytics tracking.
 *   **🎬 Projects & Script Sharing**: Share scripts securely with built-in PDF iframe preview and options for monetization.
 *   **🛡️ Authentication & Verification**: Secure stateless JWT sessions coupled with a full signup-to-verification email flow. Verified creators earn a neon (✦) verified badge.
 *   **🛰️ Real-Time Chat & Notifications**: Real-time communication powered by Pusher. Direct messaging, group chats, live typing, and instant project notifications.

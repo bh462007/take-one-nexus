@@ -1,5 +1,7 @@
 const express = require('express');
+const crypto = require('crypto');
 const { pool } = require('../config/db');
+const prisma = require('../utils/prisma');
 const { authenticateUser } = require('../middleware/auth');
 const { createRateLimiter } = require('../middleware/rateLimiter');
 
@@ -119,6 +121,13 @@ router.post('/', authenticateUser, ratingLimiter, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Target user not found' });
     }
 
+    // Check if rating already exists to determine if it is new
+    const [existingRows] = await pool.query(
+      `SELECT rating FROM user_ratings WHERE rated_user_id = ? AND rated_by_id = ? LIMIT 1`,
+      [ratedUserIdNum, ratedById]
+    );
+    const isNew = existingRows.length === 0;
+
     // Upsert rating using INSERT ON DUPLICATE KEY UPDATE
     await pool.query(
       `INSERT INTO user_ratings (rated_user_id, rated_by_id, rating, created_at, updated_at)
@@ -126,6 +135,46 @@ router.post('/', authenticateUser, ratingLimiter, async (req, res) => {
        ON DUPLICATE KEY UPDATE rating = ?, updated_at = NOW()`,
       [ratedUserIdNum, ratedById, ratingNum, ratingNum]
     );
+
+    // Trigger notification if it's a new rating
+    if (isNew) {
+      try {
+        const { createNotification } = require('../utils/notifications');
+        const [raterRows] = await pool.query(
+          `SELECT name, screen_name, display_preference FROM users WHERE id = ? LIMIT 1`,
+          [ratedById]
+        );
+        const raterName = raterRows.length > 0 ? getFormattedName(raterRows[0]) : 'Someone';
+        
+        await createNotification({
+          userId: ratedUserIdNum,
+          type: 'rating_received',
+          title: 'New Rating Received',
+          body: `${raterName} rated you ${ratingNum} stars!`,
+          linkUrl: `/profile?id=${ratedById}`
+        });
+      } catch (notifErr) {
+        console.error('Failed to create rating notification:', notifErr.message);
+      }
+    }
+
+    // Track Graphifyy Analytics event
+    try {
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+      const salt = process.env.JWT_SECRET || 'fallback-analytics-salt-v1';
+      const hashedIp = crypto.createHash('sha256').update(String(ip) + salt).digest('hex').substring(0, 16);
+      
+      await prisma.analyticsEvent.create({
+        data: {
+          user_id: ratedUserIdNum,
+          event_type: 'profile_rated',
+          target_id: ratedById,
+          visitor_ip: hashedIp
+        }
+      });
+    } catch (analyticsErr) {
+      console.error('Failed to track profile_rated event:', analyticsErr.message);
+    }
 
     // Trigger Pusher leaderboard update if configured
     if (process.env.PUSHER_APP_ID) {
@@ -189,6 +238,24 @@ router.delete('/:ratedUserId', authenticateUser, ratingLimiter, async (req, res)
 
     if (deleteResult.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Rating not found' });
+    }
+
+    // Track Graphifyy Analytics event
+    try {
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+      const salt = process.env.JWT_SECRET || 'fallback-analytics-salt-v1';
+      const hashedIp = crypto.createHash('sha256').update(String(ip) + salt).digest('hex').substring(0, 16);
+      
+      await prisma.analyticsEvent.create({
+        data: {
+          user_id: ratedUserId,
+          event_type: 'rating_removed',
+          target_id: ratedById,
+          visitor_ip: hashedIp
+        }
+      });
+    } catch (analyticsErr) {
+      console.error('Failed to track rating_removed event:', analyticsErr.message);
     }
 
     // Trigger Pusher leaderboard update if configured

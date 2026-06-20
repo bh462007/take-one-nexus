@@ -42,6 +42,7 @@ To support the dual-server architecture, API responsibilities are divided betwee
 | `/api/auth/reset-password` | Next.js Route Handler |
 | `/api/users/*` | Express Server |
 | `/api/chat/*` | Express Server |
+| `/api/ratings/*` | Express Server |
 | `/api/system/*` | Express Server |
 
 This separation helps contributors understand which framework is responsible for handling specific API endpoints within the application.
@@ -54,6 +55,9 @@ This separation helps contributors understand which framework is responsible for
   | `GET /api/users/me` | JWT | Session data (incl. `email_verified`) |
   | `GET /api/users/public/:id` | None | Public profile view |
   | `GET /api/chat/*` | JWT | Real-time message history |
+  | `POST /api/ratings` | JWT | Submit or edit creator rating; triggers notification on new rating, logs `profile_rated` |
+  | `GET /api/ratings/status/:userId` | JWT | Fetch rating status for a target creator, including average score and user rating |
+  | `DELETE /api/ratings/:ratedUserId` | JWT | Remove rating; logs `rating_removed` and updates statistics |
   | `GET /api/system/stats` | Admin | Live platform metrics |
 
 > **Routing Magic**: `vercel.json` rewrite rules map `/api/*` to Express while Next.js handles everything else.
@@ -228,6 +232,9 @@ Pusher WebSockets drive the live creative interaction layers:
 | ADR-008 | Razorpay Webhook Signatures | Verification must use crypto raw request verification to prevent signature spoofing. |
 | ADR-009 | Double-Submit CSRF Guard | Custom cookie/header matching replaces deprecated packages for stateless CSRF mitigation. |
 | ADR-010 | Subdomain Auth Coupling | Session tokens use apex domain cookie configurations to enable subdomain SSO. |
+| ADR-011 | Rating Notifications Gate | Notifications trigger only for new ratings, avoiding notifications on edits or deletions. |
+| ADR-012 | Salted IP Hash for Ratings | Ratings analytics events use SHA-256 salted hashes of visitor IPs with JWT_SECRET for anonymity. |
+
 
 ---
 

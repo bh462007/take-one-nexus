@@ -989,7 +989,7 @@ router.get('/transactions', authenticateUser, async (req, res) => {
 });
 
 // Allowed event types — reject anything outside this set to prevent abuse
-const ALLOWED_EVENT_TYPES = new Set(['profile_view', 'portfolio_view', 'project_engagement']);
+const ALLOWED_EVENT_TYPES = new Set(['profile_view', 'portfolio_view', 'project_engagement', 'profile_rated', 'rating_removed']);
 
 /**
  * POST /api/users/analytics/track
