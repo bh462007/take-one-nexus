@@ -226,18 +226,19 @@ function renderPortfolio(profile) {
     detailsWrap.innerHTML = detailsHtml;
 
     const authUser = API.auth.getUser();
-    isOwner = !!(authUser && profile.id === authUser.id);
+    isOwner = !!(authUser && Number(profile.id) === Number(authUser.id));
 
     // 2. Render Featured Work Cards
+    let gridHtml = '';
+    
     if (portfolioWorks.length === 0) {
-        gridWrap.innerHTML = `
-            <div class="collab-empty">
-                <p>No projects uploaded to showcase yet.</p>
-                ${isOwner ? '<button onclick="openEditWorkModal()" class="btn-sm">Add Work →</button>' : ''}
+        gridHtml = `
+            <div class="collab-empty" style="grid-column: 1 / -1; text-align: center;">
+                <p>${isOwner ? 'No featured work added yet.' : 'No projects uploaded to showcase yet.'}</p>
             </div>
         `;
     } else {
-        gridWrap.innerHTML = portfolioWorks.map((script, i) => {
+        gridHtml = portfolioWorks.map((script, i) => {
             let roleInfo = '';
             if (script.role_data) {
                 try {
@@ -269,6 +270,21 @@ function renderPortfolio(profile) {
             `;
         }).join('');
     }
+
+    // Always append the "+ Add Work" card for owner
+    if (isOwner) {
+        gridHtml += `
+            <div class="portfolio-item-card add-work-card" onclick="openEditWorkModal()"
+                 style="border: 2px dashed rgba(255, 77, 26, 0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; cursor: pointer; background: rgba(255, 77, 26, 0.02); transition: all 0.3s ease; gap: 8px;"
+                 onmouseover="this.style.borderColor='var(--primary)'; this.style.background='rgba(255, 77, 26, 0.06)'"
+                 onmouseout="this.style.borderColor='rgba(255, 77, 26, 0.3)'; this.style.background='rgba(255, 77, 26, 0.02)'">
+                <span style="font-size: 32px; color: var(--primary); line-height: 1;">+</span>
+                <span style="font-size: 13px; color: var(--primary); font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Add Work</span>
+            </div>
+        `;
+    }
+
+    gridWrap.innerHTML = gridHtml;
 }
 
 let currentProfileData = null;
@@ -372,13 +388,24 @@ async function initCreatorRatings(profileId) {
     const container = document.getElementById('creatorRatingSection');
     if (!container) return;
 
+    // Show visual loading feedback
+    container.innerHTML = `
+        <div class="rating-loading" style="font-size: 11px; color: var(--cyan); letter-spacing: 0.1em; opacity: 0.7; text-align: center; padding: 4px;">
+            LOADING RATING...
+        </div>
+    `;
+
     try {
         const authUser = API.auth.getUser();
         const isViewerOwner = !!(authUser && Number(authUser.id) === Number(profileId));
 
         const res = await API.ratings.getStatus(profileId);
         if (!res.success || !res.data) {
-            container.style.display = 'none';
+            container.innerHTML = `
+                <div class="rating-error" style="font-size: 11px; color: var(--neon); letter-spacing: 0.1em; text-align: center; padding: 4px;">
+                    RATING SYSTEM OFFLINE
+                </div>
+            `;
             return;
         }
 
@@ -462,16 +489,40 @@ async function initCreatorRatings(profileId) {
 
     } catch (error) {
         console.error('Error initializing creator ratings:', error);
-        container.style.display = 'none';
+        container.innerHTML = `
+            <div class="rating-error" style="font-size: 11px; color: var(--neon); letter-spacing: 0.1em; text-align: center; padding: 4px;">
+                RATING SYSTEM OFFLINE
+            </div>
+        `;
     }
 }
 
+let loadProfileAttempts = 0;
 async function loadProfile() {
-    if (typeof API === 'undefined' || !API.auth || !API.users) return;
+    if (typeof API === 'undefined' || !API.auth || !API.users || !API.ratings || !API.portfolio) {
+        loadProfileAttempts++;
+        if (loadProfileAttempts > 50) {
+            console.error('API helper failed to load after 5 seconds.');
+            notifyProfile('Connection error. Please refresh.');
+            return;
+        }
+        setTimeout(loadProfile, 100);
+        return;
+    }
+    loadProfileAttempts = 0;
 
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id');
     const authUser = API.auth.getUser();
+
+    const gridWrap = document.getElementById('portfolioGrid');
+    if (gridWrap) {
+        gridWrap.innerHTML = `
+            <div class="portfolio-loading" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--cyan); letter-spacing: 0.2em;">
+                SYNCHRONIZING PORTFOLIO...
+            </div>
+        `;
+    }
     
     // If we have a targetId and it's not us, fetch public profile
     if (targetId && (!authUser || authUser.id !== parseInt(targetId))) {
@@ -486,10 +537,26 @@ async function loadProfile() {
                     if (el.id !== 'messageBtn') el.style.display = 'none';
                 });
                 return;
+            } else {
+                if (gridWrap) {
+                    gridWrap.innerHTML = `
+                        <div class="portfolio-error" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--neon); letter-spacing: 0.2em;">
+                            PORTFOLIO NOT FOUND
+                        </div>
+                    `;
+                }
             }
         } catch (err) {
             console.error('Error loading public profile:', err);
+            if (gridWrap) {
+                gridWrap.innerHTML = `
+                    <div class="portfolio-error" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--neon); letter-spacing: 0.2em;">
+                        PORTFOLIO TRANSMISSION FAILED
+                    </div>
+                `;
+            }
         }
+        return;
     }
 
     // Default to own profile
@@ -506,9 +573,24 @@ async function loadProfile() {
             populateProfile(response.data);
             loadCollaborationRequests(authUser.id);
             loadNotifications(authUser.id);
+        } else {
+            if (gridWrap) {
+                gridWrap.innerHTML = `
+                    <div class="portfolio-error" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--neon); letter-spacing: 0.2em;">
+                        PORTFOLIO NOT FOUND
+                    </div>
+                `;
+            }
         }
     } catch (err) {
         console.error('Profile load failed:', err);
+        if (gridWrap) {
+            gridWrap.innerHTML = `
+                <div class="portfolio-error" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--neon); letter-spacing: 0.2em;">
+                    PORTFOLIO TRANSMISSION FAILED
+                </div>
+            `;
+        }
         if (typeof showToast === 'function') showToast(`Could not load profile ✦`);
     }
 }

@@ -251,10 +251,11 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const emailVerifiedVal = isProd ? 0 : 1;
 
     const [result] = await pool.query(
-      `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference, email_verified)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         normalizedEmail,
@@ -264,7 +265,8 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
         city || null,
         gender || 'Prefer not to say',
         screen_name || null,
-        display_preference || 'Show Real Name Only'
+        display_preference || 'Show Real Name Only',
+        emailVerifiedVal
       ]
     );
 
@@ -275,7 +277,8 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
       role: role || '',
       college: college || '',
       city: city || '',
-      gender: gender || 'Prefer not to say'
+      gender: gender || 'Prefer not to say',
+      email_verified: emailVerifiedVal === 1
     };
 
     const token = createToken(user);
