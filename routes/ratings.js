@@ -3,15 +3,9 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const prisma = require('../utils/prisma');
 const { authenticateUser } = require('../middleware/auth');
-const { createRateLimiter } = require('../middleware/rateLimiter');
+const { ratingLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
-
-const ratingLimiter = createRateLimiter({
-  limit: 100,
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  keyPrefix: 'ratings'
-});
 
 // Helper to format name using display_preference (same logic as formatting.js / formatting.ts)
 function getFormattedName(user) {

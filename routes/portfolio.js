@@ -1,15 +1,9 @@
 const express = require('express');
 const { pool } = require('../config/db');
 const { authenticateUser, requireVerified } = require('../middleware/auth');
-const { createRateLimiter } = require('../middleware/rateLimiter');
+const { portfolioLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
-
-const portfolioLimiter = createRateLimiter({
-  limit: 50,
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  keyPrefix: 'portfolio'
-});
 
 // GET /api/portfolio/user/:userId - Fetch portfolio items for a user
 router.get('/user/:userId', async (req, res) => {

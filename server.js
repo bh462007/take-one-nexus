@@ -112,6 +112,7 @@ app.use(helmet({
   xFrameOptions: { action: "deny" }, // Hardened clickjacking defence layout as per criteria
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   xContentTypeOptions: true,
+  xssFilter: true,
   hsts: {
     maxAge: 31536000, // 1 year runtime enforcement
     includeSubDomains: true,

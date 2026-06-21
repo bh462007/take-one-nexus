@@ -44,19 +44,19 @@ We implement a stateless **Double-Submit Cookie Pattern** globally on all state-
 - **Subdomain Sharing**: In production, the session cookie is configured with `domain: '.takeone-nexus.net.in'`. This allows a user logged in on the apex domain to access elevated panels on the admin subdomain (`admin.takeone-nexus.net.in`) seamlessly without re-authenticating. Locally, the domain attribute is omitted to support port-based testing on localhost.
 - `secondary_role` permissions (such as `admin` and `moderator`) are packed directly into the JWT payload during login, resolving route redirect loops.
 
-### 3. Granular Rate Limiting
+### 3. Distributed & Granular Rate Limiting
 Endpoint-specific rate limiters are applied on both the Next.js API router and Express middleware:
-- **Persistence**: Rate limit counters are stored in an in-memory sliding-window store, ensuring lightweight execution with no external infrastructure dependencies (e.g. Redis).
-- **Authentication**: Login requests are limited to 5 requests per 15 minutes. Registration is limited to 3 attempts per hour.
-- **Payments**: Order creation, verification, and cancellations are strictly restricted to 10 requests per 15 minutes to prevent order-flooding and brute-forcing.
-- **Portfolios**: Portfolio script uploads bypass the moderation queue but are limited to 20 uploads per hour.
-- **Issues/Telemetry**: Issue reporting and feedback ingestion are limited to 20 requests per 15 minutes.
-- **Task Management**: Task creation is rate limited to 30 requests per 15 minutes.
+- **Distributed Architecture**: Rate limit counters are tracked using a distributed sliding window in production using Upstash Redis over REST. If Upstash is unconfigured or unreachable, the system gracefully falls back to a highly optimized local in-memory sliding log.
+- **Authentication**: Auth operations (login, register, forgot/reset password) are strictly limited to 20 attempts per 15 minutes globally, with additional local limits (e.g. max 5 login attempts per 15 minutes).
+- **Payments & Communities**: Order creation, verification, and community operations are restricted to 30 requests per 15 minutes.
+- **Ratings & Portfolios**: Ratings modification is capped at 30 requests per 15 minutes, and portfolio modifications are capped at 50 requests per 15 minutes.
+- **Uploads**: Avatar and media uploads are limited to 10 uploads per 15 minutes.
 
-### 4. Input Sanitization & Parameterization
-- **XSS Prevention**: All requests pass through a global middleware that automatically cleans and sanitizes `req.body`, `req.query`, and `req.params` against malicious HTML injection using the `xss` utility.
-- **SQL Injection**: Parameterized SQL queries with placeholder `?` inputs are strictly enforced across the entire backend. All interactions with the database are fully structured, eliminating dynamic string interpolation.
-- **Object Schema Validation**: Critical routes use `express-validator` schema chains to validate payloads before entering controller logic, returning a validation response.
+### 4. Input Sanitization, SSRF, & Parameterization
+- **SSRF Mitigation**: Outbound request destinations (such as Razorpay payment verification) are strictly gated via a URL validation utility (`utils/security/urlValidator.js`). It restricts all requests to HTTPS protocol, blocks localhost/loopbacks, and rejects Class A/B/C private subnets, link-local addresses, and IPv4-mapped IPv6 subnets.
+- **XSS Prevention**: All requests pass through a global middleware that automatically cleans and sanitizes `req.body`, `req.query`, and `req.params` against malicious HTML injection using the `xss` utility. Helmet headers are configured with `xssFilter: true` to enforce client-side defense-in-depth.
+- **SQL Injection**: Parameterized SQL queries with placeholder `?` inputs are strictly enforced across the entire backend. All queries (including LIMIT and OFFSET bounds) are parameterized to prevent input injection.
+- **Object Schema Validation**: Critical routes use `express-validator` schema chains to validate payloads before entering controller logic.
 
 ### 5. Multi-Platform Ingestion Security
 - Telemetry, logging, and bug reporting modals run validation schemas to prevent abuse.

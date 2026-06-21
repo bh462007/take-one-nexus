@@ -8,7 +8,7 @@ const { sendWelcomeEmail, sendVerificationEmail } = require('../utils/email');
 const prisma = require('../utils/prisma');
 const { formatDisplayName, getCanonicalDisplayName } = require('../utils/formatting');
 const Pusher = require('pusher');
-const { createRateLimiter } = require('../middleware/rateLimiter');
+const { createRateLimiter, authLimiter, uploadLimiter } = require('../middleware/rateLimiter');
 
 const { body } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
@@ -219,7 +219,7 @@ const registerValidation = [
   validateRequest
 ];
 
-router.post('/register', registerLimiter, registerValidation, async (req, res) => {
+router.post('/register', authLimiter, registerLimiter, registerValidation, async (req, res) => {
   const isProd = process.env.NODE_ENV === 'production';
   try {
     const { name, email: normalizedEmail, password, role, college, city, gender, screen_name, display_preference } = req.body;
@@ -400,7 +400,7 @@ const loginValidation = [
   validateRequest
 ];
 
-router.post('/login', loginLimiter, loginValidation, async (req, res) => {
+router.post('/login', authLimiter, loginLimiter, loginValidation, async (req, res) => {
   const { email: normalizedEmail, password } = req.body;
   const isProd = process.env.NODE_ENV === 'production';
   
@@ -696,7 +696,8 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
       `SELECT id, name, email, role, college, city, created_at
        FROM users
        ORDER BY created_at DESC, id DESC
-       LIMIT ${limit} OFFSET ${offset}`
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
     );
 
     return res.json({
@@ -839,7 +840,7 @@ router.get('/:id', authenticateUser, requireSameUser, async (req, res) => {
  * POST /api/users/upload-avatar
  * File-handling route for profile pictures
  */
-router.post('/upload-avatar', authenticateUser, avatarUploadLimiter, upload.single('avatar'), async (req, res) => {
+router.post('/upload-avatar', authenticateUser, uploadLimiter, avatarUploadLimiter, upload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
