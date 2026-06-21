@@ -29,7 +29,6 @@ const getRoleSlug = (role?: string): string => {
   if (r.includes('editor')) return 'editor';
   if (r.includes('sound')) return 'sound';
   if (r.includes('designer')) return 'designer';
-  if (r.includes('developer')) return 'developer';
   if (r.includes('actor')) return 'actor';
   if (r.includes('producer')) return 'producer';
   if (r.includes('lighting') || r.includes('gaffer')) return 'lighting';
@@ -2231,9 +2230,14 @@ export default function ChatPage() {
           <a href="/#explore">Discover Projects</a>
           <a href="/crew">Find Crew</a>
           <a href="/leaderboard">Leaderboard</a>
-          <a href="/#upload">Share Your Script</a>
+          <a href="/chat" className="active">Community</a>
+          {(!user?.role || ['director', 'writer', 'producer'].includes(user.role.toLowerCase())) ? (
+            <a href="/#upload">Share Your Script</a>
+          ) : (
+            <a href="/#explore">Workspace</a>
+          )}
           <a href="/profile">Profile</a>
-          {user?.role && ['admin', 'developer', 'moderator'].includes(user.role.toLowerCase()) && (
+          {user?.secondary_role && ['admin', 'founder'].includes(user.secondary_role.toLowerCase()) && (
             <a href="https://admin.takeone-nexus.net.in" style={{ color: 'var(--neon)', fontWeight: 'bold' }}>Admin Panel</a>
           )}
           <button onClick={() => window.location.href = '/profile'} className="nav-cta">
@@ -3145,7 +3149,7 @@ export default function ChatPage() {
                                   <div className="msg-sender-row" style={{ display: 'flex', alignItems: 'center' }}>
                                     <span className="msg-sender-name">{getDisplayName(msg.sender)}</span>
                                     {msg.sender?.role && <span className="msg-role-badge">{msg.sender.role}</span>}
-                                    {['admin', 'developer'].includes(String(msg.sender?.role || '').toLowerCase()) && (
+                                    {['admin', 'founder'].includes(String(msg.sender?.secondary_role || '').toLowerCase()) && (
                                       <span className="msg-director-badge" style={{
                                         background: 'rgba(255, 77, 26, 0.15)',
                                         border: '1px solid var(--neon)',
@@ -3158,7 +3162,7 @@ export default function ChatPage() {
                                         letterSpacing: '1px',
                                         marginLeft: '6px',
                                         textTransform: 'uppercase'
-                                      }}>Director</span>
+                                      }}>Admin</span>
                                     )}
                                   </div>
                                 )}
@@ -3186,7 +3190,7 @@ export default function ChatPage() {
                       <h3>Active Missions</h3>
                       {activeConv && (
                         (!activeConv.is_group || 
-                        ['admin', 'developer'].includes(user?.role?.toLowerCase() || '') || 
+                        (['admin'].includes(user?.role?.toLowerCase() || '') || ['admin', 'founder'].includes(user?.secondary_role?.toLowerCase() || '')) || 
                         ['Director', 'Admin'].includes(activeConv.my_role || '')) && (
                           <button onClick={() => setIsTaskModalOpen(true)} className="add-task-btn">Assign Task +</button>
                         )
@@ -3201,7 +3205,8 @@ export default function ChatPage() {
                         {tasks.map(task => {
                           const assignee = activeConv?.users.find(u => u.id === task.assignee_id);
                           const isCreator = task.creator_id === user?.id;
-                          const isAdmin = ['admin', 'developer'].includes(user?.role?.toLowerCase() || '');
+                          const isAdmin = ['admin'].includes(user?.role?.toLowerCase() || '') || 
+                                          ['admin', 'founder'].includes(user?.secondary_role?.toLowerCase() || '');
                           const isManageable = isCreator || isAdmin;
                           const isAssignee = task.assignee_id === user?.id;
 
@@ -3964,7 +3969,7 @@ export default function ChatPage() {
                     <div>
                       <div style={{ fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {user.name}
-                        {user.email_verified && (
+                        {user.email_verified === true && (
                           <span title="Verified User" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--neon)', color: '#000', borderRadius: '50%', width: '14px', height: '14px', fontSize: '8px', fontWeight: 'bold' }}>✓</span>
                         )}
                       </div>

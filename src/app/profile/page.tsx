@@ -56,6 +56,13 @@ export default async function ProfilePage({
         where: { id: targetUserId },
         include: {
           scripts: {
+            where: {
+              payment_verified: true,
+              payment_status: { not: 'portfolio' }
+            },
+            orderBy: { created_at: 'desc' }
+          },
+          portfolio_works: {
             orderBy: { created_at: 'desc' }
           }
         }
@@ -77,11 +84,10 @@ export default async function ProfilePage({
       isOwner = false;
     } else {
       // Viewing own profile
-      rawUser = authUser;
       isOwner = true;
 
       // Auth Gate if not logged in and no targetId
-      if (!rawUser) {
+      if (!authUser) {
         return (
           <div className="profile-auth-gate" id="profileAuthGate">
             <div className="auth-kicker">Profile Locked</div>
@@ -94,10 +100,29 @@ export default async function ProfilePage({
           </div>
         );
       }
+
+      rawUser = await prisma.user.findUnique({
+        where: { id: authUser.id },
+        include: {
+          scripts: {
+            where: {
+              payment_verified: true,
+              payment_status: { not: 'portfolio' }
+            },
+            orderBy: { created_at: 'desc' }
+          },
+          portfolio_works: {
+            orderBy: { created_at: 'desc' }
+          }
+        }
+      });
     }
 
     // ENSURE POJO SERIALIZATION
     const user = JSON.parse(JSON.stringify(rawUser));
+    if (user) {
+      user.portfolioWorks = user.portfolio_works || [];
+    }
 
     // STABILITY: Absolute defaults for all fields
     const name = user?.name || 'Creator';
@@ -132,7 +157,13 @@ export default async function ProfilePage({
             <a href="/#explore">Discover Projects</a>
             <a href="/crew">Find Crew</a>
             <a href="/leaderboard">Leaderboard</a>
-            <a href="/chat" className="nav-chat-link">Messages</a>
+            <a href="/chat" className="nav-chat-link">Community</a>
+            {(!user?.role || ['director', 'writer', 'producer'].includes(user.role.toLowerCase())) ? (
+              <a href="/#upload">Share Your Script</a>
+            ) : (
+              <a href="/#explore">Workspace</a>
+            )}
+            <a href="/profile" className="active">Profile</a>
             {isOwner && <button className="profile-logout" id="profileLogoutBtn" type="button">Logout</button>}
           </nav>
         </header>
@@ -173,7 +204,7 @@ export default async function ProfilePage({
 
               <div id="profileName" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 {displayName}
-                {user.email_verified && (
+                {user.email_verified === true && (
                   <span className="verified-badge-inline" title="Verified Creator" style={{ display: 'inline-flex', alignItems: 'center' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--neon)', filter: 'drop-shadow(0 0 4px var(--neon))' }}>
                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="var(--neon)" />
@@ -221,6 +252,10 @@ export default async function ProfilePage({
                   {availability}
                 </span>
               </div>
+
+              {/* Rating Section */}
+              <div id="creatorRatingSection" className="creator-rating-section"></div>
+
               <div className="profile-meta" id="profileMeta">
                 {[college, city].filter(Boolean).join(' · ') || 'Location Pending'}
               </div>

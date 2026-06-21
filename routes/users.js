@@ -8,7 +8,7 @@ const { sendWelcomeEmail, sendVerificationEmail } = require('../utils/email');
 const prisma = require('../utils/prisma');
 const { formatDisplayName, getCanonicalDisplayName } = require('../utils/formatting');
 const Pusher = require('pusher');
-const { createRateLimiter } = require('../middleware/rateLimiter');
+const { createRateLimiter, authLimiter, uploadLimiter } = require('../middleware/rateLimiter');
 
 const { body } = require('express-validator');
 const { validateRequest } = require('../middleware/validator');
@@ -106,7 +106,7 @@ function createToken(user) {
     throw new Error('JWT_SECRET is not configured');
   }
   
-  // Ensure primary admin/dev email always has the Developer role in the session token
+  // Ensure primary roles are populated in the session token
   const role = user.role || '';
 
   return jwt.sign(
@@ -175,11 +175,28 @@ async function getProfileData(userId) {
         created_at
     FROM scripts
     WHERE user_id = ?
-    AND (
-      payment_verified = TRUE
-      OR payment_status = 'portfolio'
-    )
+    AND payment_verified = TRUE
+    AND (payment_status IS NULL OR payment_status != 'portfolio')
     ORDER BY created_at DESC, id DESC`,
+    [userId]
+  );
+
+  const [portfolioRows] = await pool.query(
+    `SELECT
+        id,
+        user_id,
+        title,
+        genre,
+        synopsis,
+        media_links,
+        role_data,
+        work_type,
+        status,
+        created_at,
+        updated_at
+     FROM portfolio_work
+     WHERE user_id = ?
+     ORDER BY created_at DESC, id DESC`,
     [userId]
   );
 
@@ -187,7 +204,8 @@ async function getProfileData(userId) {
     ...userRows[0],
     name: formatDisplayName(userRows[0].name),
     email_verified: userRows[0].email_verified === 1 || userRows[0].email_verified === true,
-    scripts: scriptRows
+    scripts: scriptRows,
+    portfolioWorks: portfolioRows
   };
 }
 
@@ -201,7 +219,7 @@ const registerValidation = [
   validateRequest
 ];
 
-router.post('/register', registerLimiter, registerValidation, async (req, res) => {
+router.post('/register', authLimiter, registerLimiter, registerValidation, async (req, res) => {
   const isProd = process.env.NODE_ENV === 'production';
   try {
     const { name, email: normalizedEmail, password, role, college, city, gender, screen_name, display_preference } = req.body;
@@ -233,10 +251,11 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const emailVerifiedVal = isProd ? 0 : 1;
 
     const [result] = await pool.query(
-      `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (name, email, password, role, college, city, gender, screen_name, display_preference, email_verified)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         normalizedEmail,
@@ -246,7 +265,8 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
         city || null,
         gender || 'Prefer not to say',
         screen_name || null,
-        display_preference || 'Show Real Name Only'
+        display_preference || 'Show Real Name Only',
+        emailVerifiedVal
       ]
     );
 
@@ -257,7 +277,8 @@ router.post('/register', registerLimiter, registerValidation, async (req, res) =
       role: role || '',
       college: college || '',
       city: city || '',
-      gender: gender || 'Prefer not to say'
+      gender: gender || 'Prefer not to say',
+      email_verified: emailVerifiedVal === 1
     };
 
     const token = createToken(user);
@@ -379,7 +400,7 @@ const loginValidation = [
   validateRequest
 ];
 
-router.post('/login', loginLimiter, loginValidation, async (req, res) => {
+router.post('/login', authLimiter, loginLimiter, loginValidation, async (req, res) => {
   const { email: normalizedEmail, password } = req.body;
   const isProd = process.env.NODE_ENV === 'production';
   
@@ -628,7 +649,11 @@ router.get('/search', authenticateUser, async (req, res) => {
     params.push(limit, offset);
 
     const rows = await safeQuery(sql, params);
-    const mappedRows = rows.map(r => ({ ...r, name: formatDisplayName(r.name) }));
+    const mappedRows = rows.map(r => ({
+      ...r,
+      name: formatDisplayName(r.name),
+      email_verified: r.email_verified === 1 || r.email_verified === true
+    }));
 
     res.json({
       success: true,
@@ -654,10 +679,8 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
     const role = String(req.user.role || '').toLowerCase();
     const secondaryRole = String(req.user.secondary_role || '').toLowerCase();
     const isAuthorized =
-      role === 'developer' ||
-      role === 'admin' ||
-      role === 'moderator' ||
-      secondaryRole === 'admin';
+      secondaryRole === 'admin' ||
+      secondaryRole === 'founder';
 
     if (!isAuthorized) {
       return res.status(403).json({
@@ -677,7 +700,8 @@ router.get('/admin/list', authenticateUser, authenticatedApiLimiter, async (req,
       `SELECT id, name, email, role, college, city, created_at
        FROM users
        ORDER BY created_at DESC, id DESC
-       LIMIT ${limit} OFFSET ${offset}`
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
     );
 
     return res.json({
@@ -820,7 +844,7 @@ router.get('/:id', authenticateUser, requireSameUser, async (req, res) => {
  * POST /api/users/upload-avatar
  * File-handling route for profile pictures
  */
-router.post('/upload-avatar', authenticateUser, avatarUploadLimiter, upload.single('avatar'), async (req, res) => {
+router.post('/upload-avatar', authenticateUser, uploadLimiter, avatarUploadLimiter, upload.single('avatar'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -863,7 +887,7 @@ router.get('/public/:id', async (req, res) => {
     }
 
     const [userRows] = await pool.query(
-      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, availability
+      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, availability, email_verified
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -906,6 +930,7 @@ router.get('/public/:id', async (req, res) => {
       data: {
         ...userRows[0],
         name: getCanonicalDisplayName(userRows[0]),
+        email_verified: userRows[0].email_verified === 1 || userRows[0].email_verified === true,
         scripts: scriptRows
       }
     });
@@ -937,7 +962,8 @@ router.get('/leaderboard', async (req, res) => {
       success: true,
       data: rows.map(r => ({
         ...r,
-        displayName: getCanonicalDisplayName(r)
+        displayName: getCanonicalDisplayName(r),
+        email_verified: r.email_verified === 1 || r.email_verified === true
       }))
     });
   } catch (error) {
@@ -970,7 +996,7 @@ router.get('/transactions', authenticateUser, async (req, res) => {
 });
 
 // Allowed event types — reject anything outside this set to prevent abuse
-const ALLOWED_EVENT_TYPES = new Set(['profile_view', 'portfolio_view', 'project_engagement']);
+const ALLOWED_EVENT_TYPES = new Set(['profile_view', 'portfolio_view', 'project_engagement', 'profile_rated', 'rating_removed']);
 
 /**
  * POST /api/users/analytics/track

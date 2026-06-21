@@ -48,13 +48,6 @@ const ROLE_THEMES = {
     secondaryRgb: "219, 39, 119",
     glow: "rgba(236, 72, 153, 0.15)"
   },
-  "developer": {
-    primary: "#22C55E",
-    primaryRgb: "34, 197, 94",
-    secondary: "#16A34A",
-    secondaryRgb: "22, 163, 74",
-    glow: "rgba(34, 197, 94, 0.15)"
-  },
   "actor": {
     primary: "#A78BFA",
     primaryRgb: "167, 139, 250",
@@ -102,7 +95,6 @@ function getRoleSlug(role) {
   if (r.includes('editor')) return 'editor';
   if (r.includes('sound')) return 'sound';
   if (r.includes('designer')) return 'designer';
-  if (r.includes('developer')) return 'developer';
   if (r.includes('actor')) return 'actor';
   if (r.includes('producer')) return 'producer';
   if (r.includes('lighting')) return 'lighting';
