@@ -315,7 +315,8 @@ router.get('/leaderboard', async (req, res) => {
       ...r,
       displayName: getFormattedName(r),
       averageRating: parseFloat(parseFloat(r.averageRating).toFixed(1)),
-      ratingCount: Number(r.ratingCount)
+      ratingCount: Number(r.ratingCount),
+      email_verified: r.email_verified === 1 || r.email_verified === true
     }));
 
     res.json({

@@ -3969,7 +3969,7 @@ export default function ChatPage() {
                     <div>
                       <div style={{ fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {user.name}
-                        {user.email_verified && (
+                        {user.email_verified === true && (
                           <span title="Verified User" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--neon)', color: '#000', borderRadius: '50%', width: '14px', height: '14px', fontSize: '8px', fontWeight: 'bold' }}>✓</span>
                         )}
                       </div>

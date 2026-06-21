@@ -649,7 +649,11 @@ router.get('/search', authenticateUser, async (req, res) => {
     params.push(limit, offset);
 
     const rows = await safeQuery(sql, params);
-    const mappedRows = rows.map(r => ({ ...r, name: formatDisplayName(r.name) }));
+    const mappedRows = rows.map(r => ({
+      ...r,
+      name: formatDisplayName(r.name),
+      email_verified: r.email_verified === 1 || r.email_verified === true
+    }));
 
     res.json({
       success: true,
@@ -883,7 +887,7 @@ router.get('/public/:id', async (req, res) => {
     }
 
     const [userRows] = await pool.query(
-      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, availability
+      `SELECT id, name, role, college, city, bio, skills, portfolio, avatar_url, gender, credits, screen_name, display_preference, social_links, created_at, availability, email_verified
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -926,6 +930,7 @@ router.get('/public/:id', async (req, res) => {
       data: {
         ...userRows[0],
         name: getCanonicalDisplayName(userRows[0]),
+        email_verified: userRows[0].email_verified === 1 || userRows[0].email_verified === true,
         scripts: scriptRows
       }
     });
@@ -957,7 +962,8 @@ router.get('/leaderboard', async (req, res) => {
       success: true,
       data: rows.map(r => ({
         ...r,
-        displayName: getCanonicalDisplayName(r)
+        displayName: getCanonicalDisplayName(r),
+        email_verified: r.email_verified === 1 || r.email_verified === true
       }))
     });
   } catch (error) {
